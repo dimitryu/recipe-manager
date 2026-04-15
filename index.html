@@ -1,0 +1,2603 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#e85d04">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="מתכוניה">
+<title>מתכוניה | Рецептник | RecipeBook</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon.svg">
+
+<!-- Firebase CDN -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+/* ===== CSS VARIABLES ===== */
+:root {
+  --c-primary: #e85d04;
+  --c-primary-dark: #c44e03;
+  --c-secondary: #f5a623;
+  --c-bg: #faf8f5;
+  --c-surface: #ffffff;
+  --c-surface2: #f0ede8;
+  --c-border: #e8e0d5;
+  --c-text: #2c2419;
+  --c-text-muted: #7a6a58;
+  --c-text-light: #b0a090;
+  --c-danger: #d32f2f;
+  --c-success: #388e3c;
+  --c-easy: #4caf50;
+  --c-medium: #ff9800;
+  --c-hard: #f44336;
+  --radius: 16px;
+  --radius-sm: 8px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.15);
+  --nav-h: 64px;
+  --header-h: 60px;
+  --transition: 0.25s ease;
+}
+
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; font-size: 16px; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  background: var(--c-bg);
+  color: var(--c-text);
+  height: 100%;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+body.ltr { direction: ltr; text-align: left; }
+body:not(.ltr) { direction: rtl; text-align: right; }
+
+img { max-width: 100%; display: block; }
+button { cursor: pointer; border: none; background: none; font-family: inherit; }
+input, select, textarea { font-family: inherit; font-size: inherit; }
+a { color: var(--c-primary); text-decoration: none; }
+
+/* ===== SCREENS ===== */
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: flex; flex-direction: column; }
+
+/* ===== SETUP SCREEN ===== */
+#setup-screen {
+  background: linear-gradient(135deg, #e85d04 0%, #f5a623 100%);
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  min-height: 100vh;
+}
+.setup-card {
+  background: var(--c-surface);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: var(--shadow-lg);
+}
+.setup-logo { text-align: center; font-size: 56px; margin-bottom: 8px; }
+.setup-title { text-align: center; font-size: 22px; font-weight: 700; color: var(--c-primary); margin-bottom: 4px; }
+.setup-subtitle { text-align: center; font-size: 14px; color: var(--c-text-muted); margin-bottom: 24px; }
+.setup-section { margin-bottom: 20px; }
+.setup-section label { display: block; font-size: 13px; font-weight: 600; color: var(--c-text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.setup-section textarea, .setup-section input {
+  width: 100%; padding: 12px 14px; border: 2px solid var(--c-border);
+  border-radius: var(--radius-sm); font-size: 14px; transition: border-color var(--transition);
+  background: var(--c-bg); color: var(--c-text);
+}
+.setup-section textarea:focus, .setup-section input:focus {
+  outline: none; border-color: var(--c-primary);
+}
+.setup-section textarea { min-height: 120px; resize: vertical; }
+.setup-note {
+  background: #fff8e1; border: 1px solid #ffcc02; border-radius: var(--radius-sm);
+  padding: 12px 14px; font-size: 13px; color: #7a5c00; margin-bottom: 20px;
+  line-height: 1.5;
+}
+.setup-note code {
+  background: #fff3cd; padding: 2px 6px; border-radius: 4px;
+  font-family: monospace; font-size: 12px; display: block; margin-top: 6px; word-break: break-all;
+}
+.btn-primary {
+  display: block; width: 100%; padding: 14px;
+  background: var(--c-primary); color: #fff; border-radius: var(--radius-sm);
+  font-size: 16px; font-weight: 600; text-align: center;
+  transition: background var(--transition), transform var(--transition);
+}
+.btn-primary:hover { background: var(--c-primary-dark); transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(0); }
+.lang-selector { display: flex; gap: 8px; justify-content: center; margin-bottom: 20px; }
+.lang-btn {
+  padding: 8px 18px; border-radius: 20px; font-size: 14px; font-weight: 500;
+  border: 2px solid var(--c-border); color: var(--c-text-muted);
+  transition: all var(--transition);
+}
+.lang-btn.active { background: var(--c-primary); color: #fff; border-color: var(--c-primary); }
+
+/* ===== AUTH SCREEN ===== */
+#auth-screen {
+  background: linear-gradient(135deg, #e85d04 0%, #f5a623 100%);
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.auth-card {
+  background: var(--c-surface);
+  border-radius: var(--radius);
+  padding: 40px 32px;
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+}
+.auth-logo { font-size: 72px; margin-bottom: 16px; animation: float 3s ease-in-out infinite; }
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.auth-title { font-size: 26px; font-weight: 700; color: var(--c-primary); margin-bottom: 8px; }
+.auth-subtitle { font-size: 15px; color: var(--c-text-muted); margin-bottom: 32px; }
+.btn-google {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  width: 100%; padding: 14px; border-radius: var(--radius-sm);
+  background: var(--c-surface); color: var(--c-text);
+  border: 2px solid var(--c-border); font-size: 15px; font-weight: 600;
+  transition: all var(--transition); box-shadow: var(--shadow);
+}
+.btn-google:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+.btn-google svg { width: 20px; height: 20px; flex-shrink: 0; }
+.auth-lang { margin-top: 24px; }
+
+/* ===== APP LAYOUT ===== */
+#app-screen { background: var(--c-bg); }
+
+/* Header */
+.app-header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: var(--header-h);
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.header-logo { display: flex; align-items: center; gap: 8px; }
+.header-logo-icon { font-size: 28px; }
+.header-app-name { font-size: 18px; font-weight: 700; color: var(--c-primary); }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.header-lang { display: flex; gap: 4px; }
+.hlang-btn {
+  padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;
+  color: var(--c-text-muted); border: 1.5px solid transparent;
+  transition: all var(--transition);
+}
+.hlang-btn.active { background: var(--c-primary); color: #fff; }
+.user-avatar {
+  width: 36px; height: 36px; border-radius: 50%; object-fit: cover;
+  border: 2px solid var(--c-primary);
+}
+.user-avatar-placeholder {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--c-primary); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Content area */
+.app-content {
+  padding-top: var(--header-h);
+  padding-bottom: calc(var(--nav-h) + 16px);
+  min-height: 100vh;
+}
+
+/* Bottom Nav */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  height: var(--nav-h);
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: space-around;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+}
+.nav-item {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; flex: 1; padding: 8px 4px;
+  color: var(--c-text-muted); font-size: 11px; font-weight: 500;
+  transition: color var(--transition); min-width: 0;
+}
+.nav-item .nav-icon { font-size: 22px; }
+.nav-item.active { color: var(--c-primary); }
+.nav-fab-wrap { flex: 1; display: flex; align-items: center; justify-content: center; }
+.nav-fab {
+  width: 54px; height: 54px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--c-primary), var(--c-secondary));
+  color: #fff; font-size: 28px; font-weight: 300;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(232,93,4,0.4);
+  transition: all var(--transition); transform: translateY(-10px);
+}
+.nav-fab:hover { box-shadow: 0 6px 20px rgba(232,93,4,0.5); transform: translateY(-12px); }
+.nav-fab:active { transform: translateY(-8px); }
+
+/* ===== VIEWS ===== */
+.view { display: none; animation: fadeIn 0.2s ease; }
+.view.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ===== RECIPE LIST VIEW ===== */
+.search-bar-wrap { padding: 16px 16px 0; }
+.search-bar {
+  position: relative; display: flex; align-items: center;
+}
+.search-bar input {
+  width: 100%; padding: 12px 44px 12px 16px; border-radius: 24px;
+  border: 2px solid var(--c-border); background: var(--c-surface);
+  font-size: 15px; transition: border-color var(--transition);
+}
+body.ltr .search-bar input { padding: 12px 16px 12px 44px; }
+.search-bar input:focus { outline: none; border-color: var(--c-primary); }
+.search-icon {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  color: var(--c-text-muted); font-size: 18px; pointer-events: none;
+}
+body.ltr .search-icon { right: auto; left: 14px; }
+
+.category-filters {
+  display: flex; gap: 8px; padding: 12px 16px;
+  overflow-x: auto; scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.category-filters::-webkit-scrollbar { display: none; }
+.cat-chip {
+  padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+  white-space: nowrap; border: 1.5px solid var(--c-border);
+  color: var(--c-text-muted); background: var(--c-surface);
+  transition: all var(--transition); flex-shrink: 0;
+}
+.cat-chip.active { background: var(--c-primary); color: #fff; border-color: var(--c-primary); }
+
+.recipe-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px; padding: 4px 16px 16px;
+}
+@media (min-width: 640px) { .recipe-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); } }
+
+.recipe-card {
+  background: var(--c-surface); border-radius: var(--radius);
+  box-shadow: var(--shadow); overflow: hidden; cursor: pointer;
+  transition: transform var(--transition), box-shadow var(--transition);
+  position: relative;
+}
+.recipe-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+.recipe-card:active { transform: translateY(-2px); }
+.card-image {
+  width: 100%; height: 130px; object-fit: cover;
+  background: linear-gradient(135deg, #ffecd2, #fcb69f);
+}
+.card-emoji-thumb {
+  width: 100%; height: 130px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 48px;
+  background: linear-gradient(135deg, #ffecd2, #fcb69f);
+}
+.card-body { padding: 10px 12px 12px; }
+.card-name { font-size: 14px; font-weight: 600; color: var(--c-text); margin-bottom: 8px; line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card-meta { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.card-time { font-size: 12px; color: var(--c-text-muted); display: flex; align-items: center; gap: 3px; }
+.card-rating { font-size: 12px; color: var(--c-secondary); }
+.difficulty-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px;
+  text-transform: uppercase; letter-spacing: 0.3px;
+}
+.diff-easy { background: #e8f5e9; color: var(--c-easy); }
+.diff-medium { background: #fff3e0; color: var(--c-medium); }
+.diff-hard { background: #ffebee; color: var(--c-hard); }
+
+.empty-state {
+  text-align: center; padding: 60px 32px;
+  color: var(--c-text-muted);
+}
+.empty-state .empty-icon { font-size: 64px; margin-bottom: 16px; }
+.empty-state h3 { font-size: 18px; margin-bottom: 8px; color: var(--c-text); }
+.empty-state p { font-size: 14px; line-height: 1.6; }
+
+/* ===== SHOPPING LIST VIEW ===== */
+.shopping-view { padding: 16px; }
+.shopping-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+}
+.shopping-header h2 { font-size: 20px; font-weight: 700; }
+.btn-outline {
+  padding: 8px 16px; border: 1.5px solid var(--c-border); border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 500; color: var(--c-text-muted);
+  transition: all var(--transition);
+}
+.btn-outline:hover { border-color: var(--c-primary); color: var(--c-primary); }
+
+.recipe-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.recipe-chip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; background: var(--c-surface2); border-radius: 20px;
+  font-size: 13px; border: 1.5px solid var(--c-border);
+  transition: all var(--transition);
+}
+.recipe-chip.selected { background: #fff0e6; border-color: var(--c-primary); color: var(--c-primary); }
+.recipe-chip .chip-remove { font-size: 16px; color: var(--c-text-muted); line-height: 1; }
+
+.shopping-list { list-style: none; }
+.shopping-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; background: var(--c-surface); border-radius: var(--radius-sm);
+  margin-bottom: 8px; border: 1.5px solid var(--c-border);
+  transition: opacity var(--transition);
+}
+.shopping-item.checked { opacity: 0.5; }
+.shopping-item input[type=checkbox] {
+  width: 20px; height: 20px; accent-color: var(--c-primary); flex-shrink: 0;
+}
+.shopping-item-text { flex: 1; font-size: 15px; }
+.shopping-item.checked .shopping-item-text { text-decoration: line-through; }
+.shopping-item-qty { font-size: 13px; color: var(--c-text-muted); white-space: nowrap; }
+.add-recipe-btn {
+  width: 100%; padding: 12px; border: 2px dashed var(--c-border); border-radius: var(--radius-sm);
+  font-size: 14px; color: var(--c-text-muted); margin-top: 12px;
+  transition: all var(--transition); text-align: center;
+}
+.add-recipe-btn:hover { border-color: var(--c-primary); color: var(--c-primary); }
+
+/* ===== SETTINGS VIEW ===== */
+.settings-view { padding: 16px; }
+.settings-card {
+  background: var(--c-surface); border-radius: var(--radius);
+  box-shadow: var(--shadow); overflow: hidden; margin-bottom: 16px;
+}
+.settings-card-header {
+  padding: 14px 16px; border-bottom: 1px solid var(--c-border);
+  font-size: 13px; font-weight: 700; color: var(--c-text-muted);
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.profile-block {
+  padding: 16px; display: flex; align-items: center; gap: 14px;
+}
+.profile-img {
+  width: 52px; height: 52px; border-radius: 50%; object-fit: cover;
+  border: 2px solid var(--c-primary); flex-shrink: 0;
+}
+.profile-img-placeholder {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--c-primary); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 700; flex-shrink: 0;
+}
+.profile-info h3 { font-size: 16px; font-weight: 600; }
+.profile-info p { font-size: 13px; color: var(--c-text-muted); }
+
+.settings-item {
+  padding: 14px 16px; border-bottom: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; transition: background var(--transition);
+}
+.settings-item:last-child { border-bottom: none; }
+.settings-item:hover { background: var(--c-bg); }
+.settings-item-left { display: flex; align-items: center; gap: 12px; }
+.settings-item-icon { font-size: 20px; width: 28px; text-align: center; }
+.settings-item-label { font-size: 15px; }
+.settings-item-arrow { color: var(--c-text-muted); font-size: 12px; }
+.settings-input {
+  width: 100%; padding: 12px 14px; border: 2px solid var(--c-border);
+  border-radius: var(--radius-sm); font-size: 14px; margin-top: 8px;
+  transition: border-color var(--transition); background: var(--c-bg);
+}
+.settings-input:focus { outline: none; border-color: var(--c-primary); }
+.settings-item-form { padding: 14px 16px; border-bottom: 1px solid var(--c-border); }
+.btn-danger {
+  padding: 10px 18px; background: #ffebee; color: var(--c-danger);
+  border: 1.5px solid #ffcdd2; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 600; transition: all var(--transition);
+}
+.btn-danger:hover { background: var(--c-danger); color: #fff; }
+.btn-save {
+  padding: 10px 18px; background: var(--c-primary); color: #fff;
+  border-radius: var(--radius-sm); font-size: 14px; font-weight: 600;
+  transition: all var(--transition); margin-top: 8px;
+}
+.btn-save:hover { background: var(--c-primary-dark); }
+
+/* ===== MODALS ===== */
+#modal-container {
+  position: fixed; inset: 0; z-index: 200;
+  display: none; align-items: flex-end;
+}
+#modal-container.open { display: flex; }
+.modal-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.5);
+  animation: fadeInBg 0.25s ease;
+}
+@keyframes fadeInBg { from { opacity: 0; } to { opacity: 1; } }
+.modal-sheet {
+  position: relative; width: 100%;
+  max-height: 95vh; background: var(--c-surface);
+  border-radius: 20px 20px 0 0;
+  overflow: hidden; display: flex; flex-direction: column;
+  animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-sheet.modal-lg { max-height: 100vh; height: 95vh; border-radius: 20px 20px 0 0; }
+.modal-sheet.modal-full { height: 100vh; max-height: 100vh; border-radius: 0; }
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--c-border);
+  flex-shrink: 0;
+}
+.modal-title { font-size: 18px; font-weight: 700; }
+.modal-close {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--c-surface2); color: var(--c-text-muted);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; line-height: 1;
+  transition: all var(--transition);
+}
+.modal-close:hover { background: var(--c-border); }
+.modal-body { overflow-y: auto; flex: 1; padding: 20px; -webkit-overflow-scrolling: touch; }
+.modal-footer {
+  padding: 16px 20px; border-top: 1px solid var(--c-border);
+  display: flex; gap: 10px; flex-shrink: 0;
+}
+
+/* ===== ADD RECIPE MODAL TABS ===== */
+.tab-bar {
+  display: flex; overflow-x: auto; scrollbar-width: none;
+  border-bottom: 2px solid var(--c-border);
+  flex-shrink: 0; padding: 0 8px;
+}
+.tab-bar::-webkit-scrollbar { display: none; }
+.tab-btn {
+  padding: 12px 16px; font-size: 13px; font-weight: 600;
+  color: var(--c-text-muted); white-space: nowrap;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  transition: all var(--transition); flex-shrink: 0;
+}
+.tab-btn.active { color: var(--c-primary); border-bottom-color: var(--c-primary); }
+.tab-content { display: none; padding: 20px; }
+.tab-content.active { display: block; }
+
+/* Upload zone */
+.upload-zone {
+  border: 2px dashed var(--c-border); border-radius: var(--radius);
+  padding: 32px 20px; text-align: center; cursor: pointer;
+  transition: all var(--transition); background: var(--c-bg);
+}
+.upload-zone:hover, .upload-zone.drag-over {
+  border-color: var(--c-primary); background: #fff5f0;
+}
+.upload-zone .upload-icon { font-size: 40px; margin-bottom: 12px; }
+.upload-zone p { font-size: 14px; color: var(--c-text-muted); }
+.upload-zone strong { color: var(--c-primary); }
+.image-previews { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.img-preview-wrap {
+  position: relative; width: 80px; height: 80px;
+  border-radius: var(--radius-sm); overflow: hidden;
+}
+.img-preview-wrap img { width: 100%; height: 100%; object-fit: cover; }
+.img-preview-del {
+  position: absolute; top: 2px; right: 2px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: rgba(0,0,0,0.6); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; cursor: pointer;
+}
+
+/* Text input groups */
+.input-group { margin-bottom: 16px; }
+.input-group label {
+  display: block; font-size: 13px; font-weight: 600;
+  color: var(--c-text-muted); margin-bottom: 6px;
+}
+.input-group input, .input-group textarea, .input-group select {
+  width: 100%; padding: 11px 14px; border: 2px solid var(--c-border);
+  border-radius: var(--radius-sm); font-size: 14px;
+  transition: border-color var(--transition); background: var(--c-bg);
+  color: var(--c-text);
+}
+.input-group input:focus, .input-group textarea:focus, .input-group select:focus {
+  outline: none; border-color: var(--c-primary);
+}
+.input-group textarea { resize: vertical; min-height: 120px; }
+
+/* ===== RECIPE FORM ===== */
+.form-section { margin-bottom: 24px; }
+.form-section-title {
+  font-size: 14px; font-weight: 700; color: var(--c-text-muted);
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--c-border);
+}
+.ingredients-list, .steps-list { list-style: none; }
+.ingredient-row, .step-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+}
+.ingredient-row input { flex: 1; }
+.ingredient-row .qty-input { flex: 0 0 80px; }
+.ingredient-row .unit-input { flex: 0 0 80px; }
+.step-row { align-items: flex-start; }
+.step-num {
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--c-primary); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; margin-top: 10px;
+}
+.step-row textarea { flex: 1; min-height: 72px; }
+.row-del {
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+  background: #ffebee; color: var(--c-danger);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700; transition: all var(--transition);
+}
+.row-del:hover { background: var(--c-danger); color: #fff; }
+.add-row-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border: 1.5px dashed var(--c-border);
+  border-radius: var(--radius-sm); color: var(--c-primary);
+  font-size: 14px; font-weight: 600; width: 100%; justify-content: center;
+  margin-top: 8px; transition: all var(--transition);
+}
+.add-row-btn:hover { border-color: var(--c-primary); background: #fff5f0; }
+
+.meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.meta-grid .input-group { margin-bottom: 0; }
+
+.star-rating { display: flex; gap: 4px; }
+.star-btn { font-size: 28px; color: var(--c-border); transition: color var(--transition); cursor: pointer; }
+.star-btn.active { color: var(--c-secondary); }
+
+/* ===== RECIPE DETAIL MODAL ===== */
+.detail-hero { width: 100%; height: 220px; object-fit: cover; }
+.detail-hero-emoji {
+  width: 100%; height: 200px; display: flex; align-items: center; justify-content: center;
+  font-size: 80px; background: linear-gradient(135deg, #ffecd2, #fcb69f);
+}
+.detail-meta-bar {
+  display: flex; flex-wrap: wrap; gap: 12px; padding: 16px 20px;
+  border-bottom: 1px solid var(--c-border); background: var(--c-surface);
+}
+.meta-chip {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 13px; color: var(--c-text-muted);
+}
+.meta-chip .mc-icon { font-size: 16px; }
+.detail-section { padding: 16px 20px; border-bottom: 1px solid var(--c-border); }
+.detail-section h3 { font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--c-text); }
+.ingredient-check-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 0; cursor: pointer;
+}
+.ingredient-check-item input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--c-primary); }
+.ingredient-check-item span { font-size: 14px; }
+.ingredient-check-item.checked span { text-decoration: line-through; color: var(--c-text-muted); }
+.step-item {
+  display: flex; gap: 12px; padding: 10px 0;
+  border-bottom: 1px solid var(--c-surface2);
+}
+.step-item:last-child { border-bottom: none; }
+.step-badge {
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--c-primary), var(--c-secondary));
+  color: #fff; font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.step-text { font-size: 14px; line-height: 1.6; padding-top: 4px; }
+.tags-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag-pill {
+  padding: 4px 12px; background: var(--c-surface2); border-radius: 20px;
+  font-size: 13px; color: var(--c-text-muted);
+}
+.detail-actions {
+  display: flex; gap: 8px; padding: 16px 20px;
+  flex-wrap: wrap;
+}
+.action-btn {
+  flex: 1; min-width: 80px; padding: 10px 8px;
+  border-radius: var(--radius-sm); font-size: 13px; font-weight: 600;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  border: 1.5px solid var(--c-border); color: var(--c-text-muted);
+  transition: all var(--transition);
+}
+.action-btn:hover { border-color: var(--c-primary); color: var(--c-primary); background: #fff5f0; }
+.action-btn .ab-icon { font-size: 20px; }
+.action-btn.danger:hover { border-color: var(--c-danger); color: var(--c-danger); background: #ffebee; }
+
+/* Share view */
+.share-view-banner {
+  background: linear-gradient(135deg, #e85d04, #f5a623);
+  color: #fff; padding: 12px 20px; text-align: center;
+  font-size: 14px; font-weight: 600;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+}
+.btn-save-recipe {
+  padding: 8px 16px; background: #fff; color: var(--c-primary);
+  border-radius: var(--radius-sm); font-size: 13px; font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ===== LOADING OVERLAY ===== */
+#loading-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,0.4);
+  display: none; align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px;
+}
+#loading-overlay.show { display: flex; }
+.loading-card {
+  background: var(--c-surface); border-radius: var(--radius);
+  padding: 28px 36px; text-align: center;
+  box-shadow: var(--shadow-lg);
+}
+.spinner {
+  width: 44px; height: 44px; border: 4px solid var(--c-border);
+  border-top-color: var(--c-primary); border-radius: 50%;
+  animation: spin 0.8s linear infinite; margin: 0 auto 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 15px; color: var(--c-text-muted); }
+
+/* ===== TOAST ===== */
+#toast-container {
+  position: fixed; bottom: calc(var(--nav-h) + 12px); left: 50%;
+  transform: translateX(-50%); z-index: 400;
+  display: flex; flex-direction: column; gap: 8px; align-items: center;
+  width: 90%; max-width: 360px; pointer-events: none;
+}
+.toast {
+  padding: 12px 18px; border-radius: 24px;
+  font-size: 14px; font-weight: 500; color: #fff;
+  box-shadow: var(--shadow-lg);
+  animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+  pointer-events: all; text-align: center;
+  max-width: 100%;
+}
+.toast.success { background: #2e7d32; }
+.toast.error { background: #c62828; }
+.toast.info { background: #1565c0; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes toastOut { to { opacity: 0; transform: translateY(-8px); } }
+
+/* ===== UTILITY ===== */
+.divider { height: 1px; background: var(--c-border); margin: 0 -20px; }
+.text-center { text-align: center; }
+.mt-8 { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+.mb-12 { margin-bottom: 12px; }
+.bold { font-weight: 700; }
+
+/* ===== PRINT ===== */
+@media print {
+  #app-screen .app-header,
+  .bottom-nav,
+  #modal-container .modal-header .modal-close,
+  .detail-actions,
+  .modal-footer,
+  #loading-overlay,
+  #toast-container { display: none !important; }
+  body { background: #fff; }
+  .app-content { padding: 0; }
+  .modal-sheet {
+    position: static; max-height: none; height: auto;
+    border-radius: 0; box-shadow: none;
+  }
+  #modal-container {
+    position: static; display: block !important;
+    background: transparent;
+  }
+  .modal-backdrop { display: none; }
+  .detail-hero { height: 150px; }
+  .detail-section { page-break-inside: avoid; }
+  .ingredient-check-item input[type=checkbox] { display: none; }
+}
+
+/* ===== RESPONSIVE LARGE ===== */
+@media (min-width: 768px) {
+  .recipe-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
+  .meta-grid { grid-template-columns: repeat(4, 1fr); }
+  .modal-sheet:not(.modal-full) {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) !important;
+    border-radius: var(--radius) !important;
+    max-height: 90vh; width: 90%; max-width: 680px;
+    animation: zoomIn 0.25s ease !important;
+  }
+  @keyframes zoomIn { from { opacity: 0; transform: translate(-50%, -50%) scale(0.95); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+  .modal-sheet.modal-full {
+    top: 50%; left: 50%; transform: translate(-50%, -50%) !important;
+    border-radius: var(--radius) !important;
+    max-height: 92vh; width: 90%; max-width: 680px;
+    animation: zoomIn 0.25s ease !important;
+    height: auto;
+  }
+  #modal-container.open { align-items: center; }
+}
+
+/* ===== SELECT DARK FIX ===== */
+select option { background: var(--c-surface); color: var(--c-text); }
+</style>
+</head>
+<body>
+
+<!-- ===== LOADING OVERLAY ===== -->
+<div id="loading-overlay">
+  <div class="loading-card">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-text">...</div>
+  </div>
+</div>
+
+<!-- ===== TOAST CONTAINER ===== -->
+<div id="toast-container"></div>
+
+<!-- ===== MODAL CONTAINER ===== -->
+<div id="modal-container">
+  <div class="modal-backdrop" id="modal-backdrop"></div>
+  <div id="modal-content"></div>
+</div>
+
+<!-- ===== SETUP SCREEN ===== -->
+<div id="setup-screen" class="screen active">
+  <div class="setup-card">
+    <div class="setup-logo">🍳</div>
+    <div class="setup-title" data-i18n="appName">מתכוניה</div>
+    <div class="setup-subtitle" data-i18n="setupSubtitle">First-time setup</div>
+
+    <div class="lang-selector">
+      <button class="lang-btn" data-lang="he" onclick="setupLang('he')">עברית</button>
+      <button class="lang-btn" data-lang="ru" onclick="setupLang('ru')">Русский</button>
+      <button class="lang-btn active" data-lang="en" onclick="setupLang('en')">English</button>
+    </div>
+
+    <div class="setup-note">
+      <span data-i18n="setupFirestoreNote">Set these Firestore Security Rules in Firebase Console → Firestore → Rules:</span>
+      <code>rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+    match /users/{userId}/recipes/{recipeId} {
+      allow read: if true;
+    }
+  }
+}</code>
+    </div>
+
+    <div class="setup-section">
+      <label data-i18n="firebaseConfigLabel">Firebase Config JSON (from Firebase Console → Project Settings → Your apps)</label>
+      <textarea id="setup-firebase-config" placeholder='{"apiKey":"...","authDomain":"...","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}'></textarea>
+    </div>
+
+    <div class="setup-section">
+      <label data-i18n="claudeKeyLabel">Claude API Key (from console.anthropic.com)</label>
+      <input type="password" id="setup-claude-key" placeholder="sk-ant-...">
+    </div>
+
+    <button class="btn-primary" onclick="saveSetup()" data-i18n="saveSetup">Save & Continue</button>
+  </div>
+</div>
+
+<!-- ===== AUTH SCREEN ===== -->
+<div id="auth-screen" class="screen">
+  <div class="auth-card">
+    <div class="auth-logo">🍳</div>
+    <div class="auth-title" data-i18n="appName">מתכוניה</div>
+    <div class="auth-subtitle" data-i18n="authSubtitle">Sign in to manage your recipes</div>
+    <button class="btn-google" onclick="signInGoogle()">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      <span data-i18n="signInGoogle">Sign in with Google</span>
+    </button>
+    <div class="auth-lang" style="margin-top:20px;">
+      <div class="lang-selector">
+        <button class="lang-btn" data-lang="he" onclick="setLang('he')">עב</button>
+        <button class="lang-btn" data-lang="ru" onclick="setLang('ru')">Ру</button>
+        <button class="lang-btn" data-lang="en" onclick="setLang('en')">En</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== APP SCREEN ===== -->
+<div id="app-screen" class="screen">
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-logo">
+      <span class="header-logo-icon">🍳</span>
+      <span class="header-app-name" data-i18n="appName">מתכוניה</span>
+    </div>
+    <div class="header-right">
+      <div class="header-lang">
+        <button class="hlang-btn" data-lang="he" onclick="setLang('he')">עב</button>
+        <button class="hlang-btn" data-lang="ru" onclick="setLang('ru')">Ру</button>
+        <button class="hlang-btn" data-lang="en" onclick="setLang('en')">En</button>
+      </div>
+      <div id="header-avatar"></div>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <main class="app-content">
+    <!-- Recipes View -->
+    <div id="view-recipes" class="view active">
+      <div class="search-bar-wrap">
+        <div class="search-bar">
+          <input type="search" id="search-input" data-i18n-placeholder="searchPlaceholder" placeholder="Search recipes..." oninput="filterRecipes()">
+          <span class="search-icon">🔍</span>
+        </div>
+      </div>
+      <div class="category-filters" id="category-filters"></div>
+      <div class="recipe-grid" id="recipe-grid"></div>
+    </div>
+
+    <!-- Shopping View -->
+    <div id="view-shopping" class="view">
+      <div class="shopping-view">
+        <div class="shopping-header">
+          <h2 data-i18n="shoppingList">Shopping List</h2>
+          <button class="btn-outline" onclick="clearCheckedItems()" data-i18n="clearChecked">Clear checked</button>
+        </div>
+        <div id="recipe-chips-container" class="recipe-chips"></div>
+        <ul id="shopping-list-ul" class="shopping-list"></ul>
+        <button class="add-recipe-btn" onclick="openAddRecipeToShoppingModal()" data-i18n="addRecipesToList">+ Add recipes to list</button>
+      </div>
+    </div>
+
+    <!-- Settings View -->
+    <div id="view-settings" class="view">
+      <div class="settings-view">
+        <div class="settings-card">
+          <div class="settings-card-header" data-i18n="profileHeader">Profile</div>
+          <div class="profile-block" id="settings-profile"></div>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-card-header" data-i18n="languageHeader">Language</div>
+          <div style="padding:14px 16px;">
+            <div class="lang-selector" style="justify-content:flex-start;">
+              <button class="lang-btn" data-lang="he" onclick="setLang('he')">עברית</button>
+              <button class="lang-btn" data-lang="ru" onclick="setLang('ru')">Русский</button>
+              <button class="lang-btn" data-lang="en" onclick="setLang('en')">English</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-card-header" data-i18n="apiHeader">API Settings</div>
+          <div class="settings-item-form">
+            <label style="font-size:13px;font-weight:600;color:var(--c-text-muted);" data-i18n="claudeKeyLabel">Claude API Key</label>
+            <input type="password" id="settings-claude-key" class="settings-input" placeholder="sk-ant-...">
+            <button class="btn-save mt-8" onclick="saveClaudeKey()" data-i18n="save">Save</button>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-card-header" data-i18n="accountHeader">Account</div>
+          <div class="settings-item" onclick="signOutUser()">
+            <div class="settings-item-left">
+              <span class="settings-item-icon">🚪</span>
+              <span class="settings-item-label" data-i18n="signOut">Sign out</span>
+            </div>
+            <span class="settings-item-arrow">›</span>
+          </div>
+          <div class="settings-item" onclick="resetSetup()" style="border-bottom:none;">
+            <div class="settings-item-left">
+              <span class="settings-item-icon">⚙️</span>
+              <span class="settings-item-label" data-i18n="resetSetup">Reset setup</span>
+            </div>
+            <span class="settings-item-arrow">›</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" id="nav-recipes" onclick="switchView('recipes')">
+      <span class="nav-icon">🏠</span>
+      <span data-i18n="navRecipes">Recipes</span>
+    </button>
+    <div class="nav-fab-wrap">
+      <button class="nav-fab" onclick="openAddRecipeModal()" aria-label="Add recipe">+</button>
+    </div>
+    <button class="nav-item" id="nav-shopping" onclick="switchView('shopping')">
+      <span class="nav-icon">🛒</span>
+      <span data-i18n="navShopping">Shopping</span>
+    </button>
+    <button class="nav-item" id="nav-settings" onclick="switchView('settings')">
+      <span class="nav-icon">⚙️</span>
+      <span data-i18n="navSettings">Settings</span>
+    </button>
+  </nav>
+</div>
+
+<script>
+'use strict';
+
+// =====================================================================
+// TRANSLATIONS
+// =====================================================================
+const TRANSLATIONS = {
+  he: {
+    appName: 'מתכוניה',
+    setupSubtitle: 'הגדרה ראשונית',
+    setupFirestoreNote: 'הגדר את כללי האבטחה של Firestore ב-Firebase Console → Firestore → Rules:',
+    firebaseConfigLabel: 'Firebase Config JSON (מ-Firebase Console → הגדרות פרויקט → האפליקציות שלך)',
+    claudeKeyLabel: 'מפתח API של Claude (מ-console.anthropic.com)',
+    saveSetup: 'שמור והמשך',
+    authSubtitle: 'התחבר כדי לנהל את המתכונים שלך',
+    signInGoogle: 'התחבר עם Google',
+    searchPlaceholder: 'חיפוש מתכונים...',
+    navRecipes: 'מתכונים',
+    navShopping: 'קניות',
+    navSettings: 'הגדרות',
+    shoppingList: 'רשימת קניות',
+    clearChecked: 'נקה מסומנים',
+    addRecipesToList: '+ הוסף מתכונים לרשימה',
+    profileHeader: 'פרופיל',
+    languageHeader: 'שפה',
+    apiHeader: 'הגדרות API',
+    accountHeader: 'חשבון',
+    signOut: 'התנתק',
+    resetSetup: 'איפוס הגדרות',
+    save: 'שמור',
+    allCategories: 'הכל',
+    breakfast: 'בוקר',
+    lunch: 'צהריים',
+    dinner: 'ערב',
+    dessert: 'קינוח',
+    snack: 'חטיף',
+    drink: 'שתייה',
+    other: 'אחר',
+    addRecipe: 'הוסף מתכון',
+    tabImage: '📷 תמונה',
+    tabUrl: '🔗 כתובת URL',
+    tabVideo: '🎬 וידאו',
+    tabText: '✍️ טקסט',
+    tabManual: '📝 ידני',
+    uploadHint: 'גרור תמונה לכאן או <strong>לחץ לבחירה</strong>',
+    uploadHint2: 'Claude Vision ינתח את המתכון אוטומטית',
+    analyzeUrl: 'נתח',
+    urlPlaceholder: 'https://example.com/recipe...',
+    videoPh: 'https://youtube.com/watch?v=...',
+    videoHint: 'הדביקו כתובת YouTube או TikTok',
+    textPh: 'הדביקו את טקסט המתכון כאן...',
+    analyzeText: 'נתח עם Claude',
+    analyzeImage: 'נתח תמונות',
+    formTitle: 'פרטי מתכון',
+    fieldName: 'שם המתכון',
+    fieldImages: 'תמונות',
+    fieldIngredients: 'מצרכים',
+    fieldIngName: 'מצרך',
+    fieldQty: 'כמות',
+    fieldUnit: 'יחידה',
+    addIngredient: '+ הוסף מצרך',
+    fieldSteps: 'שלבי הכנה',
+    addStep: '+ הוסף שלב',
+    fieldPrepTime: 'זמן הכנה (דק׳)',
+    fieldCookTime: 'זמן בישול (דק׳)',
+    fieldServings: 'מנות',
+    fieldDifficulty: 'רמת קושי',
+    easy: 'קל',
+    medium: 'בינוני',
+    hard: 'קשה',
+    fieldCategory: 'קטגוריה',
+    fieldRating: 'דירוג',
+    fieldTags: 'תגיות (מופרדות בפסיקים)',
+    fieldNotes: 'הערות',
+    fieldSourceUrl: 'קישור מקור',
+    saveRecipe: 'שמור מתכון',
+    cancel: 'ביטול',
+    edit: 'עריכה',
+    share: 'שיתוף',
+    print: 'הדפסה',
+    addToShopping: 'לרשימת קניות',
+    deleteRecipe: 'מחק',
+    confirmDelete: 'בטוח למחוק את המתכון הזה?',
+    prepTime: 'הכנה',
+    cookTime: 'בישול',
+    servings: 'מנות',
+    difficulty: 'קושי',
+    ingredients: 'מצרכים',
+    steps: 'הכנה',
+    notes: 'הערות',
+    tags: 'תגיות',
+    source: 'מקור',
+    minutes: 'ד׳',
+    emptyTitle: 'אין מתכונים עדיין',
+    emptyText: 'לחץ על הכפתור + כדי להוסף מתכון ראשון!',
+    analyzingImage: 'מנתח תמונה...',
+    analyzingUrl: 'מנתח URL...',
+    analyzingText: 'מנתח טקסט...',
+    analyzingVideo: 'מנתח וידאו...',
+    savingRecipe: 'שומר מתכון...',
+    loadingRecipe: 'טוען מתכון...',
+    errorNoKey: 'מפתח Claude API חסר. הוסף אותו בהגדרות.',
+    errorParseJson: 'לא ניתן לנתח את תגובת Claude',
+    errorNoRecipe: 'לא נמצא מתכון בתוכן',
+    errorFirebase: 'שגיאת Firebase: ',
+    recipeAdded: 'המתכון נוסף!',
+    recipeUpdated: 'המתכון עודכן!',
+    recipeDeleted: 'המתכון נמחק',
+    linkCopied: 'הקישור הועתק ללוח!',
+    addedToShopping: 'נוסף לרשימת קניות',
+    sharedRecipeTitle: 'מתכון שותף',
+    saveToMyRecipes: 'שמור למתכונים שלי',
+    sharedBy: 'שותף על ידי',
+    readOnly: 'מצב צפייה בלבד',
+    selectRecipes: 'בחר מתכונים',
+    noIngredients: 'אין מצרכים',
+    fetchingPage: 'מוריד עמוד...',
+    invalidUrl: 'כתובת URL לא תקינה',
+    configError: 'שגיאה בהגדרות Firebase',
+    min: 'דק',
+  },
+  ru: {
+    appName: 'Рецептник',
+    setupSubtitle: 'Первоначальная настройка',
+    setupFirestoreNote: 'Установите правила безопасности Firestore в Firebase Console → Firestore → Rules:',
+    firebaseConfigLabel: 'Firebase Config JSON (из Firebase Console → Настройки проекта → Ваши приложения)',
+    claudeKeyLabel: 'Ключ API Claude (из console.anthropic.com)',
+    saveSetup: 'Сохранить и продолжить',
+    authSubtitle: 'Войдите для управления рецептами',
+    signInGoogle: 'Войти через Google',
+    searchPlaceholder: 'Поиск рецептов...',
+    navRecipes: 'Рецепты',
+    navShopping: 'Покупки',
+    navSettings: 'Настройки',
+    shoppingList: 'Список покупок',
+    clearChecked: 'Удалить отмеченные',
+    addRecipesToList: '+ Добавить рецепты в список',
+    profileHeader: 'Профиль',
+    languageHeader: 'Язык',
+    apiHeader: 'Настройки API',
+    accountHeader: 'Аккаунт',
+    signOut: 'Выйти',
+    resetSetup: 'Сбросить настройки',
+    save: 'Сохранить',
+    allCategories: 'Все',
+    breakfast: 'Завтрак',
+    lunch: 'Обед',
+    dinner: 'Ужин',
+    dessert: 'Десерт',
+    snack: 'Перекус',
+    drink: 'Напиток',
+    other: 'Другое',
+    addRecipe: 'Добавить рецепт',
+    tabImage: '📷 Фото',
+    tabUrl: '🔗 URL',
+    tabVideo: '🎬 Видео',
+    tabText: '✍️ Текст',
+    tabManual: '📝 Вручную',
+    uploadHint: 'Перетащите фото сюда или <strong>нажмите для выбора</strong>',
+    uploadHint2: 'Claude Vision автоматически распознает рецепт',
+    analyzeUrl: 'Анализировать',
+    urlPlaceholder: 'https://example.com/recipe...',
+    videoPh: 'https://youtube.com/watch?v=...',
+    videoHint: 'Вставьте ссылку на YouTube или TikTok',
+    textPh: 'Вставьте текст рецепта здесь...',
+    analyzeText: 'Анализировать с Claude',
+    analyzeImage: 'Анализировать фото',
+    formTitle: 'Детали рецепта',
+    fieldName: 'Название рецепта',
+    fieldImages: 'Фотографии',
+    fieldIngredients: 'Ингредиенты',
+    fieldIngName: 'Ингредиент',
+    fieldQty: 'Кол-во',
+    fieldUnit: 'Ед.',
+    addIngredient: '+ Добавить ингредиент',
+    fieldSteps: 'Шаги приготовления',
+    addStep: '+ Добавить шаг',
+    fieldPrepTime: 'Время подготовки (мин)',
+    fieldCookTime: 'Время готовки (мин)',
+    fieldServings: 'Порции',
+    fieldDifficulty: 'Сложность',
+    easy: 'Легко',
+    medium: 'Средне',
+    hard: 'Сложно',
+    fieldCategory: 'Категория',
+    fieldRating: 'Рейтинг',
+    fieldTags: 'Теги (через запятую)',
+    fieldNotes: 'Заметки',
+    fieldSourceUrl: 'Ссылка на источник',
+    saveRecipe: 'Сохранить рецепт',
+    cancel: 'Отмена',
+    edit: 'Изменить',
+    share: 'Поделиться',
+    print: 'Печать',
+    addToShopping: 'В список',
+    deleteRecipe: 'Удалить',
+    confirmDelete: 'Удалить этот рецепт?',
+    prepTime: 'Подгот.',
+    cookTime: 'Готовка',
+    servings: 'Порций',
+    difficulty: 'Сложность',
+    ingredients: 'Ингредиенты',
+    steps: 'Приготовление',
+    notes: 'Заметки',
+    tags: 'Теги',
+    source: 'Источник',
+    minutes: 'мин',
+    emptyTitle: 'Рецептов пока нет',
+    emptyText: 'Нажмите кнопку + чтобы добавить первый рецепт!',
+    analyzingImage: 'Анализирую фото...',
+    analyzingUrl: 'Анализирую URL...',
+    analyzingText: 'Анализирую текст...',
+    analyzingVideo: 'Анализирую видео...',
+    savingRecipe: 'Сохраняю рецепт...',
+    loadingRecipe: 'Загрузка рецепта...',
+    errorNoKey: 'Ключ API Claude не задан. Добавьте его в настройках.',
+    errorParseJson: 'Не удалось разобрать ответ Claude',
+    errorNoRecipe: 'Рецепт не найден в содержимом',
+    errorFirebase: 'Ошибка Firebase: ',
+    recipeAdded: 'Рецепт добавлен!',
+    recipeUpdated: 'Рецепт обновлён!',
+    recipeDeleted: 'Рецепт удалён',
+    linkCopied: 'Ссылка скопирована!',
+    addedToShopping: 'Добавлено в список покупок',
+    sharedRecipeTitle: 'Поделились рецептом',
+    saveToMyRecipes: 'Сохранить в мои рецепты',
+    sharedBy: 'Поделился',
+    readOnly: 'Режим просмотра',
+    selectRecipes: 'Выбрать рецепты',
+    noIngredients: 'Нет ингредиентов',
+    fetchingPage: 'Загружаю страницу...',
+    invalidUrl: 'Неверный URL',
+    configError: 'Ошибка конфигурации Firebase',
+    min: 'мин',
+  },
+  en: {
+    appName: 'RecipeBook',
+    setupSubtitle: 'First-time setup',
+    setupFirestoreNote: 'Set these Firestore Security Rules in Firebase Console → Firestore → Rules:',
+    firebaseConfigLabel: 'Firebase Config JSON (from Firebase Console → Project Settings → Your apps)',
+    claudeKeyLabel: 'Claude API Key (from console.anthropic.com)',
+    saveSetup: 'Save & Continue',
+    authSubtitle: 'Sign in to manage your recipes',
+    signInGoogle: 'Sign in with Google',
+    searchPlaceholder: 'Search recipes...',
+    navRecipes: 'Recipes',
+    navShopping: 'Shopping',
+    navSettings: 'Settings',
+    shoppingList: 'Shopping List',
+    clearChecked: 'Clear checked',
+    addRecipesToList: '+ Add recipes to list',
+    profileHeader: 'Profile',
+    languageHeader: 'Language',
+    apiHeader: 'API Settings',
+    accountHeader: 'Account',
+    signOut: 'Sign out',
+    resetSetup: 'Reset setup',
+    save: 'Save',
+    allCategories: 'All',
+    breakfast: 'Breakfast',
+    lunch: 'Lunch',
+    dinner: 'Dinner',
+    dessert: 'Dessert',
+    snack: 'Snack',
+    drink: 'Drink',
+    other: 'Other',
+    addRecipe: 'Add Recipe',
+    tabImage: '📷 Image',
+    tabUrl: '🔗 URL',
+    tabVideo: '🎬 Video',
+    tabText: '✍️ Text',
+    tabManual: '📝 Manual',
+    uploadHint: 'Drag image here or <strong>click to choose</strong>',
+    uploadHint2: 'Claude Vision will analyze the recipe automatically',
+    analyzeUrl: 'Analyze',
+    urlPlaceholder: 'https://example.com/recipe...',
+    videoPh: 'https://youtube.com/watch?v=...',
+    videoHint: 'Paste a YouTube or TikTok URL',
+    textPh: 'Paste recipe text here...',
+    analyzeText: 'Analyze with Claude',
+    analyzeImage: 'Analyze Images',
+    formTitle: 'Recipe Details',
+    fieldName: 'Recipe Name',
+    fieldImages: 'Images',
+    fieldIngredients: 'Ingredients',
+    fieldIngName: 'Ingredient',
+    fieldQty: 'Qty',
+    fieldUnit: 'Unit',
+    addIngredient: '+ Add Ingredient',
+    fieldSteps: 'Steps',
+    addStep: '+ Add Step',
+    fieldPrepTime: 'Prep Time (min)',
+    fieldCookTime: 'Cook Time (min)',
+    fieldServings: 'Servings',
+    fieldDifficulty: 'Difficulty',
+    easy: 'Easy',
+    medium: 'Medium',
+    hard: 'Hard',
+    fieldCategory: 'Category',
+    fieldRating: 'Rating',
+    fieldTags: 'Tags (comma-separated)',
+    fieldNotes: 'Notes',
+    fieldSourceUrl: 'Source URL',
+    saveRecipe: 'Save Recipe',
+    cancel: 'Cancel',
+    edit: 'Edit',
+    share: 'Share',
+    print: 'Print',
+    addToShopping: 'Shopping',
+    deleteRecipe: 'Delete',
+    confirmDelete: 'Delete this recipe?',
+    prepTime: 'Prep',
+    cookTime: 'Cook',
+    servings: 'Servings',
+    difficulty: 'Difficulty',
+    ingredients: 'Ingredients',
+    steps: 'Steps',
+    notes: 'Notes',
+    tags: 'Tags',
+    source: 'Source',
+    minutes: 'min',
+    emptyTitle: 'No recipes yet',
+    emptyText: 'Tap the + button to add your first recipe!',
+    analyzingImage: 'Analyzing image...',
+    analyzingUrl: 'Analyzing URL...',
+    analyzingText: 'Analyzing text...',
+    analyzingVideo: 'Analyzing video...',
+    savingRecipe: 'Saving recipe...',
+    loadingRecipe: 'Loading recipe...',
+    errorNoKey: 'Claude API key missing. Add it in Settings.',
+    errorParseJson: 'Could not parse Claude response',
+    errorNoRecipe: 'No recipe found in the content',
+    errorFirebase: 'Firebase error: ',
+    recipeAdded: 'Recipe added!',
+    recipeUpdated: 'Recipe updated!',
+    recipeDeleted: 'Recipe deleted',
+    linkCopied: 'Link copied to clipboard!',
+    addedToShopping: 'Added to shopping list',
+    sharedRecipeTitle: 'Shared Recipe',
+    saveToMyRecipes: 'Save to my recipes',
+    sharedBy: 'Shared by',
+    readOnly: 'Read-only view',
+    selectRecipes: 'Select recipes',
+    noIngredients: 'No ingredients',
+    fetchingPage: 'Fetching page...',
+    invalidUrl: 'Invalid URL',
+    configError: 'Firebase configuration error',
+    min: 'min',
+  }
+};
+
+const CATEGORY_EMOJIS = {
+  breakfast: '🍳', lunch: '🥗', dinner: '🍝', dessert: '🍰',
+  snack: '🥨', drink: '🥤', other: '🍽️'
+};
+
+// =====================================================================
+// APP STATE
+// =====================================================================
+let currentLang = localStorage.getItem('lang') || 'en';
+let currentUser = null;
+let db = null;
+let auth = null;
+let recipesListener = null;
+let allRecipes = [];
+let filteredRecipes = [];
+let currentCategory = 'all';
+let shoppingList = JSON.parse(localStorage.getItem('shoppingList') || '[]');
+let shoppingRecipeIds = JSON.parse(localStorage.getItem('shoppingRecipeIds') || '[]');
+let editingRecipeId = null;
+let pendingImages = []; // base64 strings for current form
+let formRating = 0;
+
+// =====================================================================
+// i18n
+// =====================================================================
+function t(key) {
+  return (TRANSLATIONS[currentLang] && TRANSLATIONS[currentLang][key]) ||
+         (TRANSLATIONS['en'] && TRANSLATIONS['en'][key]) || key;
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('lang', lang);
+  // Update html dir
+  if (lang === 'he') {
+    document.documentElement.setAttribute('lang', 'he');
+    document.documentElement.setAttribute('dir', 'rtl');
+    document.body.classList.remove('ltr');
+  } else {
+    document.documentElement.setAttribute('lang', lang);
+    document.documentElement.setAttribute('dir', 'ltr');
+    document.body.classList.add('ltr');
+  }
+  // Update all data-i18n elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+  // Update lang button states
+  document.querySelectorAll('[data-lang]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === lang);
+  });
+  // Re-render current view
+  renderCategoryFilters();
+  renderRecipeGrid();
+  renderShoppingView();
+  renderSettingsProfile();
+}
+
+function setupLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('lang', lang);
+  document.querySelectorAll('.setup-card [data-lang]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === lang);
+  });
+}
+
+// =====================================================================
+// UTILITIES
+// =====================================================================
+function escHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function showLoading(text) {
+  document.getElementById('loading-text').textContent = text || '...';
+  document.getElementById('loading-overlay').classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loading-overlay').classList.remove('show');
+}
+
+function showToast(msg, type = 'info') {
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+function closeModal() {
+  const mc = document.getElementById('modal-container');
+  mc.classList.remove('open');
+  const sheet = document.getElementById('modal-content');
+  if (sheet) sheet.innerHTML = '';
+  editingRecipeId = null;
+  pendingImages = [];
+  formRating = 0;
+}
+
+function openModal(html) {
+  const mc = document.getElementById('modal-container');
+  document.getElementById('modal-content').innerHTML = html;
+  mc.classList.add('open');
+}
+
+// Close modal on backdrop click
+document.getElementById('modal-backdrop').addEventListener('click', closeModal);
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// =====================================================================
+// IMAGE COMPRESSION
+// =====================================================================
+function compressImage(file, maxWidth = 800, maxHeight = 600, quality = 0.65) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxWidth) { height = Math.round(height * maxWidth / width); width = maxWidth; }
+        if (height > maxHeight) { width = Math.round(width * maxHeight / height); height = maxHeight; }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// =====================================================================
+// FIREBASE INIT
+// =====================================================================
+function initFirebase() {
+  const raw = localStorage.getItem('firebaseConfig');
+  if (!raw) return false;
+  let config;
+  try { config = JSON.parse(raw); } catch { return false; }
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(config);
+    }
+    db = firebase.firestore();
+    auth = firebase.auth();
+    return true;
+  } catch (e) {
+    console.error('Firebase init error', e);
+    return false;
+  }
+}
+
+// =====================================================================
+// SETUP
+// =====================================================================
+function saveSetup() {
+  const configRaw = document.getElementById('setup-firebase-config').value.trim();
+  const claudeKey = document.getElementById('setup-claude-key').value.trim();
+  if (!configRaw) { showToast('Please enter Firebase config', 'error'); return; }
+  let config;
+  try { config = JSON.parse(configRaw); } catch {
+    showToast(t('configError'), 'error'); return;
+  }
+  if (!config.apiKey || !config.projectId) {
+    showToast(t('configError'), 'error'); return;
+  }
+  localStorage.setItem('firebaseConfig', configRaw);
+  if (claudeKey) localStorage.setItem('claudeKey', claudeKey);
+  if (initFirebase()) {
+    setupAuthListener();
+    showScreen('auth-screen');
+    setLang(currentLang);
+  } else {
+    showToast(t('configError'), 'error');
+  }
+}
+
+function resetSetup() {
+  if (!confirm('Reset all settings? You will be signed out.')) return;
+  if (auth) auth.signOut().catch(() => {});
+  localStorage.removeItem('firebaseConfig');
+  localStorage.removeItem('claudeKey');
+  if (recipesListener) { recipesListener(); recipesListener = null; }
+  allRecipes = [];
+  showScreen('setup-screen');
+}
+
+// =====================================================================
+// AUTH
+// =====================================================================
+function setupAuthListener() {
+  if (!auth) return;
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      currentUser = user;
+      showScreen('app-screen');
+      setLang(currentLang);
+      renderHeaderAvatar();
+      renderSettingsProfile();
+      subscribeRecipes();
+      checkShareParam();
+    } else {
+      currentUser = null;
+      if (recipesListener) { recipesListener(); recipesListener = null; }
+      showScreen('auth-screen');
+    }
+  });
+}
+
+function signInGoogle() {
+  if (!auth) { showToast(t('configError'), 'error'); return; }
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(e => showToast(t('errorFirebase') + e.message, 'error'));
+}
+
+function signOutUser() {
+  if (!confirm(t('signOut') + '?')) return;
+  if (recipesListener) { recipesListener(); recipesListener = null; }
+  auth.signOut();
+}
+
+// =====================================================================
+// HEADER
+// =====================================================================
+function renderHeaderAvatar() {
+  const el = document.getElementById('header-avatar');
+  if (!currentUser) { el.innerHTML = ''; return; }
+  if (currentUser.photoURL) {
+    el.innerHTML = `<img class="user-avatar" src="${escHtml(currentUser.photoURL)}" alt="avatar">`;
+  } else {
+    const initial = (currentUser.displayName || currentUser.email || '?')[0].toUpperCase();
+    el.innerHTML = `<div class="user-avatar-placeholder">${escHtml(initial)}</div>`;
+  }
+}
+
+function renderSettingsProfile() {
+  const el = document.getElementById('settings-profile');
+  if (!el || !currentUser) return;
+  const photo = currentUser.photoURL
+    ? `<img class="profile-img" src="${escHtml(currentUser.photoURL)}" alt="avatar">`
+    : `<div class="profile-img-placeholder">${escHtml((currentUser.displayName || currentUser.email || '?')[0].toUpperCase())}</div>`;
+  el.innerHTML = `
+    ${photo}
+    <div class="profile-info">
+      <h3>${escHtml(currentUser.displayName || '')}</h3>
+      <p>${escHtml(currentUser.email || '')}</p>
+    </div>
+  `;
+  // Set saved claude key
+  const ck = document.getElementById('settings-claude-key');
+  if (ck) ck.value = localStorage.getItem('claudeKey') || '';
+}
+
+function saveClaudeKey() {
+  const val = document.getElementById('settings-claude-key').value.trim();
+  if (val) { localStorage.setItem('claudeKey', val); showToast(t('save') + '!', 'success'); }
+}
+
+// =====================================================================
+// RECIPES FIRESTORE
+// =====================================================================
+function subscribeRecipes() {
+  if (!db || !currentUser) return;
+  if (recipesListener) recipesListener();
+  recipesListener = db.collection('users').doc(currentUser.uid)
+    .collection('recipes').orderBy('createdAt', 'desc')
+    .onSnapshot(snap => {
+      allRecipes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      filterRecipes();
+    }, e => console.error('Firestore error', e));
+}
+
+async function saveRecipe(data) {
+  if (!db || !currentUser) throw new Error('Not authenticated');
+  const col = db.collection('users').doc(currentUser.uid).collection('recipes');
+  if (editingRecipeId) {
+    data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+    await col.doc(editingRecipeId).update(data);
+    return editingRecipeId;
+  } else {
+    data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+    const ref = await col.add(data);
+    return ref.id;
+  }
+}
+
+async function deleteRecipe(id) {
+  if (!confirm(t('confirmDelete'))) return;
+  showLoading(t('savingRecipe'));
+  try {
+    await db.collection('users').doc(currentUser.uid).collection('recipes').doc(id).delete();
+    showToast(t('recipeDeleted'), 'info');
+    closeModal();
+  } catch (e) { showToast(t('errorFirebase') + e.message, 'error'); }
+  finally { hideLoading(); }
+}
+
+// =====================================================================
+// VIEWS
+// =====================================================================
+function switchView(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  const nb = document.getElementById('nav-' + view);
+  if (nb) nb.classList.add('active');
+  if (view === 'shopping') renderShoppingView();
+  if (view === 'settings') renderSettingsProfile();
+}
+
+// =====================================================================
+// RECIPE LIST & FILTER
+// =====================================================================
+function renderCategoryFilters() {
+  const cats = ['all', 'breakfast', 'lunch', 'dinner', 'dessert', 'snack', 'drink', 'other'];
+  const container = document.getElementById('category-filters');
+  if (!container) return;
+  container.innerHTML = cats.map(c => `
+    <button class="cat-chip ${currentCategory === c ? 'active' : ''}" onclick="selectCategory('${c}')">
+      ${c === 'all' ? t('allCategories') : (CATEGORY_EMOJIS[c] || '') + ' ' + t(c)}
+    </button>
+  `).join('');
+}
+
+function selectCategory(cat) {
+  currentCategory = cat;
+  renderCategoryFilters();
+  filterRecipes();
+}
+
+function filterRecipes() {
+  const q = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
+  filteredRecipes = allRecipes.filter(r => {
+    const matchCat = currentCategory === 'all' || r.category === currentCategory;
+    const matchQ = !q ||
+      (r.name && r.name.toLowerCase().includes(q)) ||
+      (r.tags && r.tags.join(' ').toLowerCase().includes(q)) ||
+      (r.notes && r.notes.toLowerCase().includes(q)) ||
+      (r.ingredients && r.ingredients.some(i => i.name && i.name.toLowerCase().includes(q)));
+    return matchCat && matchQ;
+  });
+  renderRecipeGrid();
+}
+
+function renderRecipeGrid() {
+  const grid = document.getElementById('recipe-grid');
+  if (!grid) return;
+  if (filteredRecipes.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1;">
+        <div class="empty-icon">🍳</div>
+        <h3>${escHtml(t('emptyTitle'))}</h3>
+        <p>${escHtml(t('emptyText'))}</p>
+      </div>`;
+    return;
+  }
+  grid.innerHTML = filteredRecipes.map(r => {
+    const totalTime = (r.prepTime || 0) + (r.cookTime || 0);
+    const timeStr = totalTime ? `⏱ ${totalTime} ${t('min')}` : '';
+    const diffClass = r.difficulty ? `diff-${r.difficulty}` : 'diff-easy';
+    const diffLabel = r.difficulty ? t(r.difficulty) : '';
+    const stars = r.rating ? '★'.repeat(r.rating) : '';
+    let imgHtml;
+    if (r.images && r.images.length > 0) {
+      imgHtml = `<img class="card-image" src="${r.images[0]}" alt="${escHtml(r.name)}" loading="lazy">`;
+    } else {
+      imgHtml = `<div class="card-emoji-thumb">${CATEGORY_EMOJIS[r.category] || '🍽️'}</div>`;
+    }
+    return `
+      <div class="recipe-card" onclick="openRecipeDetail('${escHtml(r.id)}')">
+        ${imgHtml}
+        <div class="card-body">
+          <div class="card-name">${escHtml(r.name)}</div>
+          <div class="card-meta">
+            <span class="card-time">${escHtml(timeStr)}</span>
+            ${diffLabel ? `<span class="difficulty-badge ${diffClass}">${escHtml(diffLabel)}</span>` : ''}
+          </div>
+          ${stars ? `<div class="card-rating" style="margin-top:4px;">${escHtml(stars)}</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// =====================================================================
+// RECIPE DETAIL MODAL
+// =====================================================================
+function openRecipeDetail(id, readOnly = false, sharedUid = null) {
+  const recipe = allRecipes.find(r => r.id === id);
+  if (!recipe && !sharedUid) return;
+  if (sharedUid && !recipe) {
+    // Load from Firestore
+    showLoading(t('loadingRecipe'));
+    db.collection('users').doc(sharedUid).collection('recipes').doc(id).get()
+      .then(doc => {
+        hideLoading();
+        if (!doc.exists) { showToast(t('errorNoRecipe'), 'error'); return; }
+        renderRecipeDetailModal({ id: doc.id, ...doc.data() }, true, sharedUid);
+      })
+      .catch(e => { hideLoading(); showToast(t('errorFirebase') + e.message, 'error'); });
+    return;
+  }
+  renderRecipeDetailModal(recipe, readOnly, sharedUid);
+}
+
+function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
+  const heroHtml = (recipe.images && recipe.images.length > 0)
+    ? `<img class="detail-hero" src="${recipe.images[0]}" alt="${escHtml(recipe.name)}">`
+    : `<div class="detail-hero-emoji">${CATEGORY_EMOJIS[recipe.category] || '🍽️'}</div>`;
+
+  const metaItems = [
+    recipe.prepTime ? `<div class="meta-chip"><span class="mc-icon">🥄</span><span>${escHtml(t('prepTime'))}: ${recipe.prepTime} ${t('min')}</span></div>` : '',
+    recipe.cookTime ? `<div class="meta-chip"><span class="mc-icon">🔥</span><span>${escHtml(t('cookTime'))}: ${recipe.cookTime} ${t('min')}</span></div>` : '',
+    recipe.servings ? `<div class="meta-chip"><span class="mc-icon">👥</span><span>${escHtml(t('servings'))}: ${recipe.servings}</span></div>` : '',
+    recipe.difficulty ? `<div class="meta-chip"><span class="difficulty-badge diff-${escHtml(recipe.difficulty)}">${escHtml(t(recipe.difficulty))}</span></div>` : '',
+    recipe.rating ? `<div class="meta-chip"><span>${'★'.repeat(recipe.rating)}${'☆'.repeat(5 - recipe.rating)}</span></div>` : '',
+  ].filter(Boolean).join('');
+
+  const ingredientsHtml = (recipe.ingredients && recipe.ingredients.length > 0)
+    ? recipe.ingredients.map((ing, i) => `
+        <label class="ingredient-check-item" id="ing-item-${i}">
+          <input type="checkbox" onchange="toggleIngCheck(${i})">
+          <span>${escHtml(ing.quantity || '')} ${escHtml(ing.unit || '')} ${escHtml(ing.name || '')}</span>
+        </label>`).join('')
+    : `<p style="color:var(--c-text-muted);font-size:14px;">${t('noIngredients')}</p>`;
+
+  const stepsHtml = (recipe.steps && recipe.steps.length > 0)
+    ? recipe.steps.map((s, i) => `
+        <div class="step-item">
+          <div class="step-badge">${i + 1}</div>
+          <div class="step-text">${escHtml(s)}</div>
+        </div>`).join('')
+    : '';
+
+  const tagsHtml = (recipe.tags && recipe.tags.length > 0)
+    ? `<div class="detail-section">
+        <h3>${t('tags')}</h3>
+        <div class="tags-list">${recipe.tags.map(tg => `<span class="tag-pill">${escHtml(tg)}</span>`).join('')}</div>
+       </div>` : '';
+
+  const notesHtml = recipe.notes
+    ? `<div class="detail-section"><h3>${t('notes')}</h3><p style="font-size:14px;line-height:1.6;">${escHtml(recipe.notes)}</p></div>` : '';
+
+  const sourceHtml = recipe.sourceUrl
+    ? `<div class="detail-section"><h3>${t('source')}</h3><a href="${escHtml(recipe.sourceUrl)}" target="_blank" rel="noopener" style="font-size:14px;word-break:break-all;">${escHtml(recipe.sourceUrl)}</a></div>` : '';
+
+  const actionsHtml = readOnly
+    ? `<div class="share-view-banner">
+        <span>${t('readOnly')}</span>
+        <button class="btn-save-recipe" onclick="saveSharedRecipe()">${t('saveToMyRecipes')}</button>
+       </div>`
+    : `<div class="detail-actions">
+        <button class="action-btn" onclick="openEditRecipe('${escHtml(recipe.id)}')">
+          <span class="ab-icon">✏️</span><span>${t('edit')}</span>
+        </button>
+        <button class="action-btn" onclick="shareRecipe('${escHtml(recipe.id)}')">
+          <span class="ab-icon">🔗</span><span>${t('share')}</span>
+        </button>
+        <button class="action-btn" onclick="window.print()">
+          <span class="ab-icon">🖨️</span><span>${t('print')}</span>
+        </button>
+        <button class="action-btn" onclick="addRecipeToShopping('${escHtml(recipe.id)}')">
+          <span class="ab-icon">🛒</span><span>${t('addToShopping')}</span>
+        </button>
+        <button class="action-btn danger" onclick="deleteRecipe('${escHtml(recipe.id)}')">
+          <span class="ab-icon">🗑️</span><span>${t('deleteRecipe')}</span>
+        </button>
+       </div>`;
+
+  // Store for potential save
+  window._sharedRecipeData = recipe;
+
+  openModal(`
+    <div class="modal-sheet modal-full" id="detail-sheet">
+      <div class="modal-header">
+        <div class="modal-title">${escHtml(recipe.name)}</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div style="overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;">
+        ${heroHtml}
+        <div class="detail-meta-bar">${metaItems}</div>
+        <div class="detail-section">
+          <h3>${t('ingredients')}</h3>
+          ${ingredientsHtml}
+        </div>
+        ${stepsHtml ? `<div class="detail-section"><h3>${t('steps')}</h3>${stepsHtml}</div>` : ''}
+        ${tagsHtml}
+        ${notesHtml}
+        ${sourceHtml}
+        ${actionsHtml}
+      </div>
+    </div>`);
+}
+
+function toggleIngCheck(i) {
+  const item = document.getElementById('ing-item-' + i);
+  if (item) item.classList.toggle('checked', item.querySelector('input').checked);
+}
+
+// =====================================================================
+// ADD RECIPE MODAL (TABS)
+// =====================================================================
+function openAddRecipeModal() {
+  pendingImages = [];
+  formRating = 0;
+  openModal(`
+    <div class="modal-sheet modal-lg">
+      <div class="modal-header">
+        <div class="modal-title">${t('addRecipe')}</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab(this,'tab-image')">${t('tabImage')}</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-url')">${t('tabUrl')}</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-video')">${t('tabVideo')}</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-text')">${t('tabText')}</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-manual')">${t('tabManual')}</button>
+      </div>
+      <!-- TAB: IMAGE -->
+      <div class="tab-content active" id="tab-image">
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()"
+          ondragover="event.preventDefault();this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="handleDrop(event)">
+          <div class="upload-icon">📷</div>
+          <p>${t('uploadHint')}</p>
+          <p style="font-size:12px;color:var(--c-text-light);margin-top:6px;">${t('uploadHint2')}</p>
+        </div>
+        <input type="file" id="file-input" accept="image/*" capture="environment" multiple style="display:none" onchange="handleFileInput(event)">
+        <div class="image-previews" id="image-previews-add"></div>
+        <button class="btn-primary mt-12" onclick="analyzeImages()">${t('analyzeImage')}</button>
+      </div>
+      <!-- TAB: URL -->
+      <div class="tab-content" id="tab-url">
+        <div class="input-group">
+          <label>${t('tabUrl')}</label>
+          <input type="url" id="url-input" placeholder="${t('urlPlaceholder')}">
+        </div>
+        <button class="btn-primary" onclick="analyzeUrl()">${t('analyzeUrl')}</button>
+      </div>
+      <!-- TAB: VIDEO -->
+      <div class="tab-content" id="tab-video">
+        <div class="input-group">
+          <label>${t('tabVideo')}</label>
+          <input type="url" id="video-input" placeholder="${t('videoPh')}">
+          <p style="font-size:12px;color:var(--c-text-muted);margin-top:6px;">${t('videoHint')}</p>
+        </div>
+        <button class="btn-primary" onclick="analyzeVideo()">${t('analyzeUrl')}</button>
+      </div>
+      <!-- TAB: TEXT -->
+      <div class="tab-content" id="tab-text">
+        <div class="input-group">
+          <label>${t('tabText')}</label>
+          <textarea id="text-input" placeholder="${t('textPh')}" style="min-height:200px;"></textarea>
+        </div>
+        <button class="btn-primary" onclick="analyzeTextInput()">${t('analyzeText')}</button>
+      </div>
+      <!-- TAB: MANUAL -->
+      <div class="tab-content" id="tab-manual">
+        <p style="font-size:14px;color:var(--c-text-muted);margin-bottom:12px;">${t('formTitle')}</p>
+        <button class="btn-primary" onclick="openRecipeForm({})">${t('tabManual')} →</button>
+      </div>
+    </div>`);
+}
+
+function switchTab(btn, tabId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+}
+
+// =====================================================================
+// FILE HANDLING
+// =====================================================================
+async function handleFileInput(event) {
+  const files = Array.from(event.target.files);
+  for (const file of files) {
+    const compressed = await compressImage(file);
+    pendingImages.push(compressed);
+  }
+  renderImagePreviews();
+}
+
+function handleDrop(event) {
+  event.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag-over');
+  const files = Array.from(event.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+  if (!files.length) return;
+  Promise.all(files.map(f => compressImage(f))).then(imgs => {
+    pendingImages.push(...imgs);
+    renderImagePreviews();
+  });
+}
+
+function renderImagePreviews() {
+  const container = document.getElementById('image-previews-add');
+  if (!container) return;
+  container.innerHTML = pendingImages.map((src, i) => `
+    <div class="img-preview-wrap">
+      <img src="${src}" alt="preview ${i}">
+      <button class="img-preview-del" onclick="removeAddImage(${i})">✕</button>
+    </div>`).join('');
+}
+
+function removeAddImage(i) {
+  pendingImages.splice(i, 1);
+  renderImagePreviews();
+}
+
+// =====================================================================
+// CLAUDE API
+// =====================================================================
+function getClaudeKey() {
+  return localStorage.getItem('claudeKey') || '';
+}
+
+async function callClaude(messages, maxTokens = 1500) {
+  const key = getClaudeKey();
+  if (!key) throw new Error(t('errorNoKey'));
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-opus-4-5',
+      max_tokens: maxTokens,
+      messages,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err.error && err.error.message) || `HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  return data.content[0].text;
+}
+
+const RECIPE_PROMPT = `You are a recipe parser. Extract the complete recipe from the provided content.
+Return ONLY valid JSON with this exact structure:
+{"name":"...","ingredients":[{"name":"...","quantity":"...","unit":"..."}],"steps":["..."],"prepTime":15,"cookTime":30,"servings":4,"difficulty":"easy","category":"dinner","notes":"...","sourceUrl":""}
+difficulty: "easy", "medium", or "hard"
+category: breakfast/lunch/dinner/dessert/snack/drink/other
+Times in minutes (integers). Use null if unknown.
+Use same language as the input content.
+If no recipe found, return {"error":"No recipe found"}`;
+
+function parseClaudeResponse(text) {
+  // Strip markdown code blocks
+  let cleaned = text.replace(/```json?\n?/g, '').replace(/```\n?/g, '').trim();
+  // Find first { ... }
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
+  if (start === -1 || end === -1) throw new Error(t('errorParseJson'));
+  cleaned = cleaned.substring(start, end + 1);
+  const obj = JSON.parse(cleaned);
+  if (obj.error) throw new Error(t('errorNoRecipe'));
+  return obj;
+}
+
+// =====================================================================
+// ANALYZE IMAGE
+// =====================================================================
+async function analyzeImages() {
+  if (pendingImages.length === 0) {
+    showToast('Please add at least one image', 'error');
+    return;
+  }
+  showLoading(t('analyzingImage'));
+  try {
+    const contentParts = [{ type: 'text', text: RECIPE_PROMPT + '\nAnalyze the recipe from these images:' }];
+    for (const img of pendingImages.slice(0, 4)) {
+      const b64 = img.split(',')[1];
+      contentParts.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } });
+    }
+    const response = await callClaude([{ role: 'user', content: contentParts }]);
+    const parsed = parseClaudeResponse(response);
+    parsed.images = pendingImages;
+    pendingImages = [];
+    hideLoading();
+    openRecipeForm(parsed);
+  } catch (e) {
+    hideLoading();
+    showToast(e.message, 'error');
+  }
+}
+
+// =====================================================================
+// ANALYZE URL
+// =====================================================================
+async function analyzeUrl() {
+  const url = document.getElementById('url-input').value.trim();
+  if (!url) { showToast(t('invalidUrl'), 'error'); return; }
+  showLoading(t('fetchingPage'));
+  try {
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const res = await fetch(proxyUrl);
+    const data = await res.json();
+    let content = data.contents || '';
+    // Strip HTML tags
+    content = content.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ').trim().substring(0, 6000);
+    showLoading(t('analyzingUrl'));
+    const response = await callClaude([{
+      role: 'user',
+      content: RECIPE_PROMPT + `\n\nSource URL: ${url}\n\nPage content:\n${content}`
+    }]);
+    const parsed = parseClaudeResponse(response);
+    if (!parsed.sourceUrl) parsed.sourceUrl = url;
+    hideLoading();
+    openRecipeForm(parsed);
+  } catch (e) {
+    hideLoading();
+    showToast(e.message, 'error');
+  }
+}
+
+// =====================================================================
+// ANALYZE VIDEO
+// =====================================================================
+async function analyzeVideo() {
+  const url = document.getElementById('video-input').value.trim();
+  if (!url) { showToast(t('invalidUrl'), 'error'); return; }
+
+  showLoading(t('analyzingVideo'));
+  let content = '';
+
+  try {
+    // Extract YouTube video ID
+    const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+    if (ytMatch) {
+      const videoId = ytMatch[1];
+      // Try captions in order
+      const langs = ['he', 'ru', 'en', 'iw'];
+      for (const lang of langs) {
+        try {
+          const captionUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${lang}&fmt=json3`;
+          const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(captionUrl)}`;
+          const res = await fetch(proxyUrl);
+          const data = await res.json();
+          if (data.contents && data.contents.length > 10) {
+            try {
+              const captionData = JSON.parse(data.contents);
+              if (captionData.events) {
+                content = captionData.events
+                  .map(e => e.segs ? e.segs.map(s => s.utf8).join('') : '')
+                  .join(' ').trim();
+                if (content.length > 100) break;
+              }
+            } catch { content = data.contents.substring(0, 4000); }
+          }
+        } catch { /* try next lang */ }
+      }
+      // Also fetch video description via proxy
+      if (content.length < 200) {
+        try {
+          const pageUrl = `https://www.youtube.com/watch?v=${videoId}`;
+          const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(pageUrl)}`;
+          const res = await fetch(proxyUrl);
+          const data = await res.json();
+          let text = (data.contents || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+          content = (content + ' ' + text).substring(0, 6000);
+        } catch { /* ignore */ }
+      }
+    } else {
+      // Generic URL (TikTok etc) — just fetch page
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+      const res = await fetch(proxyUrl);
+      const data = await res.json();
+      content = (data.contents || '')
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ').trim().substring(0, 6000);
+    }
+
+    if (!content || content.length < 50) {
+      throw new Error(t('errorNoRecipe'));
+    }
+
+    const response = await callClaude([{
+      role: 'user',
+      content: RECIPE_PROMPT + `\n\nVideo source: ${url}\n\nContent/captions:\n${content}`
+    }]);
+    const parsed = parseClaudeResponse(response);
+    if (!parsed.sourceUrl) parsed.sourceUrl = url;
+    hideLoading();
+    openRecipeForm(parsed);
+  } catch (e) {
+    hideLoading();
+    showToast(e.message, 'error');
+  }
+}
+
+// =====================================================================
+// ANALYZE TEXT
+// =====================================================================
+async function analyzeTextInput() {
+  const text = document.getElementById('text-input').value.trim();
+  if (!text) { showToast('Please enter text', 'error'); return; }
+  showLoading(t('analyzingText'));
+  try {
+    const response = await callClaude([{
+      role: 'user',
+      content: RECIPE_PROMPT + `\n\nRecipe text:\n${text}`
+    }]);
+    const parsed = parseClaudeResponse(response);
+    hideLoading();
+    openRecipeForm(parsed);
+  } catch (e) {
+    hideLoading();
+    showToast(e.message, 'error');
+  }
+}
+
+// =====================================================================
+// RECIPE FORM
+// =====================================================================
+function openEditRecipe(id) {
+  const recipe = allRecipes.find(r => r.id === id);
+  if (!recipe) return;
+  editingRecipeId = id;
+  pendingImages = recipe.images ? [...recipe.images] : [];
+  formRating = recipe.rating || 0;
+  closeModal();
+  setTimeout(() => openRecipeForm(recipe), 50);
+}
+
+function openRecipeForm(data = {}) {
+  editingRecipeId = editingRecipeId || null;
+  if (data.images) pendingImages = [...data.images];
+  formRating = data.rating || formRating || 0;
+
+  const ings = (data.ingredients && data.ingredients.length > 0)
+    ? data.ingredients
+    : [{ name: '', quantity: '', unit: '' }];
+
+  const steps = (data.steps && data.steps.length > 0)
+    ? data.steps
+    : [''];
+
+  const categories = ['breakfast', 'lunch', 'dinner', 'dessert', 'snack', 'drink', 'other'];
+  const difficulties = ['easy', 'medium', 'hard'];
+
+  openModal(`
+    <div class="modal-sheet modal-full">
+      <div class="modal-header">
+        <div class="modal-title">${t('formTitle')}</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Name -->
+        <div class="form-section">
+          <div class="input-group">
+            <label>${t('fieldName')} *</label>
+            <input type="text" id="f-name" value="${escHtml(data.name || '')}" placeholder="${t('fieldName')}">
+          </div>
+        </div>
+
+        <!-- Images -->
+        <div class="form-section">
+          <div class="form-section-title">${t('fieldImages')}</div>
+          <div class="upload-zone" style="padding:16px;" onclick="document.getElementById('form-file-input').click()">
+            <p style="font-size:13px;">📷 ${t('uploadHint')}</p>
+          </div>
+          <input type="file" id="form-file-input" accept="image/*" capture="environment" multiple style="display:none" onchange="handleFormFileInput(event)">
+          <div class="image-previews mt-8" id="form-image-previews"></div>
+        </div>
+
+        <!-- Ingredients -->
+        <div class="form-section">
+          <div class="form-section-title">${t('fieldIngredients')}</div>
+          <ul class="ingredients-list" id="ingredients-list">
+            ${ings.map((ing, i) => ingredientRowHtml(i, ing)).join('')}
+          </ul>
+          <button class="add-row-btn" onclick="addIngredientRow()">${t('addIngredient')}</button>
+        </div>
+
+        <!-- Steps -->
+        <div class="form-section">
+          <div class="form-section-title">${t('fieldSteps')}</div>
+          <ul class="steps-list" id="steps-list">
+            ${steps.map((s, i) => stepRowHtml(i, s)).join('')}
+          </ul>
+          <button class="add-row-btn" onclick="addStepRow()">${t('addStep')}</button>
+        </div>
+
+        <!-- Meta -->
+        <div class="form-section">
+          <div class="form-section-title">${t('difficulty')} & ${t('fieldCategory')}</div>
+          <div class="meta-grid">
+            <div class="input-group">
+              <label>${t('fieldPrepTime')}</label>
+              <input type="number" id="f-prep" value="${escHtml(String(data.prepTime || ''))}" min="0" placeholder="0">
+            </div>
+            <div class="input-group">
+              <label>${t('fieldCookTime')}</label>
+              <input type="number" id="f-cook" value="${escHtml(String(data.cookTime || ''))}" min="0" placeholder="0">
+            </div>
+            <div class="input-group">
+              <label>${t('fieldServings')}</label>
+              <input type="number" id="f-servings" value="${escHtml(String(data.servings || ''))}" min="1" placeholder="4">
+            </div>
+            <div class="input-group">
+              <label>${t('fieldDifficulty')}</label>
+              <select id="f-difficulty">
+                <option value="">--</option>
+                ${difficulties.map(d => `<option value="${d}" ${data.difficulty === d ? 'selected' : ''}>${t(d)}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="input-group mt-12">
+            <label>${t('fieldCategory')}</label>
+            <select id="f-category">
+              <option value="">--</option>
+              ${categories.map(c => `<option value="${c}" ${data.category === c ? 'selected' : ''}>${t(c)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+
+        <!-- Rating -->
+        <div class="form-section">
+          <div class="form-section-title">${t('fieldRating')}</div>
+          <div class="star-rating" id="star-rating-row">
+            ${[1,2,3,4,5].map(n => `<button class="star-btn ${formRating >= n ? 'active' : ''}" onclick="setFormRating(${n})">★</button>`).join('')}
+          </div>
+        </div>
+
+        <!-- Tags, Notes, Source -->
+        <div class="form-section">
+          <div class="input-group">
+            <label>${t('fieldTags')}</label>
+            <input type="text" id="f-tags" value="${escHtml((data.tags || []).join(', '))}" placeholder="${t('fieldTags')}">
+          </div>
+          <div class="input-group">
+            <label>${t('fieldNotes')}</label>
+            <textarea id="f-notes">${escHtml(data.notes || '')}</textarea>
+          </div>
+          <div class="input-group">
+            <label>${t('fieldSourceUrl')}</label>
+            <input type="url" id="f-source" value="${escHtml(data.sourceUrl || '')}" placeholder="https://...">
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline" onclick="closeModal()" style="flex:1">${t('cancel')}</button>
+        <button class="btn-primary" onclick="submitRecipeForm()" style="flex:2">${t('saveRecipe')}</button>
+      </div>
+    </div>`);
+
+  renderFormImagePreviews();
+}
+
+function ingredientRowHtml(i, ing) {
+  return `<li class="ingredient-row" id="ing-row-${i}">
+    <input type="text" class="ing-name" value="${escHtml(ing.name || '')}" placeholder="${t('fieldIngName')}">
+    <input type="text" class="qty-input" value="${escHtml(ing.quantity || '')}" placeholder="${t('fieldQty')}">
+    <input type="text" class="unit-input" value="${escHtml(ing.unit || '')}" placeholder="${t('fieldUnit')}">
+    <button class="row-del" onclick="removeRow('ing-row-${i}')">✕</button>
+  </li>`;
+}
+
+function stepRowHtml(i, text) {
+  return `<li class="step-row" id="step-row-${i}">
+    <div class="step-num">${i + 1}</div>
+    <textarea class="step-text-input" rows="2">${escHtml(text || '')}</textarea>
+    <button class="row-del" onclick="removeRow('step-row-${i}')">✕</button>
+  </li>`;
+}
+
+function addIngredientRow() {
+  const list = document.getElementById('ingredients-list');
+  const i = list.children.length;
+  const li = document.createElement('li');
+  li.id = `ing-row-${i}`;
+  li.className = 'ingredient-row';
+  li.innerHTML = `
+    <input type="text" class="ing-name" placeholder="${t('fieldIngName')}">
+    <input type="text" class="qty-input" placeholder="${t('fieldQty')}">
+    <input type="text" class="unit-input" placeholder="${t('fieldUnit')}">
+    <button class="row-del" onclick="removeRow('ing-row-${i}')">✕</button>`;
+  list.appendChild(li);
+  li.querySelector('.ing-name').focus();
+}
+
+function addStepRow() {
+  const list = document.getElementById('steps-list');
+  const i = list.children.length;
+  const li = document.createElement('li');
+  li.id = `step-row-${i}`;
+  li.className = 'step-row';
+  li.innerHTML = `
+    <div class="step-num">${i + 1}</div>
+    <textarea class="step-text-input" rows="2"></textarea>
+    <button class="row-del" onclick="removeRow('step-row-${i}')">✕</button>`;
+  list.appendChild(li);
+  li.querySelector('textarea').focus();
+  renumberSteps();
+}
+
+function removeRow(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+  renumberSteps();
+}
+
+function renumberSteps() {
+  document.querySelectorAll('#steps-list .step-row').forEach((row, i) => {
+    const badge = row.querySelector('.step-num');
+    if (badge) badge.textContent = i + 1;
+  });
+}
+
+function setFormRating(n) {
+  formRating = n;
+  document.querySelectorAll('#star-rating-row .star-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i < n);
+  });
+}
+
+async function handleFormFileInput(event) {
+  const files = Array.from(event.target.files);
+  showLoading('Compressing...');
+  try {
+    for (const file of files) {
+      const compressed = await compressImage(file);
+      pendingImages.push(compressed);
+    }
+  } finally { hideLoading(); }
+  renderFormImagePreviews();
+}
+
+function renderFormImagePreviews() {
+  const container = document.getElementById('form-image-previews');
+  if (!container) return;
+  container.innerHTML = pendingImages.map((src, i) => `
+    <div class="img-preview-wrap">
+      <img src="${src}" alt="img ${i}">
+      <button class="img-preview-del" onclick="removeFormImage(${i})">✕</button>
+    </div>`).join('');
+}
+
+function removeFormImage(i) {
+  pendingImages.splice(i, 1);
+  renderFormImagePreviews();
+}
+
+async function submitRecipeForm() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { showToast(t('fieldName') + ' required', 'error'); return; }
+
+  // Collect ingredients
+  const ingRows = document.querySelectorAll('#ingredients-list .ingredient-row');
+  const ingredients = [];
+  ingRows.forEach(row => {
+    const n = row.querySelector('.ing-name').value.trim();
+    const q = row.querySelector('.qty-input').value.trim();
+    const u = row.querySelector('.unit-input').value.trim();
+    if (n) ingredients.push({ name: n, quantity: q, unit: u });
+  });
+
+  // Collect steps
+  const stepInputs = document.querySelectorAll('#steps-list .step-text-input');
+  const steps = Array.from(stepInputs).map(el => el.value.trim()).filter(Boolean);
+
+  // Tags
+  const tagsRaw = document.getElementById('f-tags').value.trim();
+  const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+  const data = {
+    name,
+    ingredients,
+    steps,
+    prepTime: parseInt(document.getElementById('f-prep').value) || null,
+    cookTime: parseInt(document.getElementById('f-cook').value) || null,
+    servings: parseInt(document.getElementById('f-servings').value) || null,
+    difficulty: document.getElementById('f-difficulty').value || null,
+    category: document.getElementById('f-category').value || 'other',
+    rating: formRating || null,
+    tags,
+    notes: document.getElementById('f-notes').value.trim() || null,
+    sourceUrl: document.getElementById('f-source').value.trim() || null,
+    images: pendingImages,
+  };
+
+  showLoading(t('savingRecipe'));
+  try {
+    await saveRecipe(data);
+    hideLoading();
+    closeModal();
+    showToast(editingRecipeId ? t('recipeUpdated') : t('recipeAdded'), 'success');
+    editingRecipeId = null;
+  } catch (e) {
+    hideLoading();
+    showToast(t('errorFirebase') + e.message, 'error');
+  }
+}
+
+// =====================================================================
+// SHARE
+// =====================================================================
+function shareRecipe(id) {
+  if (!currentUser) return;
+  const url = `${location.origin}${location.pathname}?r=${id}&u=${currentUser.uid}`;
+  if (navigator.share) {
+    navigator.share({ title: t('appName'), url });
+  } else {
+    navigator.clipboard.writeText(url).then(() => showToast(t('linkCopied'), 'success'));
+  }
+}
+
+function checkShareParam() {
+  const params = new URLSearchParams(location.search);
+  const rId = params.get('r');
+  const uId = params.get('u');
+  if (!rId || !uId) return;
+  // Clear the URL
+  history.replaceState({}, '', location.pathname);
+  setTimeout(() => openRecipeDetail(rId, true, uId), 500);
+}
+
+async function saveSharedRecipe() {
+  const recipe = window._sharedRecipeData;
+  if (!recipe) return;
+  showLoading(t('savingRecipe'));
+  const { id: _id, createdAt: _c, updatedAt: _u, ...data } = recipe;
+  try {
+    editingRecipeId = null;
+    await saveRecipe(data);
+    hideLoading();
+    closeModal();
+    showToast(t('recipeAdded'), 'success');
+  } catch (e) {
+    hideLoading();
+    showToast(t('errorFirebase') + e.message, 'error');
+  }
+}
+
+// =====================================================================
+// SHOPPING LIST
+// =====================================================================
+function addRecipeToShopping(id) {
+  if (!shoppingRecipeIds.includes(id)) {
+    shoppingRecipeIds.push(id);
+    localStorage.setItem('shoppingRecipeIds', JSON.stringify(shoppingRecipeIds));
+    rebuildShoppingList();
+    showToast(t('addedToShopping'), 'success');
+  }
+  closeModal();
+  switchView('shopping');
+}
+
+function rebuildShoppingList() {
+  // Consolidate ingredients from selected recipes
+  const consolidated = {};
+  shoppingRecipeIds.forEach(id => {
+    const recipe = allRecipes.find(r => r.id === id);
+    if (!recipe || !recipe.ingredients) return;
+    recipe.ingredients.forEach(ing => {
+      if (!ing.name) return;
+      const key = (ing.name + '|' + ing.unit).toLowerCase();
+      if (consolidated[key]) {
+        // Try to add quantities if numeric
+        const existQty = parseFloat(consolidated[key].quantity);
+        const newQty = parseFloat(ing.quantity);
+        if (!isNaN(existQty) && !isNaN(newQty)) {
+          consolidated[key].quantity = String(existQty + newQty);
+        } else if (ing.quantity && consolidated[key].quantity !== ing.quantity) {
+          consolidated[key].quantity += '+' + ing.quantity;
+        }
+      } else {
+        consolidated[key] = { name: ing.name, quantity: ing.quantity || '', unit: ing.unit || '', checked: false };
+      }
+    });
+  });
+
+  // Preserve checked state
+  const prevChecked = {};
+  shoppingList.forEach(item => { prevChecked[item.key] = item.checked; });
+
+  shoppingList = Object.entries(consolidated).map(([key, item]) => ({
+    key, ...item, checked: prevChecked[key] || false,
+  }));
+  localStorage.setItem('shoppingList', JSON.stringify(shoppingList));
+}
+
+function renderShoppingView() {
+  const chipsContainer = document.getElementById('recipe-chips-container');
+  const listEl = document.getElementById('shopping-list-ul');
+  if (!chipsContainer || !listEl) return;
+
+  // Re-sync in case recipes changed
+  rebuildShoppingList();
+
+  // Recipe chips
+  if (shoppingRecipeIds.length === 0) {
+    chipsContainer.innerHTML = '';
+  } else {
+    chipsContainer.innerHTML = shoppingRecipeIds.map(id => {
+      const recipe = allRecipes.find(r => r.id === id);
+      if (!recipe) return '';
+      return `
+        <div class="recipe-chip selected">
+          <span>${escHtml(recipe.name)}</span>
+          <button class="chip-remove" onclick="removeShoppingRecipe('${escHtml(id)}')">✕</button>
+        </div>`;
+    }).join('');
+  }
+
+  // Shopping items
+  if (shoppingList.length === 0) {
+    listEl.innerHTML = `<li style="padding:20px;text-align:center;color:var(--c-text-muted);font-size:14px;">${t('noIngredients')}</li>`;
+    return;
+  }
+  listEl.innerHTML = shoppingList.map((item, i) => `
+    <li class="shopping-item ${item.checked ? 'checked' : ''}" id="shop-item-${i}">
+      <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggleShoppingItem(${i})">
+      <span class="shopping-item-text">${escHtml(item.name)}</span>
+      <span class="shopping-item-qty">${escHtml(item.quantity)} ${escHtml(item.unit)}</span>
+    </li>`).join('');
+}
+
+function toggleShoppingItem(i) {
+  shoppingList[i].checked = !shoppingList[i].checked;
+  localStorage.setItem('shoppingList', JSON.stringify(shoppingList));
+  const el = document.getElementById('shop-item-' + i);
+  if (el) el.classList.toggle('checked', shoppingList[i].checked);
+}
+
+function clearCheckedItems() {
+  shoppingList = shoppingList.filter(item => !item.checked);
+  localStorage.setItem('shoppingList', JSON.stringify(shoppingList));
+  renderShoppingView();
+}
+
+function removeShoppingRecipe(id) {
+  shoppingRecipeIds = shoppingRecipeIds.filter(r => r !== id);
+  localStorage.setItem('shoppingRecipeIds', JSON.stringify(shoppingRecipeIds));
+  rebuildShoppingList();
+  renderShoppingView();
+}
+
+function openAddRecipeToShoppingModal() {
+  const available = allRecipes.filter(r => !shoppingRecipeIds.includes(r.id));
+  if (available.length === 0) { showToast('No more recipes to add', 'info'); return; }
+  openModal(`
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-title">${t('selectRecipes')}</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        ${available.map(r => `
+          <div class="shopping-item" style="cursor:pointer;" onclick="addRecipeToShopping('${escHtml(r.id)}')">
+            <span class="shopping-item-text">${escHtml(r.name)}</span>
+          </div>`).join('')}
+      </div>
+    </div>`);
+}
+
+// =====================================================================
+// INIT
+// =====================================================================
+function init() {
+  // Apply lang
+  setLang(currentLang);
+
+  // Try to init Firebase
+  const hasConfig = !!localStorage.getItem('firebaseConfig');
+  if (hasConfig) {
+    if (initFirebase()) {
+      setupAuthListener();
+      showScreen('auth-screen');
+    } else {
+      showScreen('setup-screen');
+    }
+  } else {
+    showScreen('setup-screen');
+  }
+
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW:', e));
+  }
+
+  // Set up setup screen lang buttons
+  document.querySelectorAll('.setup-card [data-lang]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === currentLang);
+  });
+}
+
+// Run on DOM ready
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

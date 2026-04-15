@@ -1,0 +1,22 @@
+{
+  "name": "מתכוניה - Рецептник - RecipeBook",
+  "short_name": "מתכוניה",
+  "description": "Recipe management app with AI parsing",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#faf8f5",
+  "theme_color": "#e85d04",
+  "lang": "he",
+  "dir": "rtl",
+  "categories": ["food", "lifestyle"],
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": []
+}

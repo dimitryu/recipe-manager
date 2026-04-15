@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="#e85d04"/>
+
+  <!-- Pot body -->
+  <rect x="136" y="220" width="240" height="160" rx="24" ry="24" fill="#fff3e0"/>
+  <!-- Pot rim -->
+  <rect x="120" y="208" width="272" height="28" rx="14" ry="14" fill="#ffd180"/>
+  <!-- Pot handle left -->
+  <rect x="90" y="218" width="52" height="24" rx="12" ry="12" fill="#ffd180"/>
+  <!-- Pot handle right -->
+  <rect x="370" y="218" width="52" height="24" rx="12" ry="12" fill="#ffd180"/>
+
+  <!-- Lid -->
+  <ellipse cx="256" cy="208" rx="136" ry="18" fill="#ffab40"/>
+  <!-- Lid knob -->
+  <rect x="238" y="172" width="36" height="36" rx="18" ry="18" fill="#ff6d00"/>
+
+  <!-- Steam wisps -->
+  <path d="M200 158 Q208 140 200 122 Q192 104 200 86" stroke="#fff" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.7"/>
+  <path d="M256 150 Q264 132 256 114 Q248 96 256 78" stroke="#fff" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.7"/>
+  <path d="M312 158 Q320 140 312 122 Q304 104 312 86" stroke="#fff" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.7"/>
+
+  <!-- Fork and spoon inside pot suggestion -->
+  <rect x="220" y="240" width="14" height="80" rx="7" ry="7" fill="#e85d04" opacity="0.6"/>
+  <rect x="278" y="240" width="14" height="80" rx="7" ry="7" fill="#e85d04" opacity="0.6"/>
+  <ellipse cx="227" cy="236" rx="12" ry="16" fill="#e85d04" opacity="0.6"/>
+</svg>
