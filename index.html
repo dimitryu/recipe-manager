@@ -710,21 +710,26 @@ body.ltr .search-icon { right: auto; left: 14px; }
 @media (min-width: 768px) {
   .recipe-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
   .meta-grid { grid-template-columns: repeat(4, 1fr); }
-  .modal-sheet:not(.modal-full) {
-    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) !important;
+  #modal-container.open {
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-sheet {
     border-radius: var(--radius) !important;
-    max-height: 90vh; width: 90%; max-width: 680px;
+    width: 90%;
+    max-width: 720px;
+    max-height: 90vh;
     animation: zoomIn 0.25s ease !important;
   }
-  @keyframes zoomIn { from { opacity: 0; transform: translate(-50%, -50%) scale(0.95); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
-  .modal-sheet.modal-full {
-    top: 50%; left: 50%; transform: translate(-50%, -50%) !important;
-    border-radius: var(--radius) !important;
-    max-height: 92vh; width: 90%; max-width: 680px;
-    animation: zoomIn 0.25s ease !important;
+  .modal-sheet.modal-lg, .modal-sheet.modal-full {
+    max-width: 780px;
+    max-height: 90vh;
     height: auto;
   }
-  #modal-container.open { align-items: center; }
+  @keyframes zoomIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
+  }
 }
 
 /* ===== SELECT DARK FIX ===== */
@@ -882,6 +887,17 @@ service cloud.firestore {
         </div>
 
         <div class="settings-card">
+          <div class="settings-card-header" data-i18n="categoriesHeader">Categories</div>
+          <div class="settings-item" onclick="openManageCategoriesModal()">
+            <div class="settings-item-left">
+              <span class="settings-item-icon">🏷️</span>
+              <span class="settings-item-label" data-i18n="manageCategories">Manage Categories</span>
+            </div>
+            <span class="settings-item-arrow">›</span>
+          </div>
+        </div>
+
+        <div class="settings-card">
           <div class="settings-card-header" data-i18n="apiHeader">API Settings</div>
           <div class="settings-item-form">
             <label style="font-size:13px;font-weight:600;color:var(--c-text-muted);" data-i18n="claudeKeyLabel">Claude API Key</label>
@@ -962,13 +978,21 @@ const TRANSLATIONS = {
     resetSetup: 'איפוס הגדרות',
     save: 'שמור',
     allCategories: 'הכל',
-    breakfast: 'בוקר',
-    lunch: 'צהריים',
-    dinner: 'ערב',
-    dessert: 'קינוח',
-    snack: 'חטיף',
-    drink: 'שתייה',
-    other: 'אחר',
+    breakfast: 'בוקר', lunch: 'צהריים', dinner: 'ערב',
+    dessert: 'קינוח', snack: 'חטיף', drink: 'שתייה', other: 'אחר',
+    meat: 'בשרים', fish: 'דגים', chicken: 'עוף',
+    sides: 'תוספות', salads: 'סלטים', sandwiches: 'סנדוויצים',
+    manageCategories: 'ניהול קטגוריות',
+    categoriesHeader: 'קטגוריות',
+    addCategory: '+ הוסף קטגוריה',
+    categoryName: 'שם קטגוריה',
+    categoryEmoji: 'אמוג׳י',
+    translate: '🌐 תרגם',
+    translating: 'מתרגם...',
+    translateTitle: 'תרגם מתכון',
+    translateTo: 'תרגם ל:',
+    translateHe: 'עברית', translateRu: 'רוסית', translateEn: 'אנגלית',
+    translatedBadge: '(מתורגם)',
     addRecipe: 'הוסף מתכון',
     tabImage: '📷 תמונה',
     tabUrl: '🔗 כתובת URL',
@@ -1076,13 +1100,21 @@ const TRANSLATIONS = {
     resetSetup: 'Сбросить настройки',
     save: 'Сохранить',
     allCategories: 'Все',
-    breakfast: 'Завтрак',
-    lunch: 'Обед',
-    dinner: 'Ужин',
-    dessert: 'Десерт',
-    snack: 'Перекус',
-    drink: 'Напиток',
-    other: 'Другое',
+    breakfast: 'Завтрак', lunch: 'Обед', dinner: 'Ужин',
+    dessert: 'Десерт', snack: 'Перекус', drink: 'Напиток', other: 'Другое',
+    meat: 'Мясные', fish: 'Рыба', chicken: 'Птица',
+    sides: 'Гарниры', salads: 'Салаты', sandwiches: 'Бутерброды',
+    manageCategories: 'Управление категориями',
+    categoriesHeader: 'Категории',
+    addCategory: '+ Добавить категорию',
+    categoryName: 'Название категории',
+    categoryEmoji: 'Эмодзи',
+    translate: '🌐 Перевести',
+    translating: 'Перевожу...',
+    translateTitle: 'Перевести рецепт',
+    translateTo: 'Перевести на:',
+    translateHe: 'Иврит', translateRu: 'Русский', translateEn: 'Английский',
+    translatedBadge: '(перевод)',
     addRecipe: 'Добавить рецепт',
     tabImage: '📷 Фото',
     tabUrl: '🔗 URL',
@@ -1190,13 +1222,21 @@ const TRANSLATIONS = {
     resetSetup: 'Reset setup',
     save: 'Save',
     allCategories: 'All',
-    breakfast: 'Breakfast',
-    lunch: 'Lunch',
-    dinner: 'Dinner',
-    dessert: 'Dessert',
-    snack: 'Snack',
-    drink: 'Drink',
-    other: 'Other',
+    breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner',
+    dessert: 'Dessert', snack: 'Snack', drink: 'Drink', other: 'Other',
+    meat: 'Meat', fish: 'Fish', chicken: 'Poultry',
+    sides: 'Sides', salads: 'Salads', sandwiches: 'Sandwiches',
+    manageCategories: 'Manage Categories',
+    categoriesHeader: 'Categories',
+    addCategory: '+ Add Category',
+    categoryName: 'Category name',
+    categoryEmoji: 'Emoji',
+    translate: '🌐 Translate',
+    translating: 'Translating...',
+    translateTitle: 'Translate Recipe',
+    translateTo: 'Translate to:',
+    translateHe: 'Hebrew', translateRu: 'Russian', translateEn: 'English',
+    translatedBadge: '(translated)',
     addRecipe: 'Add Recipe',
     tabImage: '📷 Image',
     tabUrl: '🔗 URL',
@@ -1284,8 +1324,21 @@ const TRANSLATIONS = {
 
 const CATEGORY_EMOJIS = {
   breakfast: '🍳', lunch: '🥗', dinner: '🍝', dessert: '🍰',
-  snack: '🥨', drink: '🥤', other: '🍽️'
+  snack: '🥨', drink: '🥤', other: '🍽️',
+  meat: '🥩', fish: '🐟', chicken: '🍗',
+  sides: '🍟', salads: '🥗', sandwiches: '🥪'
 };
+const DEFAULT_CATEGORIES = ['meat','chicken','fish','salads','sides','sandwiches','dessert','snack','drink','other'];
+
+let userCategories = JSON.parse(localStorage.getItem('userCategories') || 'null');
+function getCategories() {
+  return userCategories || [...DEFAULT_CATEGORIES];
+}
+function saveUserCategories(cats) {
+  userCategories = cats;
+  localStorage.setItem('userCategories', JSON.stringify(cats));
+  renderCategoryFilters();
+}
 
 // =====================================================================
 // APP STATE
@@ -1612,14 +1665,27 @@ function switchView(view) {
 // RECIPE LIST & FILTER
 // =====================================================================
 function renderCategoryFilters() {
-  const cats = ['all', 'breakfast', 'lunch', 'dinner', 'dessert', 'snack', 'drink', 'other'];
+  const cats = ['all', ...getCategories()];
   const container = document.getElementById('category-filters');
   if (!container) return;
-  container.innerHTML = cats.map(c => `
-    <button class="cat-chip ${currentCategory === c ? 'active' : ''}" onclick="selectCategory('${c}')">
-      ${c === 'all' ? t('allCategories') : (CATEGORY_EMOJIS[c] || '') + ' ' + t(c)}
-    </button>
-  `).join('');
+  container.innerHTML = cats.map(c => {
+    const label = c === 'all' ? t('allCategories') : (getCategoryLabel(c));
+    const emoji = c === 'all' ? '' : (getCategoryEmoji(c) + ' ');
+    return `<button class="cat-chip ${currentCategory === c ? 'active' : ''}" onclick="selectCategory('${escHtml(c)}')">${emoji}${escHtml(label)}</button>`;
+  }).join('');
+}
+
+function getCategoryLabel(c) {
+  // Check user-defined custom categories first
+  const custom = (JSON.parse(localStorage.getItem('customCategoryDefs') || '{}')).cats || {};
+  if (custom[c]) return custom[c].name;
+  return t(c) || c;
+}
+
+function getCategoryEmoji(c) {
+  const custom = (JSON.parse(localStorage.getItem('customCategoryDefs') || '{}')).cats || {};
+  if (custom[c]) return custom[c].emoji || '🍽️';
+  return CATEGORY_EMOJIS[c] || '🍽️';
 }
 
 function selectCategory(cat) {
@@ -1751,6 +1817,9 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
     : `<div class="detail-actions">
         <button class="action-btn" onclick="openEditRecipe('${escHtml(recipe.id)}')">
           <span class="ab-icon">✏️</span><span>${t('edit')}</span>
+        </button>
+        <button class="action-btn" onclick="openTranslateModal(window._sharedRecipeData)">
+          <span class="ab-icon">🌐</span><span>${t('translate')}</span>
         </button>
         <button class="action-btn" onclick="shareRecipe('${escHtml(recipe.id)}')">
           <span class="ab-icon">🔗</span><span>${t('share')}</span>
@@ -1978,7 +2047,8 @@ async function analyzeImages() {
     }
     const response = await callClaude([{ role: 'user', content: contentParts }]);
     const parsed = parseClaudeResponse(response);
-    parsed.images = pendingImages;
+    // Don't auto-save scan image — user can add photos manually in the form
+    parsed.images = [];
     pendingImages = [];
     hideLoading();
     openRecipeForm(parsed);
@@ -2028,69 +2098,126 @@ async function analyzeVideo() {
   if (!url) { showToast(t('invalidUrl'), 'error'); return; }
 
   showLoading(t('analyzingVideo'));
-  let content = '';
 
   try {
-    // Extract YouTube video ID
-    const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+    const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+
     if (ytMatch) {
       const videoId = ytMatch[1];
-      // Try captions in order
-      const langs = ['he', 'ru', 'en', 'iw'];
-      for (const lang of langs) {
+      let videoTitle = '';
+      let videoDesc = '';
+      let captionText = '';
+
+      // Step 1: Get title via oEmbed
+      try {
+        const oembedProxy = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)}`;
+        const r = await fetch(oembedProxy);
+        const d = await r.json();
+        if (d.contents) {
+          const oe = JSON.parse(d.contents);
+          videoTitle = oe.title || '';
+        }
+      } catch {}
+
+      // Step 2: Fetch YouTube page — extract description & metadata
+      try {
+        const pageProxy = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}`;
+        const r = await fetch(pageProxy);
+        const d = await r.json();
+        const html = d.contents || '';
+
+        // Extract title from og meta if not got yet
+        if (!videoTitle) {
+          const m = html.match(/<meta property="og:title" content="([^"]*)"/);
+          if (m) videoTitle = m[1];
+        }
+
+        // Extract short description from ytInitialData JSON embedded in page
+        const shortDescMatch = html.match(/"shortDescription":"((?:[^"\\]|\\.)*)"/);
+        if (shortDescMatch) {
+          videoDesc = shortDescMatch[1]
+            .replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\')
+            .substring(0, 3000);
+        }
+        // Fallback: og:description meta
+        if (!videoDesc) {
+          const m = html.match(/<meta(?:\s+[^>]*)?\s+name="description"\s+content="([^"]*)"/);
+          if (m) videoDesc = m[1];
+        }
+      } catch {}
+
+      // Step 3: Try captions (multiple formats & languages)
+      const captionAttempts = [
+        { lang: 'he', fmt: 'json3' }, { lang: 'iw', fmt: 'json3' },
+        { lang: 'ru', fmt: 'json3' }, { lang: 'en', fmt: 'json3' },
+        { lang: 'he', fmt: '' },      { lang: 'en', fmt: '' },
+        { lang: 'a.he', fmt: 'json3' }, { lang: 'a.en', fmt: 'json3' },
+      ];
+      for (const { lang, fmt } of captionAttempts) {
+        if (captionText.length > 300) break;
         try {
-          const captionUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${lang}&fmt=json3`;
-          const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(captionUrl)}`;
-          const res = await fetch(proxyUrl);
-          const data = await res.json();
-          if (data.contents && data.contents.length > 10) {
-            try {
-              const captionData = JSON.parse(data.contents);
-              if (captionData.events) {
-                content = captionData.events
-                  .map(e => e.segs ? e.segs.map(s => s.utf8).join('') : '')
-                  .join(' ').trim();
-                if (content.length > 100) break;
-              }
-            } catch { content = data.contents.substring(0, 4000); }
+          const capUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${lang}${fmt ? `&fmt=${fmt}` : ''}`;
+          const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(capUrl)}`;
+          const r = await fetch(proxy);
+          const d = await r.json();
+          const raw = d.contents || '';
+          if (raw.length < 20 || raw === 'null') continue;
+
+          // Try JSON3 format
+          try {
+            const capData = JSON.parse(raw);
+            if (capData.events && capData.events.length > 5) {
+              captionText = capData.events
+                .filter(e => e.segs)
+                .map(e => e.segs.map(s => s.utf8 || '').join(''))
+                .join(' ').replace(/\s+/g, ' ').trim().substring(0, 4000);
+            }
+          } catch {
+            // Try XML format
+            if (raw.includes('<text')) {
+              captionText = raw.replace(/<[^>]+>/g, ' ').replace(/&amp;/g,'&').replace(/&#39;/g,"'")
+                .replace(/\s+/g, ' ').trim().substring(0, 4000);
+            }
           }
-        } catch { /* try next lang */ }
+        } catch {}
       }
-      // Also fetch video description via proxy
-      if (content.length < 200) {
-        try {
-          const pageUrl = `https://www.youtube.com/watch?v=${videoId}`;
-          const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(pageUrl)}`;
-          const res = await fetch(proxyUrl);
-          const data = await res.json();
-          let text = (data.contents || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-          content = (content + ' ' + text).substring(0, 6000);
-        } catch { /* ignore */ }
+
+      // Build final content for Claude
+      let content = `YouTube Video\nURL: ${url}\n`;
+      if (videoTitle) content += `Title: ${videoTitle}\n`;
+      if (videoDesc)  content += `\nDescription:\n${videoDesc}\n`;
+      if (captionText) content += `\nTranscript:\n${captionText}\n`;
+
+      if (content.trim().length < 80) {
+        throw new Error('לא ניתן לחלץ תוכן מהוידאו. נסה להדביק את הטקסט ישירות בלשונית "טקסט".');
       }
+
+      const response = await callClaude([{ role: 'user', content: RECIPE_PROMPT + '\n\n' + content }], 2000);
+      const parsed = parseClaudeResponse(response);
+      if (!parsed.sourceUrl) parsed.sourceUrl = url;
+      hideLoading();
+      openRecipeForm(parsed);
+
     } else {
-      // Generic URL (TikTok etc) — just fetch page
+      // Generic URL (TikTok, etc.) — fetch page text
       const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
       const res = await fetch(proxyUrl);
       const data = await res.json();
-      content = (data.contents || '')
+      const content = (data.contents || '')
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
         .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/\s+/g, ' ').trim().substring(0, 6000);
-    }
+        .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 6000);
 
-    if (!content || content.length < 50) {
-      throw new Error(t('errorNoRecipe'));
-    }
+      if (content.length < 50) throw new Error(t('errorNoRecipe'));
 
-    const response = await callClaude([{
-      role: 'user',
-      content: RECIPE_PROMPT + `\n\nVideo source: ${url}\n\nContent/captions:\n${content}`
-    }]);
-    const parsed = parseClaudeResponse(response);
-    if (!parsed.sourceUrl) parsed.sourceUrl = url;
-    hideLoading();
-    openRecipeForm(parsed);
+      const response = await callClaude([{
+        role: 'user', content: RECIPE_PROMPT + `\n\nVideo URL: ${url}\n\nPage content:\n${content}`
+      }]);
+      const parsed = parseClaudeResponse(response);
+      if (!parsed.sourceUrl) parsed.sourceUrl = url;
+      hideLoading();
+      openRecipeForm(parsed);
+    }
   } catch (e) {
     hideLoading();
     showToast(e.message, 'error');
@@ -2144,7 +2271,7 @@ function openRecipeForm(data = {}) {
     ? data.steps
     : [''];
 
-  const categories = ['breakfast', 'lunch', 'dinner', 'dessert', 'snack', 'drink', 'other'];
+  const categories = getCategories();
   const difficulties = ['easy', 'medium', 'hard'];
 
   openModal(`
@@ -2219,7 +2346,7 @@ function openRecipeForm(data = {}) {
             <label>${t('fieldCategory')}</label>
             <select id="f-category">
               <option value="">--</option>
-              ${categories.map(c => `<option value="${c}" ${data.category === c ? 'selected' : ''}>${t(c)}</option>`).join('')}
+              ${categories.map(c => `<option value="${c}" ${data.category === c ? 'selected' : ''}>${getCategoryEmoji(c)} ${getCategoryLabel(c)}</option>`).join('')}
             </select>
           </div>
         </div>
@@ -2414,6 +2541,144 @@ function shareRecipe(id) {
   } else {
     navigator.clipboard.writeText(url).then(() => showToast(t('linkCopied'), 'success'));
   }
+}
+
+// =====================================================================
+// TRANSLATE RECIPE
+// =====================================================================
+function openTranslateModal(recipe) {
+  if (!recipe) return;
+  openModal(`
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-title">${t('translateTitle')}</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body" style="text-align:center;">
+        <p style="font-size:15px;color:var(--c-text-muted);margin-bottom:24px;">${t('translateTo')}</p>
+        <div style="display:flex;flex-direction:column;gap:12px;max-width:280px;margin:0 auto;">
+          ${['he','ru','en'].map(lang => `
+            <button class="btn-primary" style="${currentLang===lang?'opacity:0.4;cursor:not-allowed;':''}"
+              onclick="${currentLang===lang?'':'translateRecipe(window._sharedRecipeData,\''+lang+'\')'}">
+              ${{he:'🇮🇱 '+t('translateHe'), ru:'🇷🇺 '+t('translateRu'), en:'🇺🇸 '+t('translateEn')}[lang]}
+            </button>`).join('')}
+        </div>
+      </div>
+    </div>`);
+}
+
+async function translateRecipe(recipe, targetLang) {
+  if (!recipe) return;
+  closeModal();
+  showLoading(t('translating'));
+  try {
+    const langName = {he:'Hebrew',ru:'Russian',en:'English'}[targetLang] || 'English';
+    const response = await callClaude([{
+      role: 'user',
+      content: `Translate the following recipe fields to ${langName}.
+Return ONLY valid JSON with exactly these keys (same structure, translated values only):
+{"name":"...","ingredients":[{"name":"...","quantity":"...","unit":"..."}],"steps":["..."],"notes":"..."}
+
+Input JSON:
+${JSON.stringify({
+  name: recipe.name || '',
+  ingredients: recipe.ingredients || [],
+  steps: recipe.steps || [],
+  notes: recipe.notes || ''
+})}`
+    }], 3000);
+
+    const translated = parseClaudeResponse(response);
+    hideLoading();
+    // Show translated recipe (read-only view)
+    const merged = {
+      ...recipe,
+      name: (translated.name || recipe.name) + ' ' + t('translatedBadge'),
+      ingredients: translated.ingredients || recipe.ingredients,
+      steps: translated.steps || recipe.steps,
+      notes: translated.notes || recipe.notes,
+    };
+    renderRecipeDetailModal(merged, true);
+  } catch (e) {
+    hideLoading();
+    showToast(e.message, 'error');
+  }
+}
+
+// =====================================================================
+// MANAGE CATEGORIES
+// =====================================================================
+function openManageCategoriesModal() {
+  const cats = getCategories();
+  const defs = JSON.parse(localStorage.getItem('customCategoryDefs') || '{"cats":{}}');
+
+  openModal(`
+    <div class="modal-sheet modal-lg">
+      <div class="modal-header">
+        <div class="modal-title">${t('manageCategories')}</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="cat-list-wrap" style="margin-bottom:20px;">
+          ${cats.map(c => {
+            const label = getCategoryLabel(c);
+            const emoji = getCategoryEmoji(c);
+            const isDefault = DEFAULT_CATEGORIES.includes(c);
+            return `
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--c-border);">
+                <span style="font-size:22px;">${emoji}</span>
+                <span style="flex:1;font-size:15px;font-weight:500;">${escHtml(label)}</span>
+                ${isDefault
+                  ? `<span style="font-size:12px;color:var(--c-text-light);">default</span>`
+                  : `<button class="row-del" onclick="deleteCategoryItem('${escHtml(c)}')">✕</button>`}
+              </div>`;
+          }).join('')}
+        </div>
+        <div style="border-top:2px dashed var(--c-border);padding-top:16px;">
+          <p style="font-size:13px;font-weight:700;color:var(--c-text-muted);margin-bottom:10px;">${t('addCategory')}</p>
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <input id="new-cat-emoji" type="text" maxlength="4" placeholder="🍴"
+              style="width:60px;padding:10px;border:2px solid var(--c-border);border-radius:var(--radius-sm);font-size:20px;text-align:center;">
+            <input id="new-cat-name" type="text" placeholder="${t('categoryName')}"
+              style="flex:1;padding:10px;border:2px solid var(--c-border);border-radius:var(--radius-sm);font-size:14px;">
+          </div>
+          <button class="btn-primary" onclick="addCategoryItem()">${t('addCategory')}</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+function addCategoryItem() {
+  const emoji = document.getElementById('new-cat-emoji').value.trim() || '🍽️';
+  const name = document.getElementById('new-cat-name').value.trim();
+  if (!name) { showToast(t('categoryName') + ' required', 'error'); return; }
+
+  // Create a slug key from name
+  const key = 'cat_' + name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_\u0590-\u05ff\u0400-\u04ff]/g, '').substring(0, 20) + '_' + Date.now();
+
+  // Save to custom defs
+  const defs = JSON.parse(localStorage.getItem('customCategoryDefs') || '{"cats":{}}');
+  defs.cats[key] = { name, emoji };
+  localStorage.setItem('customCategoryDefs', JSON.stringify(defs));
+
+  // Add to user categories
+  const cats = getCategories();
+  cats.push(key);
+  saveUserCategories(cats);
+
+  closeModal();
+  openManageCategoriesModal();
+}
+
+function deleteCategoryItem(key) {
+  const cats = getCategories().filter(c => c !== key);
+  saveUserCategories(cats);
+  // Remove from custom defs
+  const defs = JSON.parse(localStorage.getItem('customCategoryDefs') || '{"cats":{}}');
+  delete defs.cats[key];
+  localStorage.setItem('customCategoryDefs', JSON.stringify(defs));
+  closeModal();
+  openManageCategoriesModal();
 }
 
 function checkShareParam() {
