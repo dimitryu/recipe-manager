@@ -683,6 +683,128 @@ body.ltr .search-icon { right: auto; left: 14px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading-text { font-size: 15px; color: var(--c-text-muted); }
 
+/* ===== TOOLS VIEW ===== */
+.tools-view { padding: 16px; max-width: 600px; margin: 0 auto; }
+.tools-section { margin-bottom: 24px; }
+.tools-section-title {
+  font-size: 13px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.8px; color: var(--c-text-muted);
+  margin-bottom: 12px; padding: 0 4px;
+}
+.tool-card {
+  background: var(--c-surface); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 18px; margin-bottom: 14px;
+}
+.tool-card-title {
+  font-size: 16px; font-weight: 700; color: var(--c-text);
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+
+/* ── Converter ── */
+.conv-cats { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.conv-cat {
+  padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
+  border: 2px solid var(--c-border); color: var(--c-text-muted);
+  background: var(--c-bg); transition: all 0.2s;
+}
+.conv-cat.active { background: var(--c-primary); color: #fff; border-color: var(--c-primary); }
+.conv-input-row {
+  display: flex; gap: 10px; margin-bottom: 16px; align-items: center;
+}
+.conv-number {
+  flex: 1; padding: 12px 14px; border: 2px solid var(--c-border);
+  border-radius: var(--radius-sm); font-size: 20px; font-weight: 600;
+  background: var(--c-bg); color: var(--c-text);
+  min-width: 0; transition: border-color 0.2s;
+}
+.conv-number:focus { outline: none; border-color: var(--c-primary); }
+.conv-unit-select {
+  padding: 12px 10px; border: 2px solid var(--c-border);
+  border-radius: var(--radius-sm); font-size: 14px; font-weight: 600;
+  background: var(--c-bg); color: var(--c-text);
+  transition: border-color 0.2s; max-width: 130px;
+}
+.conv-unit-select:focus { outline: none; border-color: var(--c-primary); }
+.conv-results { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.conv-result-item {
+  background: var(--c-surface2); border-radius: var(--radius-sm);
+  padding: 10px 12px; display: flex; justify-content: space-between;
+  align-items: center; gap: 8px; cursor: pointer; transition: background 0.15s;
+}
+.conv-result-item:hover { background: var(--c-border); }
+.conv-result-item.highlight { background: #fff3e0; }
+.conv-result-label { font-size: 12px; color: var(--c-text-muted); font-weight: 500; }
+.conv-result-value { font-size: 15px; font-weight: 700; color: var(--c-text); }
+.conv-divider {
+  grid-column: 1 / -1; height: 1px; background: var(--c-border);
+  margin: 4px 0;
+}
+.conv-section-label {
+  grid-column: 1 / -1; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px; color: var(--c-text-light);
+  padding: 4px 0 2px;
+}
+
+/* ── Temp table ── */
+.temp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.temp-table th {
+  background: var(--c-surface2); padding: 8px 12px; font-weight: 700;
+  text-align: start; color: var(--c-text-muted); font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.temp-table td { padding: 9px 12px; border-bottom: 1px solid var(--c-border); }
+.temp-table tr:last-child td { border-bottom: none; }
+.temp-table tr:nth-child(even) td { background: var(--c-surface2); }
+
+/* ── Timers ── */
+.timers-list { display: flex; flex-direction: column; gap: 10px; }
+.timer-card {
+  background: var(--c-surface2); border-radius: var(--radius-sm);
+  padding: 12px 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.timer-label-input {
+  flex: 1; min-width: 80px; padding: 7px 10px;
+  border: 1px solid var(--c-border); border-radius: 8px;
+  font-size: 13px; background: var(--c-surface);
+}
+.timer-display {
+  font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums;
+  color: var(--c-text); min-width: 72px; text-align: center;
+}
+.timer-display.running { color: var(--c-primary); }
+.timer-display.done { color: var(--c-success); animation: timerPulse 0.6s ease infinite alternate; }
+@keyframes timerPulse { from { opacity: 1; } to { opacity: 0.4; } }
+.timer-controls { display: flex; gap: 6px; align-items: center; }
+.timer-btn {
+  padding: 7px 12px; border-radius: 8px; font-size: 14px; font-weight: 600;
+  transition: all 0.15s; border: none; cursor: pointer;
+}
+.timer-btn-start { background: var(--c-primary); color: #fff; }
+.timer-btn-start:hover { background: var(--c-primary-dark); }
+.timer-btn-reset { background: var(--c-surface); color: var(--c-text-muted); border: 1px solid var(--c-border); }
+.timer-btn-delete { background: none; color: var(--c-danger); font-size: 16px; padding: 4px 8px; }
+.timer-time-adj { display: flex; align-items: center; gap: 4px; }
+.timer-adj-btn {
+  width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--c-border);
+  background: var(--c-surface); font-size: 16px; display: flex;
+  align-items: center; justify-content: center; cursor: pointer; font-weight: 700;
+}
+
+/* ── Substitutions ── */
+.subs-search {
+  width: 100%; padding: 10px 14px; border: 2px solid var(--c-border);
+  border-radius: var(--radius-sm); font-size: 14px; background: var(--c-bg);
+  margin-bottom: 12px; transition: border-color 0.2s;
+}
+.subs-search:focus { outline: none; border-color: var(--c-primary); }
+.sub-item {
+  padding: 10px 12px; border-bottom: 1px solid var(--c-border);
+}
+.sub-item:last-child { border-bottom: none; }
+.sub-original { font-weight: 700; font-size: 14px; color: var(--c-text); margin-bottom: 4px; }
+.sub-replace { font-size: 13px; color: var(--c-text-muted); line-height: 1.5; }
+.sub-replace::before { content: '→ '; color: var(--c-primary); font-weight: 700; }
+
 /* ===== TOAST ===== */
 #toast-container {
   position: fixed; bottom: calc(var(--nav-h) + 12px); left: 50%;
@@ -1001,6 +1123,52 @@ service cloud.firestore {
       </div>
     </div>
 
+    <!-- Tools View -->
+    <div id="view-tools" class="view">
+      <div class="tools-view">
+
+        <!-- UNIT CONVERTER -->
+        <div class="tool-card" id="tool-converter">
+          <div class="tool-card-title">⚖️ <span data-i18n="toolConvTitle">המרת מידות ומשקלות</span></div>
+          <div class="conv-cats">
+            <button class="conv-cat active" onclick="setConvCat('weight',this)" data-i18n="convWeight">⚖️ משקל</button>
+            <button class="conv-cat" onclick="setConvCat('volume',this)" data-i18n="convVolume">🥛 נפח</button>
+            <button class="conv-cat" onclick="setConvCat('temp',this)" data-i18n="convTemp">🌡️ טמפרטורה</button>
+          </div>
+          <div class="conv-input-row">
+            <input type="number" class="conv-number" id="conv-input" value="100" oninput="updateConv()" placeholder="0">
+            <select class="conv-unit-select" id="conv-unit" onchange="updateConv()"></select>
+          </div>
+          <div class="conv-results" id="conv-results"></div>
+        </div>
+
+        <!-- OVEN TEMPERATURE TABLE -->
+        <div class="tool-card" id="tool-oven">
+          <div class="tool-card-title">🌡️ <span data-i18n="toolOvenTitle">טמפרטורות תנור</span></div>
+          <div style="overflow-x:auto;">
+            <table class="temp-table" id="oven-table"></table>
+          </div>
+        </div>
+
+        <!-- TIMERS -->
+        <div class="tool-card" id="tool-timers">
+          <div class="tool-card-title" style="justify-content:space-between;">
+            <span>⏱️ <span data-i18n="toolTimerTitle">טיימרים</span></span>
+            <button class="btn-primary" style="padding:6px 14px;font-size:13px;" onclick="addTimer()" data-i18n="toolAddTimer">+ הוסף טיימר</button>
+          </div>
+          <div class="timers-list" id="timers-list"></div>
+        </div>
+
+        <!-- SUBSTITUTIONS -->
+        <div class="tool-card" id="tool-subs">
+          <div class="tool-card-title">🔄 <span data-i18n="toolSubsTitle">תחליפי מצרכים</span></div>
+          <input type="search" class="subs-search" id="subs-search" oninput="filterSubs()" placeholder="חפש מצרך...">
+          <div id="subs-list"></div>
+        </div>
+
+      </div>
+    </div>
+
     <!-- Settings View -->
     <div id="view-settings" class="view">
       <div class="settings-view">
@@ -1106,6 +1274,10 @@ service cloud.firestore {
     <button class="nav-item active" id="nav-recipes" onclick="switchView('recipes')">
       <span class="nav-icon">🏠</span>
       <span data-i18n="navRecipes">Recipes</span>
+    </button>
+    <button class="nav-item" id="nav-tools" onclick="switchView('tools')">
+      <span class="nav-icon">🔧</span>
+      <span data-i18n="navTools">Tools</span>
     </button>
     <div class="nav-fab-wrap">
       <button class="nav-fab" onclick="openAddRecipeModal()" aria-label="Add recipe">+</button>
@@ -1279,6 +1451,18 @@ const TRANSLATIONS = {
     saveAsNew: 'שמור כמתכון חדש נפרד',
     changeImage: 'החלף תמונה',
     imageSaved: 'התמונה עודכנה!',
+    navTools: 'כלים',
+    toolConvTitle: 'המרת מידות ומשקלות',
+    convWeight: '⚖️ משקל',
+    convVolume: '🥛 נפח',
+    convTemp: '🌡️ טמפרטורה',
+    toolOvenTitle: 'טמפרטורות תנור',
+    toolTimerTitle: 'טיימרים',
+    toolAddTimer: '+ טיימר',
+    toolTimerLabelPh: 'שם (למשל: עוף)',
+    toolTimerDone: '✅ הסתיים!',
+    toolSubsTitle: 'תחליפי מצרכים',
+    subsSearchPh: 'חפש מצרך...',
   },
   ru: {
     appName: 'Рецептник',
@@ -1431,6 +1615,18 @@ const TRANSLATIONS = {
     saveAsNew: 'Сохранить как новый рецепт',
     changeImage: 'Заменить фото',
     imageSaved: 'Фото обновлено!',
+    navTools: 'Инструм.',
+    toolConvTitle: 'Конвертер мер и весов',
+    convWeight: '⚖️ Вес',
+    convVolume: '🥛 Объём',
+    convTemp: '🌡️ Темп-ра',
+    toolOvenTitle: 'Температуры духовки',
+    toolTimerTitle: 'Таймеры',
+    toolAddTimer: '+ Таймер',
+    toolTimerLabelPh: 'Название (напр.: курица)',
+    toolTimerDone: '✅ Готово!',
+    toolSubsTitle: 'Замена ингредиентов',
+    subsSearchPh: 'Поиск ингредиента...',
   },
   en: {
     appName: 'RecipeBook',
@@ -1583,6 +1779,18 @@ const TRANSLATIONS = {
     saveAsNew: 'Save as a new separate recipe',
     changeImage: 'Change Image',
     imageSaved: 'Image updated!',
+    navTools: 'Tools',
+    toolConvTitle: 'Unit Converter',
+    convWeight: '⚖️ Weight',
+    convVolume: '🥛 Volume',
+    convTemp: '🌡️ Temp',
+    toolOvenTitle: 'Oven Temperatures',
+    toolTimerTitle: 'Timers',
+    toolAddTimer: '+ Timer',
+    toolTimerLabelPh: 'Label (e.g. Chicken)',
+    toolTimerDone: '✅ Done!',
+    toolSubsTitle: 'Ingredient Substitutions',
+    subsSearchPh: 'Search ingredient...',
   }
 };
 
@@ -1607,7 +1815,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.6';
+const APP_VERSION = '1.3.7';
 
 // =====================================================================
 // APP STATE
@@ -1960,6 +2168,7 @@ function switchView(view) {
   if (nb) nb.classList.add('active');
   if (view === 'shopping') renderShoppingView();
   if (view === 'settings') renderSettingsProfile();
+  if (view === 'tools') initToolsView();
 }
 
 // =====================================================================
@@ -3567,6 +3776,358 @@ function init() {
 
 // Run on DOM ready
 document.addEventListener('DOMContentLoaded', init);
+
+// =====================================================================
+// TOOLS PAGE
+// =====================================================================
+
+// ── Unit Converter ──
+let convCat = 'weight';
+
+const CONV_UNITS = {
+  weight: [
+    { key: 'g',   label: 'גרם (g)',    factor: 1 },
+    { key: 'kg',  label: 'ק"ג (kg)',   factor: 1000 },
+    { key: 'oz',  label: 'אונקיה (oz)', factor: 28.3495 },
+    { key: 'lbs', label: 'פאונד (lbs)', factor: 453.592 },
+  ],
+  weightKitchen: [
+    { key: 'cup_flour',  label: 'כוס קמח',   factor: 130 },
+    { key: 'cup_sugar',  label: 'כוס סוכר',  factor: 200 },
+    { key: 'cup_butter', label: 'כוס חמאה',  factor: 227 },
+    { key: 'cup_water',  label: 'כוס מים',   factor: 240 },
+    { key: 'cup_rice',   label: 'כוס אורז',  factor: 185 },
+    { key: 'tbsp_butter',label: 'כף חמאה',   factor: 14.2 },
+    { key: 'tbsp_flour', label: 'כף קמח',    factor: 8 },
+    { key: 'tbsp_sugar', label: 'כף סוכר',   factor: 12.5 },
+  ],
+  volume: [
+    { key: 'ml',   label: 'מ"ל (ml)',     factor: 1 },
+    { key: 'l',    label: 'ליטר (L)',     factor: 1000 },
+    { key: 'cup',  label: 'כוס (240ml)',  factor: 240 },
+    { key: 'tbsp', label: 'כף (15ml)',    factor: 15 },
+    { key: 'tsp',  label: 'כפית (5ml)',   factor: 5 },
+    { key: 'floz', label: 'fl oz',        factor: 29.5735 },
+  ],
+  temp: [
+    { key: 'c', label: '°C (צלזיוס)', factor: 1 },
+    { key: 'f', label: '°F (פרנהייט)', factor: null }, // special
+  ],
+};
+
+function setConvCat(cat, btn) {
+  convCat = cat;
+  document.querySelectorAll('.conv-cat').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderConvUnits();
+  updateConv();
+}
+
+function renderConvUnits() {
+  const sel = document.getElementById('conv-unit');
+  if (!sel) return;
+  const units = CONV_UNITS[convCat] || [];
+  sel.innerHTML = units.map(u => `<option value="${u.key}">${u.label}</option>`).join('');
+}
+
+function updateConv() {
+  const input = parseFloat(document.getElementById('conv-input')?.value);
+  const fromKey = document.getElementById('conv-unit')?.value;
+  const container = document.getElementById('conv-results');
+  if (!container) return;
+  if (isNaN(input)) { container.innerHTML = ''; return; }
+
+  if (convCat === 'temp') {
+    renderTempConv(input, fromKey, container);
+    return;
+  }
+
+  const allUnits = convCat === 'weight'
+    ? [...CONV_UNITS.weight, ...CONV_UNITS.weightKitchen]
+    : CONV_UNITS.volume;
+
+  const fromUnit = allUnits.find(u => u.key === fromKey);
+  if (!fromUnit) return;
+  const inGrams = input * fromUnit.factor;
+
+  let html = '';
+  // Main units
+  const mainUnits = CONV_UNITS[convCat];
+  mainUnits.forEach(u => {
+    if (u.key === fromKey) return;
+    const val = inGrams / u.factor;
+    html += `<div class="conv-result-item" onclick="convCopyResult(this,'${fmt(val)}')">
+      <span class="conv-result-label">${u.label}</span>
+      <span class="conv-result-value">${fmt(val)}</span>
+    </div>`;
+  });
+
+  // Kitchen measures for weight
+  if (convCat === 'weight') {
+    html += `<div class="conv-section-label">🍽️ מידות מטבח</div>`;
+    CONV_UNITS.weightKitchen.forEach(u => {
+      if (u.key === fromKey) return;
+      const val = inGrams / u.factor;
+      html += `<div class="conv-result-item highlight" onclick="convCopyResult(this,'${fmt(val)}')">
+        <span class="conv-result-label">${u.label}</span>
+        <span class="conv-result-value">${fmt(val)}</span>
+      </div>`;
+    });
+  }
+
+  container.innerHTML = html;
+}
+
+function renderTempConv(val, fromKey, container) {
+  let c, f;
+  if (fromKey === 'c') { c = val; f = val * 9/5 + 32; }
+  else { f = val; c = (val - 32) * 5/9; }
+  container.innerHTML = `
+    <div class="conv-result-item highlight">
+      <span class="conv-result-label">°${fromKey === 'c' ? 'F' : 'C'}</span>
+      <span class="conv-result-value">${fmt(fromKey === 'c' ? f : c)}</span>
+    </div>
+    <div class="conv-result-item">
+      <span class="conv-result-label">מסימן גז</span>
+      <span class="conv-result-value">${celsiusToGasMark(c)}</span>
+    </div>`;
+}
+
+function celsiusToGasMark(c) {
+  if (c < 135) return '¼';
+  if (c < 150) return '½';
+  if (c < 165) return '1';
+  if (c < 177) return '2';
+  if (c < 190) return '3';
+  if (c < 200) return '4';
+  if (c < 218) return '5';
+  if (c < 232) return '6';
+  if (c < 246) return '7';
+  if (c < 260) return '8';
+  return '9';
+}
+
+function fmt(n) {
+  if (n === undefined || n === null || isNaN(n)) return '—';
+  if (Math.abs(n) < 0.001) return '≈ 0';
+  if (Math.abs(n) >= 1000) return n.toFixed(0);
+  if (Math.abs(n) >= 100) return n.toFixed(1);
+  if (Math.abs(n) >= 10) return n.toFixed(2);
+  return n.toFixed(3).replace(/\.?0+$/, '');
+}
+
+function convCopyResult(el, val) {
+  navigator.clipboard?.writeText(val).catch(() => {});
+  el.style.background = '#d4edda';
+  setTimeout(() => el.style.background = '', 500);
+}
+
+// ── Oven Temperature Table ──
+const OVEN_TEMPS = [
+  [110, 225, '¼'],  [130, 265, '½'],  [150, 300, '2'],
+  [160, 325, '3'],  [180, 350, '4'],  [190, 375, '5'],
+  [200, 400, '6'],  [220, 425, '7'],  [230, 450, '8'],
+  [250, 480, '9'],
+];
+const OVEN_LABELS = {
+  he: ['°C', '°F', 'גז', 'תיאור'],
+  ru: ['°C', '°F', 'Газ', 'Описание'],
+  en: ['°C', '°F', 'Gas', 'Description'],
+};
+const OVEN_DESC = {
+  he: ['חמים מאוד', 'חמים', 'בינוני-חמים', 'בינוני', 'בינוני-גבוה', 'חם', 'חם', 'חם מאוד', 'חם מאוד', 'גריל'],
+  ru: ['Очень тёплый', 'Тёплый', 'Умеренный', 'Средний', 'Средне-горячий', 'Горячий', 'Горячий', 'Очень горячий', 'Очень горячий', 'Гриль'],
+  en: ['Very warm', 'Warm', 'Moderate', 'Medium', 'Med-hot', 'Hot', 'Hot', 'Very hot', 'Very hot', 'Grill'],
+};
+
+function renderOvenTable() {
+  const table = document.getElementById('oven-table');
+  if (!table) return;
+  const lang = currentLang || 'he';
+  const labels = OVEN_LABELS[lang] || OVEN_LABELS.he;
+  const descs  = OVEN_DESC[lang]  || OVEN_DESC.he;
+  let html = `<thead><tr>${labels.map(l => `<th>${l}</th>`).join('')}</tr></thead><tbody>`;
+  OVEN_TEMPS.forEach(([c, f, gas], i) => {
+    html += `<tr><td><b>${c}</b></td><td>${f}</td><td>${gas}</td><td style="font-size:12px;color:var(--c-text-muted);">${descs[i]||''}</td></tr>`;
+  });
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
+// ── Timers ──
+let timers = [];
+let timerIdSeq = 0;
+
+function addTimer() {
+  if (timers.length >= 5) { showToast('מקסימום 5 טיימרים', 'error'); return; }
+  const id = ++timerIdSeq;
+  timers.push({ id, label: '', totalSec: 5 * 60, remainSec: 5 * 60, running: false, done: false, interval: null });
+  renderTimers();
+}
+
+function renderTimers() {
+  const list = document.getElementById('timers-list');
+  if (!list) return;
+  if (timers.length === 0) {
+    list.innerHTML = `<p style="text-align:center;color:var(--c-text-muted);font-size:14px;padding:16px 0;">${t('toolAddTimer')} להוסיף טיימר 👆</p>`;
+    return;
+  }
+  list.innerHTML = timers.map(tmr => {
+    const mm = String(Math.floor(tmr.remainSec / 60)).padStart(2, '0');
+    const ss = String(tmr.remainSec % 60).padStart(2, '0');
+    const dispClass = tmr.done ? 'done' : tmr.running ? 'running' : '';
+    const displayText = tmr.done ? t('toolTimerDone') : `${mm}:${ss}`;
+    return `<div class="timer-card" id="timer-${tmr.id}">
+      <input class="timer-label-input" placeholder="${t('toolTimerLabelPh')}" value="${escHtml(tmr.label)}"
+        oninput="timers.find(t=>t.id==${tmr.id}).label=this.value">
+      <div class="timer-time-adj">
+        <button class="timer-adj-btn" onclick="adjTimer(${tmr.id},-60)" ${tmr.running?'disabled':''}>−</button>
+        <span class="timer-display ${dispClass}" id="tdisp-${tmr.id}">${displayText}</span>
+        <button class="timer-adj-btn" onclick="adjTimer(${tmr.id},+60)" ${tmr.running?'disabled':''}>+</button>
+      </div>
+      <div class="timer-controls">
+        <button class="timer-btn timer-btn-start" onclick="toggleTimer(${tmr.id})">
+          ${tmr.running ? '⏸' : tmr.done ? '↺' : '▶'}
+        </button>
+        <button class="timer-btn timer-btn-reset" onclick="resetTimer(${tmr.id})">↺</button>
+        <button class="timer-btn timer-btn-delete" onclick="deleteTimer(${tmr.id})">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function adjTimer(id, deltaSec) {
+  const tmr = timers.find(t => t.id === id);
+  if (!tmr || tmr.running) return;
+  tmr.totalSec = Math.max(60, tmr.totalSec + deltaSec);
+  tmr.remainSec = tmr.totalSec;
+  tmr.done = false;
+  renderTimers();
+}
+
+function toggleTimer(id) {
+  const tmr = timers.find(t => t.id === id);
+  if (!tmr) return;
+  if (tmr.done) { resetTimer(id); return; }
+  if (tmr.running) {
+    clearInterval(tmr.interval); tmr.interval = null; tmr.running = false;
+  } else {
+    tmr.running = true;
+    tmr.interval = setInterval(() => tickTimer(id), 1000);
+  }
+  renderTimers();
+}
+
+function tickTimer(id) {
+  const tmr = timers.find(t => t.id === id);
+  if (!tmr) return;
+  tmr.remainSec--;
+  if (tmr.remainSec <= 0) {
+    tmr.remainSec = 0; tmr.running = false; tmr.done = true;
+    clearInterval(tmr.interval); tmr.interval = null;
+    // Vibrate
+    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+    // Beep via AudioContext
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.4, 0.8].forEach(t => {
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.frequency.value = 880; g.gain.setValueAtTime(0.3, ctx.currentTime + t);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.35);
+        o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.35);
+      });
+    } catch {}
+    showToast(`⏱️ ${tmr.label || 'טיימר'} — ${t('toolTimerDone')}`, 'success');
+    renderTimers(); return;
+  }
+  // Update display without full re-render
+  const disp = document.getElementById(`tdisp-${id}`);
+  if (disp) {
+    const mm = String(Math.floor(tmr.remainSec / 60)).padStart(2, '0');
+    const ss = String(tmr.remainSec % 60).padStart(2, '0');
+    disp.textContent = `${mm}:${ss}`;
+  }
+}
+
+function resetTimer(id) {
+  const tmr = timers.find(t => t.id === id);
+  if (!tmr) return;
+  clearInterval(tmr.interval); tmr.interval = null;
+  tmr.running = false; tmr.done = false; tmr.remainSec = tmr.totalSec;
+  renderTimers();
+}
+
+function deleteTimer(id) {
+  const tmr = timers.find(t => t.id === id);
+  if (tmr) { clearInterval(tmr.interval); }
+  timers = timers.filter(t => t.id !== id);
+  renderTimers();
+}
+
+// ── Substitutions ──
+const SUBS_DATA = [
+  { orig: { he:'חמאה (100 גרם)', ru:'Сливочное масло (100 г)', en:'Butter (100g)' },
+    sub:  { he:'80 מ"ל שמן קנולה/חמניות', ru:'80 мл растительного масла', en:'80ml vegetable oil' } },
+  { orig: { he:'חלב מכורבל (1 כוס)', ru:'Пахта (1 стакан)', en:'Buttermilk (1 cup)' },
+    sub:  { he:'1 כוס חלב + 1 כף חומץ לבן, המתן 5 דקות', ru:'1 стакан молока + 1 ст.л. уксуса, подождать 5 мин', en:'1 cup milk + 1 tbsp white vinegar, wait 5 min' } },
+  { orig: { he:'אבקת אפייה (1 כפית)', ru:'Разрыхлитель (1 ч.л.)', en:'Baking powder (1 tsp)' },
+    sub:  { he:'¼ כפית סודה לשתייה + ½ כפית חומץ', ru:'¼ ч.л. соды + ½ ч.л. уксуса', en:'¼ tsp baking soda + ½ tsp vinegar' } },
+  { orig: { he:'ביצה (1 יחידה)', ru:'Яйцо (1 шт)', en:'Egg (1 pc)' },
+    sub:  { he:'3 כפות מיונז / 1 כף פשתן טחון + 3 כפות מים / ½ בננה מרוסקת', ru:'3 ст.л. майонеза / 1 ст.л. молотого льна + 3 ст.л. воды', en:'3 tbsp mayo / 1 tbsp ground flax + 3 tbsp water / ½ mashed banana' } },
+  { orig: { he:'קמח לבן (1 כוס)', ru:'Белая мука (1 стакан)', en:'All-purpose flour (1 cup)' },
+    sub:  { he:'⅞ כוס קמח מלא + 2 כפות נוספות', ru:'⅞ стакана цельнозерновой муки + 2 ст.л.', en:'⅞ cup whole wheat flour + 2 extra tbsp' } },
+  { orig: { he:'סוכר (1 כוס)', ru:'Сахар (1 стакан)', en:'Sugar (1 cup)' },
+    sub:  { he:'¾ כוס דבש (הפחת נוזלים אחרים ב-¼ כוס)', ru:'¾ стакана мёда (уменьшить жидкость на ¼ стакана)', en:'¾ cup honey (reduce other liquids by ¼ cup)' } },
+  { orig: { he:'קרם חמוץ (1 כוס)', ru:'Сметана (1 стакан)', en:'Sour cream (1 cup)' },
+    sub:  { he:'1 כוס יוגורט רגיל', ru:'1 стакан обычного йогурта', en:'1 cup plain yogurt' } },
+  { orig: { he:'יין לבן לבישול', ru:'Белое вино для готовки', en:'White wine for cooking' },
+    sub:  { he:'מיץ ענבים לבן + כפית חומץ', ru:'Белый виноградный сок + ч.л. уксуса', en:'White grape juice + 1 tsp vinegar' } },
+  { orig: { he:'שמנת מתוקה (1 כוס)', ru:'Сливки (1 стакан)', en:'Heavy cream (1 cup)' },
+    sub:  { he:'¾ כוס חלב + 3 כפות חמאה מומסת', ru:'¾ стакана молока + 3 ст.л. растопленного масла', en:'¾ cup milk + 3 tbsp melted butter' } },
+  { orig: { he:'שוקולד מריר (30 גרם)', ru:'Горький шоколад (30 г)', en:'Dark chocolate (30g)' },
+    sub:  { he:'3 כפות אבקת קקאו + 1 כף חמאה', ru:'3 ст.л. какао-порошка + 1 ст.л. масла', en:'3 tbsp cocoa powder + 1 tbsp butter' } },
+  { orig: { he:'גבינת ריקוטה', ru:'Рикотта', en:'Ricotta cheese' },
+    sub:  { he:'גבינת קוטג׳ מסוננת', ru:'Протёртый творог', en:'Strained cottage cheese' } },
+  { orig: { he:'חלב (לפטורי חלב)', ru:'Молоко (без молочного)', en:'Milk (dairy-free)' },
+    sub:  { he:'חלב שקדים / אוכמניות / קוקוס / שיבולת שועל', ru:'Миндальное / кокосовое / овсяное молоко', en:'Almond / oat / coconut milk (same amount)' } },
+];
+
+function renderSubs(filter = '') {
+  const list = document.getElementById('subs-list');
+  if (!list) return;
+  const lang = currentLang || 'he';
+  const fl = filter.toLowerCase();
+  const filtered = SUBS_DATA.filter(s =>
+    !fl ||
+    (s.orig[lang] || s.orig.he).toLowerCase().includes(fl) ||
+    (s.sub[lang]  || s.sub.he).toLowerCase().includes(fl)
+  );
+  if (!filtered.length) {
+    list.innerHTML = `<p style="color:var(--c-text-muted);text-align:center;padding:12px;">לא נמצאו תוצאות</p>`;
+    return;
+  }
+  list.innerHTML = filtered.map(s => `
+    <div class="sub-item">
+      <div class="sub-original">${s.orig[lang] || s.orig.he}</div>
+      <div class="sub-replace">${s.sub[lang] || s.sub.he}</div>
+    </div>`).join('');
+}
+
+function filterSubs() {
+  renderSubs(document.getElementById('subs-search')?.value || '');
+}
+
+function initToolsView() {
+  renderConvUnits();
+  updateConv();
+  renderOvenTable();
+  renderTimers();
+  renderSubs();
+  // Update search placeholder
+  const sp = document.getElementById('subs-search');
+  if (sp) sp.placeholder = t('subsSearchPh');
+}
 </script>
 </body>
 </html>
