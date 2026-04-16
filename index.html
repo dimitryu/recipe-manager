@@ -459,27 +459,41 @@ body.ltr .search-icon { right: auto; left: 14px; }
 
 /* ===== ADD RECIPE MODAL TABS ===== */
 .tab-bar {
-  display: flex; overflow-x: auto; scrollbar-width: none;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
   border-bottom: 2px solid var(--c-border);
-  flex-shrink: 0; padding: 0 4px;
-  -webkit-overflow-scrolling: touch;
-  position: relative;
+  flex-shrink: 0;
 }
-.tab-bar::-webkit-scrollbar { display: none; }
 .tab-btn {
-  padding: 10px 12px; font-size: 12px; font-weight: 600;
-  color: var(--c-text-muted); white-space: nowrap;
+  padding: 7px 2px;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  text-align: center;
   border-bottom: 2px solid transparent; margin-bottom: -2px;
-  transition: all var(--transition); flex-shrink: 0;
-  min-width: 0;
+  transition: all var(--transition);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 50px; gap: 2px;
 }
-@media (min-width: 480px) {
-  .tab-btn { padding: 12px 16px; font-size: 13px; }
+.tab-icon { font-size: 16px; line-height: 1; }
+.tab-lbl  { font-size: 9px; line-height: 1.2; word-break: break-word;
+             white-space: normal; max-width: 100%; }
+@media (min-width: 400px) {
+  .tab-lbl { font-size: 10px; }
+}
+@media (min-width: 520px) {
+  .tab-btn  { flex-direction: row; gap: 5px; padding: 12px 6px; min-height: 46px; }
+  .tab-icon { font-size: 15px; }
+  .tab-lbl  { font-size: 12px; white-space: nowrap; word-break: normal; }
+}
+@media (min-width: 680px) {
+  .tab-btn  { padding: 12px 16px; }
+  .tab-lbl  { font-size: 13px; }
 }
 .tab-btn.active { color: var(--c-primary); border-bottom-color: var(--c-primary); }
 .tab-content { display: none; padding: 16px; }
 .tab-content.active { display: block; }
-@media (min-width: 480px) {
+@media (min-width: 520px) {
   .tab-content { padding: 20px; }
 }
 
@@ -1593,7 +1607,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.5';
+const APP_VERSION = '1.3.6';
 
 // =====================================================================
 // APP STATE
@@ -2216,11 +2230,11 @@ function openAddRecipeModal() {
         <button class="modal-close" onclick="closeModal()">✕</button>
       </div>
       <div class="tab-bar">
-        <button class="tab-btn active" onclick="switchTab(this,'tab-image')">${t('tabImage')}</button>
-        <button class="tab-btn" onclick="switchTab(this,'tab-url')">${t('tabUrl')}</button>
-        <button class="tab-btn" onclick="switchTab(this,'tab-video')">${t('tabVideo')}</button>
-        <button class="tab-btn" onclick="switchTab(this,'tab-text')">${t('tabText')}</button>
-        <button class="tab-btn" onclick="switchTab(this,'tab-manual')">${t('tabManual')}</button>
+        <button class="tab-btn active" onclick="switchTab(this,'tab-image')">${tabLabel('tabImage')}</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-url')">${tabLabel('tabUrl')}</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-video')">${tabLabel('tabVideo')}</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-text')">${tabLabel('tabText')}</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-manual')">${tabLabel('tabManual')}</button>
       </div>
       <!-- TAB: IMAGE -->
       <div class="tab-content active" id="tab-image">
@@ -2274,6 +2288,14 @@ function switchTab(btn, tabId) {
   btn.classList.add('active');
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.getElementById(tabId).classList.add('active');
+}
+
+// Split "📷 תמונה" → <span class="tab-icon">📷</span><span class="tab-lbl">תמונה</span>
+function tabLabel(key) {
+  const str = t(key);
+  const m = str.match(/^(\S+)\s+([\s\S]+)$/);
+  if (m) return `<span class="tab-icon">${m[1]}</span><span class="tab-lbl">${m[2]}</span>`;
+  return `<span class="tab-icon">${str}</span>`;
 }
 
 // =====================================================================
