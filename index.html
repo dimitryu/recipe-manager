@@ -799,6 +799,28 @@ select option { background: var(--c-surface); color: var(--c-text); }
   transition: all var(--transition);
 }
 .fsize-btn.active { background: var(--c-primary); color: #fff; border-color: var(--c-primary); }
+
+/* ===== CARD CATEGORY BADGE ===== */
+.card-cat {
+  font-size: 11px; color: var(--c-text-light);
+  margin-top: 5px; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ===== COLLAPSIBLE HERO ===== */
+.detail-hero-wrap { position: relative; overflow: hidden; transition: height 0.3s ease; }
+.detail-hero-wrap .detail-hero { transition: height 0.3s ease; }
+.detail-hero-wrap .detail-hero-emoji { transition: all 0.3s ease; }
+.detail-hero-wrap.collapsed .detail-hero { height: 70px; object-fit: cover; object-position: center top; }
+.detail-hero-wrap.collapsed .detail-hero-emoji { height: 70px; font-size: 32px; }
+.hero-toggle-btn {
+  position: absolute; bottom: 6px; right: 10px;
+  background: rgba(0,0,0,0.48); color: #fff;
+  border-radius: 14px; padding: 3px 12px; font-size: 12px;
+  font-weight: 600; letter-spacing: 0.2px;
+  backdrop-filter: blur(4px); transition: all 0.2s ease;
+  border: none; cursor: pointer;
+}
 </style>
 </head>
 <body>
@@ -1002,6 +1024,13 @@ service cloud.firestore {
             <div class="settings-item-left">
               <span class="settings-item-icon">📤</span>
               <span class="settings-item-label" data-i18n="exportBackup">Export JSON</span>
+            </div>
+            <span class="settings-item-arrow">›</span>
+          </div>
+          <div class="settings-item" onclick="refreshAllImages()">
+            <div class="settings-item-left">
+              <span class="settings-item-icon">🖼️</span>
+              <span class="settings-item-label" data-i18n="refreshImages">Refresh Card Images</span>
             </div>
             <span class="settings-item-arrow">›</span>
           </div>
@@ -1214,6 +1243,11 @@ const TRANSLATIONS = {
     backupSuccess: 'הגיבוי יובא בהצלחה!',
     backupError: 'שגיאה בייבוא הגיבוי',
     installNotAvailable: 'האפליקציה כבר מותקנת או שהדפדפן לא תומך',
+    refreshImages: 'רענן תמונות כרטיסיות',
+    allImagesExist: 'לכל המתכונים כבר יש תמונות',
+    imagesUpdated: 'תמונות עודכנו',
+    heroCollapse: '▲ כווץ',
+    heroExpand: '▼ הרחב',
   },
   ru: {
     appName: 'Рецептник',
@@ -1355,6 +1389,11 @@ const TRANSLATIONS = {
     backupSuccess: 'Резервная копия импортирована!',
     backupError: 'Ошибка импорта резервной копии',
     installNotAvailable: 'Приложение уже установлено или браузер не поддерживает',
+    refreshImages: 'Обновить фото карточек',
+    allImagesExist: 'У всех рецептов уже есть фото',
+    imagesUpdated: 'Фото обновлены',
+    heroCollapse: '▲ Свернуть',
+    heroExpand: '▼ Развернуть',
   },
   en: {
     appName: 'RecipeBook',
@@ -1496,6 +1535,11 @@ const TRANSLATIONS = {
     backupSuccess: 'Backup imported successfully!',
     backupError: 'Error importing backup',
     installNotAvailable: 'App is already installed or browser does not support',
+    refreshImages: 'Refresh Card Images',
+    allImagesExist: 'All recipes already have images',
+    imagesUpdated: 'Images updated',
+    heroCollapse: '▲ Collapse',
+    heroExpand: '▼ Expand',
   }
 };
 
@@ -1520,7 +1564,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.3.1';
 
 // =====================================================================
 // APP STATE
@@ -1949,6 +1993,8 @@ function renderRecipeGrid() {
     } else {
       imgHtml = `<div class="card-emoji-thumb">${CATEGORY_EMOJIS[r.category] || '🍽️'}</div>`;
     }
+    const catEmoji = r.category ? getCategoryEmoji(r.category) : '';
+    const catLabel = r.category ? getCategoryLabel(r.category) : '';
     return `
       <div class="recipe-card" onclick="openRecipeDetail('${escHtml(r.id)}')">
         <div style="position:relative;">
@@ -1961,7 +2007,8 @@ function renderRecipeGrid() {
             <span class="card-time">${escHtml(timeStr)}</span>
             ${diffLabel ? `<span class="difficulty-badge ${diffClass}">${escHtml(diffLabel)}</span>` : ''}
           </div>
-          ${stars ? `<div class="card-rating" style="margin-top:4px;">${escHtml(stars)}</div>` : ''}
+          ${catLabel ? `<div class="card-cat">${catEmoji} ${escHtml(catLabel)}</div>` : ''}
+          ${stars ? `<div class="card-rating" style="margin-top:2px;">${escHtml(stars)}</div>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -1989,9 +2036,13 @@ function openRecipeDetail(id, readOnly = false, sharedUid = null) {
 }
 
 function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
-  const heroHtml = (recipe.images && recipe.images.length > 0)
+  const heroInner = (recipe.images && recipe.images.length > 0)
     ? `<img class="detail-hero" src="${recipe.images[0]}" alt="${escHtml(recipe.name)}">`
-    : `<div class="detail-hero-emoji">${CATEGORY_EMOJIS[recipe.category] || '🍽️'}</div>`;
+    : `<div class="detail-hero-emoji">${getCategoryEmoji(recipe.category) || '🍽️'}</div>`;
+  const heroHtml = `<div class="detail-hero-wrap" id="detail-hero-wrap">
+    ${heroInner}
+    <button class="hero-toggle-btn" id="hero-toggle-btn" onclick="toggleDetailHero()">${t('heroCollapse')}</button>
+  </div>`;
 
   const metaItems = [
     recipe.prepTime ? `<div class="meta-chip"><span class="mc-icon">🥄</span><span>${escHtml(t('prepTime'))}: ${recipe.prepTime} ${t('min')}</span></div>` : '',
@@ -2086,6 +2137,14 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
 function toggleIngCheck(i) {
   const item = document.getElementById('ing-item-' + i);
   if (item) item.classList.toggle('checked', item.querySelector('input').checked);
+}
+
+function toggleDetailHero() {
+  const wrap = document.getElementById('detail-hero-wrap');
+  const btn = document.getElementById('hero-toggle-btn');
+  if (!wrap) return;
+  const collapsed = wrap.classList.toggle('collapsed');
+  if (btn) btn.textContent = collapsed ? t('heroExpand') : t('heroCollapse');
 }
 
 // =====================================================================
@@ -2316,10 +2375,53 @@ async function analyzeUrl() {
 // =====================================================================
 // ANALYZE VIDEO
 // =====================================================================
+
+// Fetch through multiple CORS proxies — returns text or null
+async function ytProxy(targetUrl, timeoutMs = 9000) {
+  const proxies = [
+    `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`,
+    `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
+  ];
+  for (const proxyUrl of proxies) {
+    try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), timeoutMs);
+      const r = await fetch(proxyUrl, { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (proxyUrl.includes('allorigins')) {
+        const d = await r.json();
+        const c = d.contents || '';
+        if (c.length > 30) return c;
+      } else {
+        const c = await r.text();
+        if (c.length > 30) return c;
+      }
+    } catch {}
+  }
+  return '';
+}
+
+function ytExtractDesc(html) {
+  // Try various JSON patterns embedded in YouTube's initial data
+  const patterns = [
+    /"shortDescription":"((?:[^"\\]|\\.)*)"/,
+    /"attributedDescriptionBodyText":\{"content":"((?:[^"\\]|\\.)*)"/,
+    /"description":\{"simpleText":"((?:[^"\\]|\\.)*)"/,
+  ];
+  for (const p of patterns) {
+    const m = html.match(p);
+    if (m) return m[1].replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\').substring(0,3000);
+  }
+  // Fallback: meta tags
+  const og = html.match(/<meta[^>]+name="description"[^>]+content="([^"]+)"/i)
+    || html.match(/<meta[^>]+content="([^"]+)"[^>]+name="description"/i)
+    || html.match(/<meta[^>]+property="og:description"[^>]+content="([^"]+)"/i);
+  return og ? og[1] : '';
+}
+
 async function analyzeVideo() {
   const url = document.getElementById('video-input').value.trim();
   if (!url) { showToast(t('invalidUrl'), 'error'); return; }
-
   showLoading(t('analyzingVideo'));
 
   try {
@@ -2327,94 +2429,98 @@ async function analyzeVideo() {
 
     if (ytMatch) {
       const videoId = ytMatch[1];
+      const isShorts = url.includes('/shorts/');
       let videoTitle = '';
       let videoDesc = '';
       let captionText = '';
 
-      // Step 1: Get title via oEmbed
-      try {
-        const oembedProxy = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)}`;
-        const r = await fetch(oembedProxy);
-        const d = await r.json();
-        if (d.contents) {
-          const oe = JSON.parse(d.contents);
-          videoTitle = oe.title || '';
-        }
-      } catch {}
+      // ── Step 1: oEmbed title (try original URL first, then watch URL, then noembed.com) ──
+      const oembedTargets = [
+        `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`,
+        `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
+        `https://noembed.com/embed?url=${encodeURIComponent(url)}`,
+      ];
+      for (const target of oembedTargets) {
+        if (videoTitle) break;
+        try {
+          const raw = await ytProxy(target, 6000);
+          if (raw) {
+            const oe = JSON.parse(raw);
+            if (oe.title) videoTitle = oe.title;
+          }
+        } catch {}
+      }
 
-      // Step 2: Fetch YouTube page — extract description & metadata
-      try {
-        const pageProxy = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}`;
-        const r = await fetch(pageProxy);
-        const d = await r.json();
-        const html = d.contents || '';
+      // ── Step 2: Fetch page HTML (try shorts URL and watch URL) ──
+      showLoading('📄 ' + t('analyzingVideo'));
+      const pageTargets = isShorts
+        ? [`https://www.youtube.com/shorts/${videoId}`, `https://www.youtube.com/watch?v=${videoId}`]
+        : [`https://www.youtube.com/watch?v=${videoId}`, `https://www.youtube.com/shorts/${videoId}`];
 
-        // Extract title from og meta if not got yet
-        if (!videoTitle) {
-          const m = html.match(/<meta property="og:title" content="([^"]*)"/);
-          if (m) videoTitle = m[1];
-        }
+      for (const pageUrl of pageTargets) {
+        if (videoDesc.length > 100) break;
+        try {
+          const html = await ytProxy(pageUrl, 10000);
+          if (!html) continue;
 
-        // Extract short description from ytInitialData JSON embedded in page
-        const shortDescMatch = html.match(/"shortDescription":"((?:[^"\\]|\\.)*)"/);
-        if (shortDescMatch) {
-          videoDesc = shortDescMatch[1]
-            .replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\')
-            .substring(0, 3000);
-        }
-        // Fallback: og:description meta
-        if (!videoDesc) {
-          const m = html.match(/<meta(?:\s+[^>]*)?\s+name="description"\s+content="([^"]*)"/);
-          if (m) videoDesc = m[1];
-        }
-      } catch {}
+          // Title from HTML if oEmbed failed
+          if (!videoTitle) {
+            const m = html.match(/<meta property="og:title" content="([^"]*)"/i)
+              || html.match(/"title":"([^"]+)","description"/)
+              || html.match(/<title>([^<]+)<\/title>/);
+            if (m) videoTitle = m[1].replace(' - YouTube','').trim();
+          }
 
-      // Step 3: Try captions (multiple formats & languages)
+          const desc = ytExtractDesc(html);
+          if (desc.length > videoDesc.length) videoDesc = desc;
+        } catch {}
+      }
+
+      // ── Step 3: Captions ──
       const captionAttempts = [
         { lang: 'he', fmt: 'json3' }, { lang: 'iw', fmt: 'json3' },
         { lang: 'ru', fmt: 'json3' }, { lang: 'en', fmt: 'json3' },
-        { lang: 'he', fmt: '' },      { lang: 'en', fmt: '' },
-        { lang: 'a.he', fmt: 'json3' }, { lang: 'a.en', fmt: 'json3' },
+        { lang: 'a.he', fmt: 'json3' }, { lang: 'a.ru', fmt: 'json3' }, { lang: 'a.en', fmt: 'json3' },
+        { lang: 'he', fmt: '' }, { lang: 'en', fmt: '' },
       ];
       for (const { lang, fmt } of captionAttempts) {
         if (captionText.length > 300) break;
         try {
           const capUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${lang}${fmt ? `&fmt=${fmt}` : ''}`;
-          const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(capUrl)}`;
-          const r = await fetch(proxy);
-          const d = await r.json();
-          const raw = d.contents || '';
-          if (raw.length < 20 || raw === 'null') continue;
-
-          // Try JSON3 format
+          const raw = await ytProxy(capUrl, 6000);
+          if (!raw || raw.length < 20 || raw === 'null') continue;
           try {
             const capData = JSON.parse(raw);
-            if (capData.events && capData.events.length > 5) {
-              captionText = capData.events
-                .filter(e => e.segs)
+            if (capData.events && capData.events.length > 3) {
+              captionText = capData.events.filter(e => e.segs)
                 .map(e => e.segs.map(s => s.utf8 || '').join(''))
-                .join(' ').replace(/\s+/g, ' ').trim().substring(0, 4000);
+                .join(' ').replace(/\s+/g,' ').trim().substring(0, 4000);
             }
           } catch {
-            // Try XML format
             if (raw.includes('<text')) {
-              captionText = raw.replace(/<[^>]+>/g, ' ').replace(/&amp;/g,'&').replace(/&#39;/g,"'")
-                .replace(/\s+/g, ' ').trim().substring(0, 4000);
+              captionText = raw.replace(/<[^>]+>/g,' ').replace(/&amp;/g,'&').replace(/&#39;/g,"'")
+                .replace(/\s+/g,' ').trim().substring(0, 4000);
             }
           }
         } catch {}
       }
 
-      // Build final content for Claude
+      // ── Build Claude prompt ──
       let content = `YouTube Video\nURL: ${url}\n`;
-      if (videoTitle) content += `Title: ${videoTitle}\n`;
-      if (videoDesc)  content += `\nDescription:\n${videoDesc}\n`;
+      if (videoTitle)  content += `Title: ${videoTitle}\n`;
+      if (videoDesc)   content += `\nDescription:\n${videoDesc}\n`;
       if (captionText) content += `\nTranscript:\n${captionText}\n`;
 
-      if (content.trim().length < 80) {
+      // Need at least a title to proceed
+      if (!videoTitle && !videoDesc && !captionText) {
         throw new Error('לא ניתן לחלץ תוכן מהוידאו. נסה להדביק את הטקסט ישירות בלשונית "טקסט".');
       }
+      if (!videoDesc && !captionText) {
+        // Only title available — tell Claude to infer the recipe
+        content += '\n(Only the title is available. Please infer a typical recipe for this dish.)';
+      }
 
+      showLoading('🤖 ' + t('analyzingVideo'));
       const response = await callClaude([{ role: 'user', content: RECIPE_PROMPT + '\n\n' + content }], 2000);
       const parsed = parseClaudeResponse(response);
       if (!parsed.sourceUrl) parsed.sourceUrl = url;
@@ -2423,18 +2529,14 @@ async function analyzeVideo() {
 
     } else {
       // Generic URL (TikTok, etc.) — fetch page text
-      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-      const res = await fetch(proxyUrl);
-      const data = await res.json();
-      const content = (data.contents || '')
+      const content = await ytProxy(url, 10000);
+      const stripped = (content || '')
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
         .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
         .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 6000);
-
-      if (content.length < 50) throw new Error(t('errorNoRecipe'));
-
+      if (stripped.length < 50) throw new Error(t('errorNoRecipe'));
       const response = await callClaude([{
-        role: 'user', content: RECIPE_PROMPT + `\n\nVideo URL: ${url}\n\nPage content:\n${content}`
+        role: 'user', content: RECIPE_PROMPT + `\n\nVideo URL: ${url}\n\nPage content:\n${stripped}`
       }]);
       const parsed = parseClaudeResponse(response);
       if (!parsed.sourceUrl) parsed.sourceUrl = url;
@@ -2704,20 +2806,42 @@ function removeFormImage(i) {
 
 async function fetchRecipeImage(recipeName) {
   try {
-    const query = encodeURIComponent(recipeName);
-    const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${query}&prop=pageimages&format=json&pithumbsize=600&origin=*`;
-    const res = await fetch(url);
-    const data = await res.json();
+    const imgUrl = await findWikipediaImageUrl(recipeName);
+    if (!imgUrl) return null;
+    // Wikimedia CDN allows CORS — fetch directly and convert to base64
+    const res = await fetch(imgUrl);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
+  } catch { return null; }
+}
+
+async function findWikipediaImageUrl(recipeName) {
+  const q = encodeURIComponent(recipeName);
+  // Strategy 1: Direct article title lookup
+  try {
+    const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${q}&prop=pageimages&format=json&pithumbsize=600&origin=*`;
+    const data = await (await fetch(url)).json();
     const pages = data.query && data.query.pages;
-    if (!pages) return null;
-    const page = Object.values(pages)[0];
-    if (page && page.thumbnail && page.thumbnail.source) {
-      // Fetch image as base64 via proxy
-      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(page.thumbnail.source)}`;
-      const imgRes = await fetch(proxyUrl);
-      const imgData = await imgRes.json();
-      if (imgData.contents && imgData.contents.startsWith('data:image')) {
-        return imgData.contents;
+    if (pages) {
+      const page = Object.values(pages)[0];
+      if (page && page.thumbnail && page.thumbnail.source && page.pageid !== -1) {
+        return page.thumbnail.source;
+      }
+    }
+  } catch {}
+  // Strategy 2: Search for "recipeName food"
+  try {
+    const url = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${q}+food&prop=pageimages&format=json&pithumbsize=600&origin=*&gsrlimit=5`;
+    const data = await (await fetch(url)).json();
+    const pages = data.query && data.query.pages;
+    if (pages) {
+      for (const page of Object.values(pages)) {
+        if (page.thumbnail && page.thumbnail.source) return page.thumbnail.source;
       }
     }
   } catch {}
@@ -3084,10 +3208,40 @@ function openAddRecipeToShoppingModal() {
 }
 
 // =====================================================================
+// REFRESH ALL IMAGES
+// =====================================================================
+async function refreshAllImages() {
+  const noImg = allRecipes.filter(r => !r.images || r.images.length === 0);
+  if (noImg.length === 0) {
+    showToast(t('allImagesExist'), 'info');
+    return;
+  }
+  let count = 0;
+  for (let i = 0; i < noImg.length; i++) {
+    const recipe = noImg[i];
+    document.getElementById('loading-text').textContent =
+      `🖼️ ${i + 1}/${noImg.length}: ${recipe.name.substring(0, 30)}`;
+    showLoading(document.getElementById('loading-text').textContent);
+    const img = await fetchRecipeImage(recipe.name);
+    if (img) {
+      try {
+        await db.collection('users').doc(currentUser.uid).collection('recipes')
+          .doc(recipe.id).update({ images: [img] });
+        count++;
+      } catch {}
+    }
+  }
+  hideLoading();
+  showToast(`${t('imagesUpdated')} (${count}/${noImg.length})`, 'success');
+}
+
+// =====================================================================
 // FONT SIZE
 // =====================================================================
 function setFontSize(size) {
-  document.documentElement.style.setProperty('--font-size-base', size + 'px');
+  const ratio = size / 16;
+  // zoom scales ALL elements (text, buttons, icons, layout) proportionally
+  document.documentElement.style.zoom = ratio === 1 ? '' : String(ratio);
   localStorage.setItem('fontSize', size);
   document.querySelectorAll('.fsize-btn').forEach(btn => {
     btn.classList.toggle('active', parseInt(btn.dataset.fsize) === size);
