@@ -1576,7 +1576,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.2';
+const APP_VERSION = '1.3.3';
 
 // =====================================================================
 // APP STATE
@@ -2308,8 +2308,15 @@ Return ONLY valid JSON with this exact structure:
 difficulty: "easy", "medium", or "hard"
 category: breakfast/lunch/dinner/dessert/snack/drink/other
 Times in minutes (integers). Use null if unknown.
-Use same language as the input content.
+LANG_PLACEHOLDER
 If no recipe found, return {"error":"No recipe found"}`;
+
+// Returns RECIPE_PROMPT with language instruction injected for current UI language
+function getRecipePrompt() {
+  const langName = {he:'Hebrew', ru:'Russian', en:'English'}[currentLang] || 'English';
+  return RECIPE_PROMPT.replace('LANG_PLACEHOLDER',
+    `Return ALL text fields (name, ingredient names, step text, notes) in ${langName} language.`);
+}
 
 function parseClaudeResponse(text) {
   // Strip markdown code blocks
@@ -2334,7 +2341,7 @@ async function analyzeImages() {
   }
   showLoading(t('analyzingImage'));
   try {
-    const contentParts = [{ type: 'text', text: RECIPE_PROMPT + '\nAnalyze the recipe from these images:' }];
+    const contentParts = [{ type: 'text', text: getRecipePrompt() + '\nAnalyze the recipe from these images:' }];
     for (const img of pendingImages.slice(0, 4)) {
       const b64 = img.split(',')[1];
       contentParts.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } });
@@ -2422,7 +2429,7 @@ async function analyzeUrl() {
     showLoading(t('analyzingUrl'));
     const response = await callClaude([{
       role: 'user',
-      content: RECIPE_PROMPT + `\n\nSource URL: ${url}\n\nPage content:\n${content}`
+      content: getRecipePrompt() + `\n\nSource URL: ${url}\n\nPage content:\n${content}`
     }]);
     const parsed = parseClaudeResponse(response);
     if (!parsed.sourceUrl) parsed.sourceUrl = url;
@@ -2602,7 +2609,7 @@ async function analyzeVideo() {
       }
 
       showLoading('🤖 ' + t('analyzingVideo'));
-      const response = await callClaude([{ role: 'user', content: RECIPE_PROMPT + '\n\n' + content }], 2000);
+      const response = await callClaude([{ role: 'user', content: getRecipePrompt() + '\n\n' + content }], 2000);
       const parsed = parseClaudeResponse(response);
       if (!parsed.sourceUrl) parsed.sourceUrl = url;
       hideLoading();
@@ -2617,7 +2624,7 @@ async function analyzeVideo() {
         .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 6000);
       if (stripped.length < 50) throw new Error(t('errorNoRecipe'));
       const response = await callClaude([{
-        role: 'user', content: RECIPE_PROMPT + `\n\nVideo URL: ${url}\n\nPage content:\n${stripped}`
+        role: 'user', content: getRecipePrompt() + `\n\nVideo URL: ${url}\n\nPage content:\n${stripped}`
       }]);
       const parsed = parseClaudeResponse(response);
       if (!parsed.sourceUrl) parsed.sourceUrl = url;
@@ -2640,7 +2647,7 @@ async function analyzeTextInput() {
   try {
     const response = await callClaude([{
       role: 'user',
-      content: RECIPE_PROMPT + `\n\nRecipe text:\n${text}`
+      content: getRecipePrompt() + `\n\nRecipe text:\n${text}`
     }]);
     const parsed = parseClaudeResponse(response);
     hideLoading();
@@ -2885,40 +2892,52 @@ function removeFormImage(i) {
   renderFormImagePreviews();
 }
 
+// Returns Wikimedia thumbnail URL directly — stored as image URL (no base64 needed)
 async function fetchRecipeImage(recipeName) {
-  try {
-    const imgUrl = await findWikipediaImageUrl(recipeName);
-    if (!imgUrl) return null;
-    // Wikimedia CDN allows CORS — fetch directly and convert to base64
-    const res = await fetch(imgUrl);
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    return new Promise(resolve => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.readAsDataURL(blob);
-    });
-  } catch { return null; }
+  return await findWikipediaImageUrl(recipeName);
 }
 
 async function findWikipediaImageUrl(recipeName) {
+  if (!recipeName) return null;
+
+  // Detect script to pick matching Wikipedia language edition
+  const hasHebrew   = /[\u0590-\u05ff]/.test(recipeName);
+  const hasCyrillic = /[\u0400-\u04ff]/.test(recipeName);
+  const hasKorean   = /[\uac00-\ud7a3]/.test(recipeName);
+  const hasJapanese = /[\u3040-\u30ff]/.test(recipeName);
+  const hasCJK      = /[\u4e00-\u9fff]/.test(recipeName) && !hasKorean && !hasJapanese;
+  const hasArabic   = /[\u0600-\u06ff]/.test(recipeName);
+
+  // Build priority list: native language first, English fallback last
+  const langs = [];
+  if (hasHebrew)   langs.push('he');
+  if (hasCyrillic) langs.push('ru');
+  if (hasKorean)   langs.push('ko');
+  if (hasJapanese) langs.push('ja');
+  if (hasCJK)      langs.push('zh');
+  if (hasArabic)   langs.push('ar');
+  langs.push('en'); // always try English
+
   const q = encodeURIComponent(recipeName);
-  // Strategy 1: Direct article title lookup
-  try {
-    const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${q}&prop=pageimages&format=json&pithumbsize=600&origin=*`;
-    const data = await (await fetch(url)).json();
-    const pages = data.query && data.query.pages;
-    if (pages) {
-      const page = Object.values(pages)[0];
-      if (page && page.thumbnail && page.thumbnail.source && page.pageid !== -1) {
-        return page.thumbnail.source;
+
+  for (const lang of langs) {
+    // Search API — generator=search finds closest article
+    try {
+      const url = `https://${lang}.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${q}&prop=pageimages&format=json&pithumbsize=600&origin=*&gsrlimit=5`;
+      const data = await (await fetch(url, { signal: AbortSignal.timeout(6000) })).json();
+      const pages = data.query && data.query.pages;
+      if (pages) {
+        for (const page of Object.values(pages)) {
+          if (page.thumbnail && page.thumbnail.source) return page.thumbnail.source;
+        }
       }
-    }
-  } catch {}
-  // Strategy 2: Search for "recipeName food"
+    } catch {}
+  }
+
+  // Last resort: English Wikipedia with "food" modifier
   try {
-    const url = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${q}+food&prop=pageimages&format=json&pithumbsize=600&origin=*&gsrlimit=5`;
-    const data = await (await fetch(url)).json();
+    const url = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${q}+food+recipe&prop=pageimages&format=json&pithumbsize=600&origin=*&gsrlimit=5`;
+    const data = await (await fetch(url, { signal: AbortSignal.timeout(6000) })).json();
     const pages = data.query && data.query.pages;
     if (pages) {
       for (const page of Object.values(pages)) {
@@ -2926,6 +2945,7 @@ async function findWikipediaImageUrl(recipeName) {
       }
     }
   } catch {}
+
   return null;
 }
 
