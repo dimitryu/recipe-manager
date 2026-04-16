@@ -805,6 +805,27 @@ body.ltr .search-icon { right: auto; left: 14px; }
 .sub-replace { font-size: 13px; color: var(--c-text-muted); line-height: 1.5; }
 .sub-replace::before { content: '→ '; color: var(--c-primary); font-weight: 700; }
 
+/* ── Tool card collapse ── */
+.tool-card-title { justify-content: space-between; }
+.tool-card-title-left { display: flex; align-items: center; gap: 8px; }
+.tool-collapse-btn {
+  background: none; border: 1px solid var(--c-border); color: var(--c-text-muted);
+  font-size: 13px; cursor: pointer; padding: 3px 9px;
+  border-radius: 6px; transition: all 0.15s; flex-shrink: 0; line-height: 1.4;
+  font-weight: 700;
+}
+.tool-collapse-btn:hover { background: var(--c-surface2); color: var(--c-text); }
+.tool-card-body { overflow: hidden; }
+.tool-card.collapsed .tool-card-body { display: none; }
+
+/* ── Timer alert state ── */
+.timer-display.alerting { color: var(--c-danger); animation: timerPulse 0.4s ease infinite alternate; }
+.timer-btn-dismiss {
+  background: var(--c-danger); color: #fff;
+  padding: 7px 12px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  border: none; cursor: pointer; animation: timerPulse 0.5s ease infinite alternate;
+}
+
 /* ===== TOAST ===== */
 #toast-container {
   position: fixed; bottom: calc(var(--nav-h) + 12px); left: 50%;
@@ -1129,41 +1150,61 @@ service cloud.firestore {
 
         <!-- UNIT CONVERTER -->
         <div class="tool-card" id="tool-converter">
-          <div class="tool-card-title">⚖️ <span data-i18n="toolConvTitle">המרת מידות ומשקלות</span></div>
-          <div class="conv-cats">
-            <button class="conv-cat active" onclick="setConvCat('weight',this)" data-i18n="convWeight">⚖️ משקל</button>
-            <button class="conv-cat" onclick="setConvCat('volume',this)" data-i18n="convVolume">🥛 נפח</button>
-            <button class="conv-cat" onclick="setConvCat('temp',this)" data-i18n="convTemp">🌡️ טמפרטורה</button>
+          <div class="tool-card-title">
+            <span class="tool-card-title-left">⚖️ <span data-i18n="toolConvTitle">המרת מידות ומשקלות</span></span>
+            <button class="tool-collapse-btn" onclick="toggleToolCard('tool-converter')">▲</button>
           </div>
-          <div class="conv-input-row">
-            <input type="number" class="conv-number" id="conv-input" value="100" oninput="updateConv()" placeholder="0">
-            <select class="conv-unit-select" id="conv-unit" onchange="updateConv()"></select>
+          <div class="tool-card-body">
+            <div class="conv-cats">
+              <button class="conv-cat active" onclick="setConvCat('weight',this)" data-i18n="convWeight">⚖️ משקל</button>
+              <button class="conv-cat" onclick="setConvCat('volume',this)" data-i18n="convVolume">🥛 נפח</button>
+              <button class="conv-cat" onclick="setConvCat('temp',this)" data-i18n="convTemp">🌡️ טמפרטורה</button>
+            </div>
+            <div class="conv-input-row">
+              <input type="number" class="conv-number" id="conv-input" value="100" oninput="updateConv()" placeholder="0">
+              <select class="conv-unit-select" id="conv-unit" onchange="updateConv()"></select>
+            </div>
+            <div class="conv-results" id="conv-results"></div>
           </div>
-          <div class="conv-results" id="conv-results"></div>
         </div>
 
         <!-- OVEN TEMPERATURE TABLE -->
         <div class="tool-card" id="tool-oven">
-          <div class="tool-card-title">🌡️ <span data-i18n="toolOvenTitle">טמפרטורות תנור</span></div>
-          <div style="overflow-x:auto;">
-            <table class="temp-table" id="oven-table"></table>
+          <div class="tool-card-title">
+            <span class="tool-card-title-left">🌡️ <span data-i18n="toolOvenTitle">טמפרטורות תנור</span></span>
+            <button class="tool-collapse-btn" onclick="toggleToolCard('tool-oven')">▲</button>
+          </div>
+          <div class="tool-card-body">
+            <div style="overflow-x:auto;">
+              <table class="temp-table" id="oven-table"></table>
+            </div>
           </div>
         </div>
 
         <!-- TIMERS -->
         <div class="tool-card" id="tool-timers">
-          <div class="tool-card-title" style="justify-content:space-between;">
-            <span>⏱️ <span data-i18n="toolTimerTitle">טיימרים</span></span>
-            <button class="btn-primary" style="padding:6px 14px;font-size:13px;" onclick="addTimer()" data-i18n="toolAddTimer">+ הוסף טיימר</button>
+          <div class="tool-card-title">
+            <span class="tool-card-title-left">⏱️ <span data-i18n="toolTimerTitle">טיימרים</span></span>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="btn-primary" style="padding:6px 14px;font-size:13px;" onclick="addTimer()" data-i18n="toolAddTimer">+ טיימר</button>
+              <button class="tool-collapse-btn" onclick="toggleToolCard('tool-timers')">▲</button>
+            </div>
           </div>
-          <div class="timers-list" id="timers-list"></div>
+          <div class="tool-card-body">
+            <div class="timers-list" id="timers-list"></div>
+          </div>
         </div>
 
         <!-- SUBSTITUTIONS -->
         <div class="tool-card" id="tool-subs">
-          <div class="tool-card-title">🔄 <span data-i18n="toolSubsTitle">תחליפי מצרכים</span></div>
-          <input type="search" class="subs-search" id="subs-search" oninput="filterSubs()" placeholder="חפש מצרך...">
-          <div id="subs-list"></div>
+          <div class="tool-card-title">
+            <span class="tool-card-title-left">🔄 <span data-i18n="toolSubsTitle">תחליפי מצרכים</span></span>
+            <button class="tool-collapse-btn" onclick="toggleToolCard('tool-subs')">▲</button>
+          </div>
+          <div class="tool-card-body">
+            <input type="search" class="subs-search" id="subs-search" oninput="filterSubs()" placeholder="חפש מצרך...">
+            <div id="subs-list"></div>
+          </div>
         </div>
 
       </div>
@@ -1461,6 +1502,7 @@ const TRANSLATIONS = {
     toolAddTimer: '+ טיימר',
     toolTimerLabelPh: 'שם (למשל: עוף)',
     toolTimerDone: '✅ הסתיים!',
+    toolTimerDismiss: 'עצור התראה',
     toolSubsTitle: 'תחליפי מצרכים',
     subsSearchPh: 'חפש מצרך...',
   },
@@ -1625,6 +1667,7 @@ const TRANSLATIONS = {
     toolAddTimer: '+ Таймер',
     toolTimerLabelPh: 'Название (напр.: курица)',
     toolTimerDone: '✅ Готово!',
+    toolTimerDismiss: 'Стоп сигнал',
     toolSubsTitle: 'Замена ингредиентов',
     subsSearchPh: 'Поиск ингредиента...',
   },
@@ -1789,6 +1832,7 @@ const TRANSLATIONS = {
     toolAddTimer: '+ Timer',
     toolTimerLabelPh: 'Label (e.g. Chicken)',
     toolTimerDone: '✅ Done!',
+    toolTimerDismiss: 'Stop alert',
     toolSubsTitle: 'Ingredient Substitutions',
     subsSearchPh: 'Search ingredient...',
   }
@@ -1815,7 +1859,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.7';
+const APP_VERSION = '1.3.8';
 
 // =====================================================================
 // APP STATE
@@ -1872,6 +1916,8 @@ function setLang(lang) {
   renderRecipeGrid();
   renderShoppingView();
   renderSettingsProfile();
+  // Refresh tools page if currently visible
+  if (document.getElementById('view-tools')?.classList.contains('active')) initToolsView();
 }
 
 function setupLang(lang) {
@@ -3784,34 +3830,83 @@ document.addEventListener('DOMContentLoaded', init);
 // ── Unit Converter ──
 let convCat = 'weight';
 
+// Multilingual labels for all unit keys
+const CONV_LABELS = {
+  g:           { he:'גרם',        ru:'г',           en:'g' },
+  kg:          { he:'ק"ג',        ru:'кг',          en:'kg' },
+  oz:          { he:'אונקיה',     ru:'унция',       en:'oz' },
+  lbs:         { he:'פאונד',      ru:'фунт',        en:'lbs' },
+  cup_flour:   { he:'כוס קמח',    ru:'ст. муки',    en:'cup flour' },
+  cup_sugar:   { he:'כוס סוכר',   ru:'ст. сахара',  en:'cup sugar' },
+  cup_butter:  { he:'כוס חמאה',   ru:'ст. масла',   en:'cup butter' },
+  cup_water:   { he:'כוס מים',    ru:'ст. воды',    en:'cup water' },
+  cup_rice:    { he:'כוס אורז',   ru:'ст. риса',    en:'cup rice' },
+  tbsp_butter: { he:'כף חמאה',    ru:'л. масла',    en:'tbsp butter' },
+  tbsp_flour:  { he:'כף קמח',     ru:'л. муки',     en:'tbsp flour' },
+  tbsp_sugar:  { he:'כף סוכר',    ru:'л. сахара',   en:'tbsp sugar' },
+  ml:          { he:'מ"ל',        ru:'мл',          en:'ml' },
+  l:           { he:'ליטר',       ru:'литр',        en:'L' },
+  cup:         { he:'כוס',        ru:'стакан',      en:'cup' },
+  tbsp:        { he:'כף',         ru:'ст.л.',       en:'tbsp' },
+  tsp:         { he:'כפית',       ru:'ч.л.',        en:'tsp' },
+  floz:        { he:'fl oz',      ru:'fl oz',       en:'fl oz' },
+  vol_water:   { he:'מים',        ru:'вода',        en:'water' },
+  vol_milk:    { he:'חלב',        ru:'молоко',      en:'milk' },
+  vol_oil:     { he:'שמן',        ru:'масло',       en:'oil' },
+  vol_honey:   { he:'דבש',        ru:'мёд',         en:'honey' },
+  vol_flour:   { he:'קמח (מנופה)',ru:'мука (сит.)', en:'flour (sifted)' },
+  vol_sugar:   { he:'סוכר',       ru:'сахар',       en:'sugar' },
+  c:           { he:'°C צלזיוס',  ru:'°C Цельсий',  en:'°C Celsius' },
+  f:           { he:'°F פרנהייט', ru:'°F Фаренг.',  en:'°F Fahrenheit' },
+};
+function convLabel(key) {
+  const l = CONV_LABELS[key]; if (!l) return key;
+  return l[currentLang] || l.en || key;
+}
+const CONV_SECTION = {
+  kitchen: { he:'🍽️ מידות מטבח', ru:'🍽️ Кухонные меры',     en:'🍽️ Kitchen measures' },
+  liquid:  { he:'⚗️ משקל לפי נוזל', ru:'⚗️ Вес по жидкости', en:'⚗️ Weight by liquid (g)' },
+  gasmark: { he:'מסימן גז',       ru:'Газовая отм.',         en:'Gas mark' },
+};
+function convSec(key) { const s = CONV_SECTION[key]; return s ? (s[currentLang] || s.en) : key; }
+
 const CONV_UNITS = {
   weight: [
-    { key: 'g',   label: 'גרם (g)',    factor: 1 },
-    { key: 'kg',  label: 'ק"ג (kg)',   factor: 1000 },
-    { key: 'oz',  label: 'אונקיה (oz)', factor: 28.3495 },
-    { key: 'lbs', label: 'פאונד (lbs)', factor: 453.592 },
+    { key: 'g',   factor: 1 },
+    { key: 'kg',  factor: 1000 },
+    { key: 'oz',  factor: 28.3495 },
+    { key: 'lbs', factor: 453.592 },
   ],
   weightKitchen: [
-    { key: 'cup_flour',  label: 'כוס קמח',   factor: 130 },
-    { key: 'cup_sugar',  label: 'כוס סוכר',  factor: 200 },
-    { key: 'cup_butter', label: 'כוס חמאה',  factor: 227 },
-    { key: 'cup_water',  label: 'כוס מים',   factor: 240 },
-    { key: 'cup_rice',   label: 'כוס אורז',  factor: 185 },
-    { key: 'tbsp_butter',label: 'כף חמאה',   factor: 14.2 },
-    { key: 'tbsp_flour', label: 'כף קמח',    factor: 8 },
-    { key: 'tbsp_sugar', label: 'כף סוכר',   factor: 12.5 },
+    { key: 'cup_flour',   factor: 130 },
+    { key: 'cup_sugar',   factor: 200 },
+    { key: 'cup_butter',  factor: 227 },
+    { key: 'cup_water',   factor: 240 },
+    { key: 'cup_rice',    factor: 185 },
+    { key: 'tbsp_butter', factor: 14.2 },
+    { key: 'tbsp_flour',  factor: 8 },
+    { key: 'tbsp_sugar',  factor: 12.5 },
   ],
   volume: [
-    { key: 'ml',   label: 'מ"ל (ml)',     factor: 1 },
-    { key: 'l',    label: 'ליטר (L)',     factor: 1000 },
-    { key: 'cup',  label: 'כוס (240ml)',  factor: 240 },
-    { key: 'tbsp', label: 'כף (15ml)',    factor: 15 },
-    { key: 'tsp',  label: 'כפית (5ml)',   factor: 5 },
-    { key: 'floz', label: 'fl oz',        factor: 29.5735 },
+    { key: 'ml',   factor: 1 },
+    { key: 'l',    factor: 1000 },
+    { key: 'cup',  factor: 240 },
+    { key: 'tbsp', factor: 15 },
+    { key: 'tsp',  factor: 5 },
+    { key: 'floz', factor: 29.5735 },
+  ],
+  // density in g/ml — shows how many grams the volume contains
+  volumeKitchen: [
+    { key: 'vol_water',  dens: 1.00 },
+    { key: 'vol_milk',   dens: 1.03 },
+    { key: 'vol_oil',    dens: 0.91 },
+    { key: 'vol_honey',  dens: 1.42 },
+    { key: 'vol_flour',  dens: 0.54 },
+    { key: 'vol_sugar',  dens: 0.83 },
   ],
   temp: [
-    { key: 'c', label: '°C (צלזיוס)', factor: 1 },
-    { key: 'f', label: '°F (פרנהייט)', factor: null }, // special
+    { key: 'c', factor: 1 },
+    { key: 'f', factor: null },
   ],
 };
 
@@ -3827,7 +3922,7 @@ function renderConvUnits() {
   const sel = document.getElementById('conv-unit');
   if (!sel) return;
   const units = CONV_UNITS[convCat] || [];
-  sel.innerHTML = units.map(u => `<option value="${u.key}">${u.label}</option>`).join('');
+  sel.innerHTML = units.map(u => `<option value="${u.key}">${convLabel(u.key)}</option>`).join('');
 }
 
 function updateConv() {
@@ -3842,40 +3937,60 @@ function updateConv() {
     return;
   }
 
-  const allUnits = convCat === 'weight'
-    ? [...CONV_UNITS.weight, ...CONV_UNITS.weightKitchen]
-    : CONV_UNITS.volume;
+  if (convCat === 'volume') {
+    renderVolumeConv(input, fromKey, container);
+    return;
+  }
 
+  // Weight
+  const allUnits = [...CONV_UNITS.weight, ...CONV_UNITS.weightKitchen];
   const fromUnit = allUnits.find(u => u.key === fromKey);
   if (!fromUnit) return;
   const inGrams = input * fromUnit.factor;
 
   let html = '';
-  // Main units
-  const mainUnits = CONV_UNITS[convCat];
-  mainUnits.forEach(u => {
+  CONV_UNITS.weight.forEach(u => {
     if (u.key === fromKey) return;
     const val = inGrams / u.factor;
-    html += `<div class="conv-result-item" onclick="convCopyResult(this,'${fmt(val)}')">
-      <span class="conv-result-label">${u.label}</span>
-      <span class="conv-result-value">${fmt(val)}</span>
-    </div>`;
+    html += convResultItem(convLabel(u.key), fmt(val), false);
   });
-
-  // Kitchen measures for weight
-  if (convCat === 'weight') {
-    html += `<div class="conv-section-label">🍽️ מידות מטבח</div>`;
-    CONV_UNITS.weightKitchen.forEach(u => {
-      if (u.key === fromKey) return;
-      const val = inGrams / u.factor;
-      html += `<div class="conv-result-item highlight" onclick="convCopyResult(this,'${fmt(val)}')">
-        <span class="conv-result-label">${u.label}</span>
-        <span class="conv-result-value">${fmt(val)}</span>
-      </div>`;
-    });
-  }
-
+  html += `<div class="conv-section-label">${convSec('kitchen')}</div>`;
+  CONV_UNITS.weightKitchen.forEach(u => {
+    if (u.key === fromKey) return;
+    const val = inGrams / u.factor;
+    html += convResultItem(convLabel(u.key), fmt(val), true);
+  });
   container.innerHTML = html;
+}
+
+function renderVolumeConv(input, fromKey, container) {
+  const allUnits = CONV_UNITS.volume;
+  const fromUnit = allUnits.find(u => u.key === fromKey);
+  if (!fromUnit) return;
+  const inMl = input * fromUnit.factor;
+
+  let html = '';
+  // Main volume units
+  allUnits.forEach(u => {
+    if (u.key === fromKey) return;
+    const val = inMl / u.factor;
+    html += convResultItem(convLabel(u.key), fmt(val), false);
+  });
+  // Kitchen liquid weights section
+  html += `<div class="conv-section-label">${convSec('liquid')}</div>`;
+  CONV_UNITS.volumeKitchen.forEach(u => {
+    const grams = inMl * u.dens;
+    html += convResultItem(convLabel(u.key), `${fmt(grams)} ${convLabel('g')}`, true);
+  });
+  container.innerHTML = html;
+}
+
+function convResultItem(label, value, highlight) {
+  const cls = highlight ? 'conv-result-item highlight' : 'conv-result-item';
+  return `<div class="${cls}" onclick="convCopyResult(this,'${value}')">
+    <span class="conv-result-label">${label}</span>
+    <span class="conv-result-value">${value}</span>
+  </div>`;
 }
 
 function renderTempConv(val, fromKey, container) {
@@ -3884,11 +3999,11 @@ function renderTempConv(val, fromKey, container) {
   else { f = val; c = (val - 32) * 5/9; }
   container.innerHTML = `
     <div class="conv-result-item highlight">
-      <span class="conv-result-label">°${fromKey === 'c' ? 'F' : 'C'}</span>
+      <span class="conv-result-label">${convLabel(fromKey === 'c' ? 'f' : 'c')}</span>
       <span class="conv-result-value">${fmt(fromKey === 'c' ? f : c)}</span>
     </div>
     <div class="conv-result-item">
-      <span class="conv-result-label">מסימן גז</span>
+      <span class="conv-result-label">${convSec('gasmark')}</span>
       <span class="conv-result-value">${celsiusToGasMark(c)}</span>
     </div>`;
 }
@@ -3961,7 +4076,8 @@ let timerIdSeq = 0;
 function addTimer() {
   if (timers.length >= 5) { showToast('מקסימום 5 טיימרים', 'error'); return; }
   const id = ++timerIdSeq;
-  timers.push({ id, label: '', totalSec: 5 * 60, remainSec: 5 * 60, running: false, done: false, interval: null });
+  timers.push({ id, label: '', totalSec: 5 * 60, remainSec: 5 * 60,
+    running: false, done: false, interval: null, alertInterval: null });
   renderTimers();
 }
 
@@ -3969,46 +4085,87 @@ function renderTimers() {
   const list = document.getElementById('timers-list');
   if (!list) return;
   if (timers.length === 0) {
-    list.innerHTML = `<p style="text-align:center;color:var(--c-text-muted);font-size:14px;padding:16px 0;">${t('toolAddTimer')} להוסיף טיימר 👆</p>`;
+    list.innerHTML = `<p style="text-align:center;color:var(--c-text-muted);font-size:14px;padding:16px 0;">👆 ${t('toolAddTimer')}</p>`;
     return;
   }
   list.innerHTML = timers.map(tmr => {
     const mm = String(Math.floor(tmr.remainSec / 60)).padStart(2, '0');
     const ss = String(tmr.remainSec % 60).padStart(2, '0');
-    const dispClass = tmr.done ? 'done' : tmr.running ? 'running' : '';
-    const displayText = tmr.done ? t('toolTimerDone') : `${mm}:${ss}`;
+    const alerting = tmr.done && tmr.alertInterval;
+    const dispClass = alerting ? 'alerting' : tmr.done ? 'done' : tmr.running ? 'running' : '';
+    const displayText = tmr.done ? `${mm}:${ss}` : `${mm}:${ss}`;
     return `<div class="timer-card" id="timer-${tmr.id}">
       <input class="timer-label-input" placeholder="${t('toolTimerLabelPh')}" value="${escHtml(tmr.label)}"
-        oninput="timers.find(t=>t.id==${tmr.id}).label=this.value">
+        oninput="timers.find(x=>x.id==${tmr.id}).label=this.value">
       <div class="timer-time-adj">
-        <button class="timer-adj-btn" onclick="adjTimer(${tmr.id},-60)" ${tmr.running?'disabled':''}>−</button>
+        <button class="timer-adj-btn" onclick="adjTimer(${tmr.id},-60)" ${tmr.running||tmr.done?'disabled':''}>−</button>
         <span class="timer-display ${dispClass}" id="tdisp-${tmr.id}">${displayText}</span>
-        <button class="timer-adj-btn" onclick="adjTimer(${tmr.id},+60)" ${tmr.running?'disabled':''}>+</button>
+        <button class="timer-adj-btn" onclick="adjTimer(${tmr.id},+60)" ${tmr.running||tmr.done?'disabled':''}>+</button>
       </div>
       <div class="timer-controls">
-        <button class="timer-btn timer-btn-start" onclick="toggleTimer(${tmr.id})">
-          ${tmr.running ? '⏸' : tmr.done ? '↺' : '▶'}
-        </button>
-        <button class="timer-btn timer-btn-reset" onclick="resetTimer(${tmr.id})">↺</button>
+        ${tmr.done
+          ? `<button class="timer-btn-dismiss" onclick="dismissTimerAlert(${tmr.id})">🔕 ${t('toolTimerDismiss')}</button>`
+          : `<button class="timer-btn timer-btn-start" onclick="toggleTimer(${tmr.id})">${tmr.running ? '⏸' : '▶'}</button>`
+        }
+        <button class="timer-btn timer-btn-reset" onclick="resetTimer(${tmr.id})" title="Reset">↺</button>
         <button class="timer-btn timer-btn-delete" onclick="deleteTimer(${tmr.id})">✕</button>
       </div>
     </div>`;
   }).join('');
 }
 
+function playTimerBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.35, 0.7].forEach(delay => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 880;
+      g.gain.setValueAtTime(0.35, ctx.currentTime + delay);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.28);
+      o.start(ctx.currentTime + delay); o.stop(ctx.currentTime + delay + 0.28);
+    });
+  } catch {}
+  if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+}
+
+function startTimerAlert(id) {
+  const tmr = timers.find(t => t.id === id);
+  if (!tmr) return;
+  stopTimerAlert(id); // clear any existing
+  playTimerBeep();    // immediate first alert
+  tmr.alertInterval = setInterval(() => {
+    playTimerBeep();
+    // Pulse display
+    const disp = document.getElementById(`tdisp-${id}`);
+    if (disp) { disp.classList.add('alerting'); }
+  }, 3000);
+}
+
+function stopTimerAlert(id) {
+  const tmr = timers.find(t => t.id === id);
+  if (tmr && tmr.alertInterval) {
+    clearInterval(tmr.alertInterval);
+    tmr.alertInterval = null;
+  }
+}
+
+function dismissTimerAlert(id) {
+  stopTimerAlert(id);
+  renderTimers(); // re-render so pulsing/dismiss button disappears
+}
+
 function adjTimer(id, deltaSec) {
   const tmr = timers.find(t => t.id === id);
-  if (!tmr || tmr.running) return;
+  if (!tmr || tmr.running || tmr.done) return;
   tmr.totalSec = Math.max(60, tmr.totalSec + deltaSec);
   tmr.remainSec = tmr.totalSec;
-  tmr.done = false;
   renderTimers();
 }
 
 function toggleTimer(id) {
   const tmr = timers.find(t => t.id === id);
-  if (!tmr) return;
-  if (tmr.done) { resetTimer(id); return; }
+  if (!tmr || tmr.done) return;
   if (tmr.running) {
     clearInterval(tmr.interval); tmr.interval = null; tmr.running = false;
   } else {
@@ -4025,23 +4182,12 @@ function tickTimer(id) {
   if (tmr.remainSec <= 0) {
     tmr.remainSec = 0; tmr.running = false; tmr.done = true;
     clearInterval(tmr.interval); tmr.interval = null;
-    // Vibrate
-    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
-    // Beep via AudioContext
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      [0, 0.4, 0.8].forEach(t => {
-        const o = ctx.createOscillator(); const g = ctx.createGain();
-        o.connect(g); g.connect(ctx.destination);
-        o.frequency.value = 880; g.gain.setValueAtTime(0.3, ctx.currentTime + t);
-        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.35);
-        o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.35);
-      });
-    } catch {}
     showToast(`⏱️ ${tmr.label || 'טיימר'} — ${t('toolTimerDone')}`, 'success');
-    renderTimers(); return;
+    startTimerAlert(id);
+    renderTimers();
+    return;
   }
-  // Update display without full re-render
+  // Update display only — no full re-render
   const disp = document.getElementById(`tdisp-${id}`);
   if (disp) {
     const mm = String(Math.floor(tmr.remainSec / 60)).padStart(2, '0');
@@ -4054,13 +4200,14 @@ function resetTimer(id) {
   const tmr = timers.find(t => t.id === id);
   if (!tmr) return;
   clearInterval(tmr.interval); tmr.interval = null;
+  stopTimerAlert(id);
   tmr.running = false; tmr.done = false; tmr.remainSec = tmr.totalSec;
   renderTimers();
 }
 
 function deleteTimer(id) {
   const tmr = timers.find(t => t.id === id);
-  if (tmr) { clearInterval(tmr.interval); }
+  if (tmr) { clearInterval(tmr.interval); stopTimerAlert(id); }
   timers = timers.filter(t => t.id !== id);
   renderTimers();
 }
@@ -4118,15 +4265,32 @@ function filterSubs() {
   renderSubs(document.getElementById('subs-search')?.value || '');
 }
 
+// ── Tool card collapse ──
+const toolCollapsed = {};
+function toggleToolCard(id) {
+  toolCollapsed[id] = !toolCollapsed[id];
+  const card = document.getElementById(id);
+  if (!card) return;
+  card.classList.toggle('collapsed', !!toolCollapsed[id]);
+  const btn = card.querySelector('.tool-collapse-btn');
+  if (btn) btn.textContent = toolCollapsed[id] ? '▼' : '▲';
+}
+
 function initToolsView() {
   renderConvUnits();
   updateConv();
   renderOvenTable();
   renderTimers();
   renderSubs();
-  // Update search placeholder
   const sp = document.getElementById('subs-search');
   if (sp) sp.placeholder = t('subsSearchPh');
+  // Restore collapse state on all cards
+  ['tool-converter','tool-oven','tool-timers','tool-subs'].forEach(id => {
+    const card = document.getElementById(id);
+    const btn  = card?.querySelector('.tool-collapse-btn');
+    if (card) card.classList.toggle('collapsed', !!toolCollapsed[id]);
+    if (btn)  btn.textContent = toolCollapsed[id] ? '▼' : '▲';
+  });
 }
 </script>
 </body>
