@@ -1248,6 +1248,10 @@ const TRANSLATIONS = {
     imagesUpdated: 'תמונות עודכנו',
     heroCollapse: '▲ כווץ',
     heroExpand: '▼ הרחב',
+    saveChoiceTitle: 'שמירת מתכון',
+    saveChoiceMsg: 'המתכון כבר קיים. מה לעשות?',
+    updateExisting: 'עדכן את המתכון הקיים',
+    saveAsNew: 'שמור כמתכון חדש נפרד',
   },
   ru: {
     appName: 'Рецептник',
@@ -1394,6 +1398,10 @@ const TRANSLATIONS = {
     imagesUpdated: 'Фото обновлены',
     heroCollapse: '▲ Свернуть',
     heroExpand: '▼ Развернуть',
+    saveChoiceTitle: 'Сохранить рецепт',
+    saveChoiceMsg: 'Рецепт уже существует. Что сделать?',
+    updateExisting: 'Обновить существующий рецепт',
+    saveAsNew: 'Сохранить как новый рецепт',
   },
   en: {
     appName: 'RecipeBook',
@@ -1540,6 +1548,10 @@ const TRANSLATIONS = {
     imagesUpdated: 'Images updated',
     heroCollapse: '▲ Collapse',
     heroExpand: '▼ Expand',
+    saveChoiceTitle: 'Save Recipe',
+    saveChoiceMsg: 'This recipe already exists. What would you like to do?',
+    updateExisting: 'Update the existing recipe',
+    saveAsNew: 'Save as a new separate recipe',
   }
 };
 
@@ -1564,7 +1576,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.1';
+const APP_VERSION = '1.3.2';
 
 // =====================================================================
 // APP STATE
@@ -2341,6 +2353,63 @@ async function analyzeImages() {
 }
 
 // =====================================================================
+// FETCH PAGE CONTENT (URL analysis helper)
+// =====================================================================
+async function fetchPageContent(url, timeoutMs = 12000) {
+  // Strategy 1: Jina Reader — converts any webpage to clean text, CORS-open
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), timeoutMs);
+    const res = await fetch(`https://r.jina.ai/${url}`, {
+      signal: ctrl.signal,
+      headers: { 'Accept': 'text/plain', 'X-Return-Format': 'text' }
+    });
+    clearTimeout(tid);
+    if (res.ok) {
+      const text = await res.text();
+      if (text && text.length > 200) return text.substring(0, 8000);
+    }
+  } catch {}
+
+  // Strategy 2: allorigins proxy
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), timeoutMs);
+    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
+    clearTimeout(tid);
+    const d = await res.json();
+    const raw = d.contents || '';
+    if (raw.length > 200) {
+      return raw
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ').trim().substring(0, 8000);
+    }
+  } catch {}
+
+  // Strategy 3: corsproxy.io
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), timeoutMs);
+    const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, { signal: ctrl.signal });
+    clearTimeout(tid);
+    const raw = await res.text();
+    if (raw.length > 200) {
+      return raw
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ').trim().substring(0, 8000);
+    }
+  } catch {}
+
+  return '';
+}
+
+// =====================================================================
 // ANALYZE URL
 // =====================================================================
 async function analyzeUrl() {
@@ -2348,15 +2417,8 @@ async function analyzeUrl() {
   if (!url) { showToast(t('invalidUrl'), 'error'); return; }
   showLoading(t('fetchingPage'));
   try {
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-    const res = await fetch(proxyUrl);
-    const data = await res.json();
-    let content = data.contents || '';
-    // Strip HTML tags
-    content = content.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ').trim().substring(0, 6000);
+    const content = await fetchPageContent(url);
+    if (!content || content.length < 80) throw new Error(t('fetchingPage') + ' failed');
     showLoading(t('analyzingUrl'));
     const response = await callClaude([{
       role: 'user',
@@ -2376,8 +2438,27 @@ async function analyzeUrl() {
 // ANALYZE VIDEO
 // =====================================================================
 
-// Fetch through multiple CORS proxies — returns text or null
+// Fetch YouTube-related URLs through multiple methods
 async function ytProxy(targetUrl, timeoutMs = 9000) {
+  // For YouTube pages, try Jina Reader first (gives clean transcript/description)
+  const isYtPage = targetUrl.includes('youtube.com/watch') || targetUrl.includes('youtube.com/shorts');
+  if (isYtPage) {
+    try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), timeoutMs);
+      const r = await fetch(`https://r.jina.ai/${targetUrl}`, {
+        signal: ctrl.signal,
+        headers: { 'Accept': 'text/plain', 'X-Return-Format': 'text' }
+      });
+      clearTimeout(tid);
+      if (r.ok) {
+        const text = await r.text();
+        if (text && text.length > 80) return text.substring(0, 8000);
+      }
+    } catch {}
+  }
+
+  // Fallback: allorigins + corsproxy
   const proxies = [
     `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`,
     `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
@@ -2576,10 +2657,10 @@ async function analyzeTextInput() {
 function openEditRecipe(id) {
   const recipe = allRecipes.find(r => r.id === id);
   if (!recipe) return;
-  editingRecipeId = id;
   pendingImages = recipe.images ? [...recipe.images] : [];
   formRating = recipe.rating || 0;
-  closeModal();
+  closeModal();               // closes detail modal (resets editingRecipeId)
+  editingRecipeId = id;       // set AFTER closeModal so it isn't wiped
   setTimeout(() => openRecipeForm(recipe), 50);
 }
 
@@ -3068,17 +3149,50 @@ function checkShareParam() {
   setTimeout(() => openRecipeDetail(rId, true, uId), 500);
 }
 
-async function saveSharedRecipe() {
+function saveSharedRecipe() {
   const recipe = window._sharedRecipeData;
   if (!recipe) return;
+  // If the recipe belongs to current user → ask update vs new
+  const isOwn = recipe.id && allRecipes.some(r => r.id === recipe.id);
+  if (isOwn) {
+    showSaveChoiceModal(recipe);
+  } else {
+    doSaveSharedRecipe(recipe, null); // external share → always new
+  }
+}
+
+function showSaveChoiceModal(recipe) {
+  openModal(`
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-title">${t('saveChoiceTitle')}</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body" style="text-align:center;">
+        <p style="font-size:15px;color:var(--c-text-muted);margin-bottom:24px;">${escHtml(t('saveChoiceMsg'))}</p>
+        <div style="display:flex;flex-direction:column;gap:12px;max-width:300px;margin:0 auto;">
+          <button class="btn-primary" onclick="doSaveSharedRecipe(window._sharedRecipeData,'${escHtml(recipe.id)}')">
+            ✏️ ${t('updateExisting')}
+          </button>
+          <button class="btn-primary" style="background:var(--c-text-muted);" onclick="doSaveSharedRecipe(window._sharedRecipeData,null)">
+            📋 ${t('saveAsNew')}
+          </button>
+        </div>
+      </div>
+    </div>`);
+}
+
+async function doSaveSharedRecipe(recipe, existingId) {
+  closeModal();
   showLoading(t('savingRecipe'));
   const { id: _id, createdAt: _c, updatedAt: _u, ...data } = recipe;
   try {
-    editingRecipeId = null;
+    editingRecipeId = existingId || null;
     await saveRecipe(data);
+    editingRecipeId = null;
     hideLoading();
     closeModal();
-    showToast(t('recipeAdded'), 'success');
+    showToast(existingId ? t('recipeUpdated') : t('recipeAdded'), 'success');
   } catch (e) {
     hideLoading();
     showToast(t('errorFirebase') + e.message, 'error');
@@ -3211,17 +3325,13 @@ function openAddRecipeToShoppingModal() {
 // REFRESH ALL IMAGES
 // =====================================================================
 async function refreshAllImages() {
-  const noImg = allRecipes.filter(r => !r.images || r.images.length === 0);
-  if (noImg.length === 0) {
-    showToast(t('allImagesExist'), 'info');
-    return;
-  }
+  if (allRecipes.length === 0) { showToast(t('emptyTitle'), 'info'); return; }
   let count = 0;
-  for (let i = 0; i < noImg.length; i++) {
-    const recipe = noImg[i];
-    document.getElementById('loading-text').textContent =
-      `🖼️ ${i + 1}/${noImg.length}: ${recipe.name.substring(0, 30)}`;
-    showLoading(document.getElementById('loading-text').textContent);
+  const total = allRecipes.length;
+  for (let i = 0; i < total; i++) {
+    const recipe = allRecipes[i];
+    const label = `🖼️ ${i + 1}/${total}: ${recipe.name.substring(0, 28)}`;
+    showLoading(label);
     const img = await fetchRecipeImage(recipe.name);
     if (img) {
       try {
@@ -3232,7 +3342,7 @@ async function refreshAllImages() {
     }
   }
   hideLoading();
-  showToast(`${t('imagesUpdated')} (${count}/${noImg.length})`, 'success');
+  showToast(`${t('imagesUpdated')} (${count}/${total})`, 'success');
 }
 
 // =====================================================================
