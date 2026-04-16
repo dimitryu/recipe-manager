@@ -42,11 +42,12 @@
   --nav-h: 64px;
   --header-h: 60px;
   --transition: 0.25s ease;
+  --font-size-base: 16px;
 }
 
 /* ===== RESET & BASE ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { height: 100%; font-size: 16px; }
+html { height: 100%; font-size: var(--font-size-base); }
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   background: var(--c-bg);
@@ -526,10 +527,17 @@ body.ltr .search-icon { right: auto; left: 14px; }
 .ingredients-list, .steps-list { list-style: none; }
 .ingredient-row, .step-row {
   display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  flex-wrap: wrap;
 }
-.ingredient-row input { flex: 1; }
-.ingredient-row .qty-input { flex: 0 0 80px; }
-.ingredient-row .unit-input { flex: 0 0 80px; }
+.ingredient-row .ing-name { flex: 1 1 100%; min-width: 0; }
+.ingredient-row .qty-input { flex: 1 1 70px; min-width: 60px; max-width: 100px; }
+.ingredient-row .unit-input { flex: 1 1 70px; min-width: 60px; max-width: 100px; }
+.ingredient-row .row-del { flex-shrink: 0; margin-right: auto; }
+@media (min-width: 480px) {
+  .ingredient-row .ing-name { flex: 1 1 0; }
+  .ingredient-row .qty-input { flex: 0 0 80px; max-width: 80px; }
+  .ingredient-row .unit-input { flex: 0 0 80px; max-width: 80px; }
+}
 .step-row { align-items: flex-start; }
 .step-num {
   flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
@@ -734,9 +742,77 @@ body.ltr .search-icon { right: auto; left: 14px; }
 
 /* ===== SELECT DARK FIX ===== */
 select option { background: var(--c-surface); color: var(--c-text); }
+
+/* ===== VERSION BADGE ===== */
+.header-version { font-size: 10px; color: var(--c-text-light); margin-top: 1px; }
+
+/* ===== CONFIRM DIALOG ===== */
+#confirm-dialog {
+  position: fixed; inset: 0; z-index: 600;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.5);
+}
+#confirm-dialog.open { display: flex; }
+.confirm-card {
+  background: var(--c-surface); border-radius: var(--radius);
+  padding: 28px 24px; max-width: 320px; width: 90%;
+  box-shadow: var(--shadow-lg); text-align: center;
+  animation: zoomIn 0.2s ease;
+}
+.confirm-msg { font-size: 16px; line-height: 1.5; margin-bottom: 24px; color: var(--c-text); }
+.confirm-btns { display: flex; gap: 10px; justify-content: center; }
+.confirm-btn-cancel {
+  flex: 1; padding: 10px 16px; border-radius: var(--radius-sm);
+  border: 1.5px solid var(--c-border); font-size: 14px; font-weight: 600;
+  color: var(--c-text-muted); transition: all var(--transition);
+}
+.confirm-btn-cancel:hover { background: var(--c-bg); }
+.confirm-btn-ok {
+  flex: 1; padding: 10px 16px; border-radius: var(--radius-sm);
+  background: var(--c-danger); color: #fff; font-size: 14px; font-weight: 600;
+  transition: all var(--transition);
+}
+.confirm-btn-ok:hover { background: #b71c1c; }
+
+/* ===== FAVORITES ===== */
+.fav-btn {
+  position: absolute; top: 8px; left: 8px;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: rgba(255,255,255,0.9);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  transition: transform var(--transition);
+  z-index: 1;
+}
+.fav-btn:hover { transform: scale(1.15); }
+.fav-btn.active { background: #fff0f0; }
+.action-btn.fav-active { background: #fff0f0; border-color: #e57373; color: #c62828; }
+
+/* ===== FONT SIZE SELECTOR ===== */
+.font-size-row {
+  display: flex; gap: 8px; padding: 12px 16px; flex-wrap: wrap;
+}
+.fsize-btn {
+  flex: 1; padding: 8px 6px; border-radius: var(--radius-sm);
+  border: 1.5px solid var(--c-border); font-weight: 600;
+  color: var(--c-text-muted); font-size: 13px; text-align: center;
+  transition: all var(--transition);
+}
+.fsize-btn.active { background: var(--c-primary); color: #fff; border-color: var(--c-primary); }
 </style>
 </head>
 <body>
+
+<!-- ===== CONFIRM DIALOG ===== -->
+<div id="confirm-dialog">
+  <div class="confirm-card">
+    <div class="confirm-msg" id="confirm-msg"></div>
+    <div class="confirm-btns">
+      <button class="confirm-btn-cancel" id="confirm-cancel"></button>
+      <button class="confirm-btn-ok" id="confirm-ok"></button>
+    </div>
+  </div>
+</div>
 
 <!-- ===== LOADING OVERLAY ===== -->
 <div id="loading-overlay">
@@ -803,6 +879,7 @@ service cloud.firestore {
     <div class="auth-logo">🍳</div>
     <div class="auth-title" data-i18n="appName">מתכוניה</div>
     <div class="auth-subtitle" data-i18n="authSubtitle">Sign in to manage your recipes</div>
+    <div style="font-size:12px;color:var(--c-text-light);margin-bottom:8px;" id="auth-version"></div>
     <button class="btn-google" onclick="signInGoogle()">
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -828,7 +905,10 @@ service cloud.firestore {
   <header class="app-header">
     <div class="header-logo">
       <span class="header-logo-icon">🍳</span>
-      <span class="header-app-name" data-i18n="appName">מתכוניה</span>
+      <div>
+        <span class="header-app-name" data-i18n="appName">מתכוניה</span>
+        <div class="header-version" id="header-version"></div>
+      </div>
     </div>
     <div class="header-right">
       <div class="header-lang">
@@ -903,6 +983,46 @@ service cloud.firestore {
             <label style="font-size:13px;font-weight:600;color:var(--c-text-muted);" data-i18n="claudeKeyLabel">Claude API Key</label>
             <input type="password" id="settings-claude-key" class="settings-input" placeholder="sk-ant-...">
             <button class="btn-save mt-8" onclick="saveClaudeKey()" data-i18n="save">Save</button>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-card-header" data-i18n="fontSizeHeader">Font Size</div>
+          <div class="font-size-row">
+            <button class="fsize-btn" data-fsize="14" onclick="setFontSize(14)" data-i18n="fontSmall">Small</button>
+            <button class="fsize-btn" data-fsize="16" onclick="setFontSize(16)" data-i18n="fontMedium">Medium</button>
+            <button class="fsize-btn" data-fsize="18" onclick="setFontSize(18)" data-i18n="fontLarge">Large</button>
+            <button class="fsize-btn" data-fsize="20" onclick="setFontSize(20)" data-i18n="fontXLarge">XLarge</button>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-card-header" data-i18n="backupHeader">Backup & Restore</div>
+          <div class="settings-item" onclick="exportBackup()">
+            <div class="settings-item-left">
+              <span class="settings-item-icon">📤</span>
+              <span class="settings-item-label" data-i18n="exportBackup">Export JSON</span>
+            </div>
+            <span class="settings-item-arrow">›</span>
+          </div>
+          <div class="settings-item" onclick="document.getElementById('import-file-input').click()" style="border-bottom:none;">
+            <div class="settings-item-left">
+              <span class="settings-item-icon">📥</span>
+              <span class="settings-item-label" data-i18n="importBackup">Import JSON</span>
+            </div>
+            <span class="settings-item-arrow">›</span>
+          </div>
+          <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="importBackup(event)">
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-card-header" data-i18n="installHeader">Installation</div>
+          <div class="settings-item" onclick="installPWA()" id="install-pwa-item" style="border-bottom:none;">
+            <div class="settings-item-left">
+              <span class="settings-item-icon">📲</span>
+              <span class="settings-item-label" data-i18n="installPwa">Install App</span>
+            </div>
+            <span class="settings-item-arrow">›</span>
           </div>
         </div>
 
@@ -1075,6 +1195,25 @@ const TRANSLATIONS = {
     invalidUrl: 'כתובת URL לא תקינה',
     configError: 'שגיאה בהגדרות Firebase',
     min: 'דק',
+    favorites: 'מועדפים',
+    addToFavorites: 'הוסף למועדפים',
+    removeFromFavorites: 'הסר ממועדפים',
+    fontSizeHeader: 'גודל טקסט',
+    fontSmall: 'קטן', fontMedium: 'בינוני', fontLarge: 'גדול', fontXLarge: 'ענק',
+    backupHeader: 'גיבוי ושחזור',
+    exportBackup: 'ייצוא JSON',
+    importBackup: 'ייבוא JSON',
+    installHeader: 'התקנה',
+    installPwa: 'התקן אפליקציה',
+    confirmCancel: 'ביטול',
+    confirmOk: 'אישור',
+    confirmReset: 'לאפס את כל ההגדרות? תתנתק.',
+    confirmSignOut: 'להתנתק?',
+    confirmDeleteMsg: 'בטוח למחוק את המתכון הזה?',
+    versionLabel: 'גרסה',
+    backupSuccess: 'הגיבוי יובא בהצלחה!',
+    backupError: 'שגיאה בייבוא הגיבוי',
+    installNotAvailable: 'האפליקציה כבר מותקנת או שהדפדפן לא תומך',
   },
   ru: {
     appName: 'Рецептник',
@@ -1197,6 +1336,25 @@ const TRANSLATIONS = {
     invalidUrl: 'Неверный URL',
     configError: 'Ошибка конфигурации Firebase',
     min: 'мин',
+    favorites: 'Избранное',
+    addToFavorites: 'В избранное',
+    removeFromFavorites: 'Убрать из избранного',
+    fontSizeHeader: 'Размер текста',
+    fontSmall: 'Маленький', fontMedium: 'Средний', fontLarge: 'Большой', fontXLarge: 'Огромный',
+    backupHeader: 'Резервная копия',
+    exportBackup: 'Экспорт JSON',
+    importBackup: 'Импорт JSON',
+    installHeader: 'Установка',
+    installPwa: 'Установить приложение',
+    confirmCancel: 'Отмена',
+    confirmOk: 'Подтвердить',
+    confirmReset: 'Сбросить все настройки? Вы будете выключены.',
+    confirmSignOut: 'Выйти из аккаунта?',
+    confirmDeleteMsg: 'Удалить этот рецепт?',
+    versionLabel: 'Версия',
+    backupSuccess: 'Резервная копия импортирована!',
+    backupError: 'Ошибка импорта резервной копии',
+    installNotAvailable: 'Приложение уже установлено или браузер не поддерживает',
   },
   en: {
     appName: 'RecipeBook',
@@ -1319,6 +1477,25 @@ const TRANSLATIONS = {
     invalidUrl: 'Invalid URL',
     configError: 'Firebase configuration error',
     min: 'min',
+    favorites: 'Favorites',
+    addToFavorites: 'Add to Favorites',
+    removeFromFavorites: 'Remove from Favorites',
+    fontSizeHeader: 'Font Size',
+    fontSmall: 'Small', fontMedium: 'Medium', fontLarge: 'Large', fontXLarge: 'XLarge',
+    backupHeader: 'Backup & Restore',
+    exportBackup: 'Export JSON',
+    importBackup: 'Import JSON',
+    installHeader: 'Installation',
+    installPwa: 'Install App',
+    confirmCancel: 'Cancel',
+    confirmOk: 'Confirm',
+    confirmReset: 'Reset all settings? You will be signed out.',
+    confirmSignOut: 'Sign out?',
+    confirmDeleteMsg: 'Delete this recipe?',
+    versionLabel: 'Version',
+    backupSuccess: 'Backup imported successfully!',
+    backupError: 'Error importing backup',
+    installNotAvailable: 'App is already installed or browser does not support',
   }
 };
 
@@ -1341,6 +1518,11 @@ function saveUserCategories(cats) {
 }
 
 // =====================================================================
+// VERSION
+// =====================================================================
+const APP_VERSION = '1.3.0';
+
+// =====================================================================
 // APP STATE
 // =====================================================================
 let currentLang = localStorage.getItem('lang') || 'en';
@@ -1356,6 +1538,7 @@ let shoppingRecipeIds = JSON.parse(localStorage.getItem('shoppingRecipeIds') || 
 let editingRecipeId = null;
 let pendingImages = []; // base64 strings for current form
 let formRating = 0;
+let deferredInstallPrompt = null;
 
 // =====================================================================
 // i18n
@@ -1432,6 +1615,19 @@ function showToast(msg, type = 'info') {
   el.textContent = msg;
   container.appendChild(el);
   setTimeout(() => el.remove(), 3200);
+}
+
+function showConfirm(message, onConfirm, isDanger = true) {
+  const dialog = document.getElementById('confirm-dialog');
+  document.getElementById('confirm-msg').textContent = message;
+  document.getElementById('confirm-cancel').textContent = t('confirmCancel');
+  const okBtn = document.getElementById('confirm-ok');
+  okBtn.textContent = t('confirmOk');
+  okBtn.style.background = isDanger ? 'var(--c-danger)' : 'var(--c-primary)';
+  dialog.classList.add('open');
+  const close = () => dialog.classList.remove('open');
+  document.getElementById('confirm-cancel').onclick = close;
+  okBtn.onclick = () => { close(); onConfirm(); };
 }
 
 function closeModal() {
@@ -1528,13 +1724,14 @@ function saveSetup() {
 }
 
 function resetSetup() {
-  if (!confirm('Reset all settings? You will be signed out.')) return;
-  if (auth) auth.signOut().catch(() => {});
-  localStorage.removeItem('firebaseConfig');
-  localStorage.removeItem('claudeKey');
-  if (recipesListener) { recipesListener(); recipesListener = null; }
-  allRecipes = [];
-  showScreen('setup-screen');
+  showConfirm(t('confirmReset'), () => {
+    if (auth) auth.signOut().catch(() => {});
+    localStorage.removeItem('firebaseConfig');
+    localStorage.removeItem('claudeKey');
+    if (recipesListener) { recipesListener(); recipesListener = null; }
+    allRecipes = [];
+    showScreen('setup-screen');
+  });
 }
 
 // =====================================================================
@@ -1566,9 +1763,10 @@ function signInGoogle() {
 }
 
 function signOutUser() {
-  if (!confirm(t('signOut') + '?')) return;
-  if (recipesListener) { recipesListener(); recipesListener = null; }
-  auth.signOut();
+  showConfirm(t('confirmSignOut'), () => {
+    if (recipesListener) { recipesListener(); recipesListener = null; }
+    auth.signOut();
+  });
 }
 
 // =====================================================================
@@ -1638,14 +1836,30 @@ async function saveRecipe(data) {
 }
 
 async function deleteRecipe(id) {
-  if (!confirm(t('confirmDelete'))) return;
-  showLoading(t('savingRecipe'));
+  showConfirm(t('confirmDeleteMsg'), async () => {
+    showLoading(t('savingRecipe'));
+    try {
+      await db.collection('users').doc(currentUser.uid).collection('recipes').doc(id).delete();
+      showToast(t('recipeDeleted'), 'info');
+      closeModal();
+    } catch (e) { showToast(t('errorFirebase') + e.message, 'error'); }
+    finally { hideLoading(); }
+  });
+}
+
+async function toggleFavorite(id) {
+  const recipe = allRecipes.find(r => r.id === id);
+  if (!recipe) return;
+  const newVal = !recipe.favorite;
   try {
-    await db.collection('users').doc(currentUser.uid).collection('recipes').doc(id).delete();
-    showToast(t('recipeDeleted'), 'info');
-    closeModal();
+    await db.collection('users').doc(currentUser.uid).collection('recipes').doc(id).update({ favorite: newVal });
+    // Update locally for immediate UI feedback
+    recipe.favorite = newVal;
+    filterRecipes();
+    // If detail modal is open, re-render it
+    const detailSheet = document.getElementById('detail-sheet');
+    if (detailSheet) renderRecipeDetailModal(recipe);
   } catch (e) { showToast(t('errorFirebase') + e.message, 'error'); }
-  finally { hideLoading(); }
 }
 
 // =====================================================================
@@ -1665,12 +1879,14 @@ function switchView(view) {
 // RECIPE LIST & FILTER
 // =====================================================================
 function renderCategoryFilters() {
-  const cats = ['all', ...getCategories()];
+  const cats = ['all', 'favorites', ...getCategories()];
   const container = document.getElementById('category-filters');
   if (!container) return;
   container.innerHTML = cats.map(c => {
-    const label = c === 'all' ? t('allCategories') : (getCategoryLabel(c));
-    const emoji = c === 'all' ? '' : (getCategoryEmoji(c) + ' ');
+    let label, emoji;
+    if (c === 'all') { label = t('allCategories'); emoji = ''; }
+    else if (c === 'favorites') { label = t('favorites'); emoji = '❤️ '; }
+    else { label = getCategoryLabel(c); emoji = getCategoryEmoji(c) + ' '; }
     return `<button class="cat-chip ${currentCategory === c ? 'active' : ''}" onclick="selectCategory('${escHtml(c)}')">${emoji}${escHtml(label)}</button>`;
   }).join('');
 }
@@ -1697,7 +1913,8 @@ function selectCategory(cat) {
 function filterRecipes() {
   const q = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
   filteredRecipes = allRecipes.filter(r => {
-    const matchCat = currentCategory === 'all' || r.category === currentCategory;
+    const matchCat = currentCategory === 'all' ||
+      (currentCategory === 'favorites' ? r.favorite === true : r.category === currentCategory);
     const matchQ = !q ||
       (r.name && r.name.toLowerCase().includes(q)) ||
       (r.tags && r.tags.join(' ').toLowerCase().includes(q)) ||
@@ -1734,7 +1951,10 @@ function renderRecipeGrid() {
     }
     return `
       <div class="recipe-card" onclick="openRecipeDetail('${escHtml(r.id)}')">
-        ${imgHtml}
+        <div style="position:relative;">
+          ${imgHtml}
+          <button class="fav-btn ${r.favorite ? 'active' : ''}" onclick="event.stopPropagation();toggleFavorite('${escHtml(r.id)}')" title="${r.favorite ? t('removeFromFavorites') : t('addToFavorites')}">${r.favorite ? '❤️' : '🤍'}</button>
+        </div>
         <div class="card-body">
           <div class="card-name">${escHtml(r.name)}</div>
           <div class="card-meta">
@@ -1829,6 +2049,9 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
         </button>
         <button class="action-btn" onclick="addRecipeToShopping('${escHtml(recipe.id)}')">
           <span class="ab-icon">🛒</span><span>${t('addToShopping')}</span>
+        </button>
+        <button class="action-btn ${recipe.favorite ? 'fav-active' : ''}" onclick="toggleFavorite('${escHtml(recipe.id)}')">
+          <span class="ab-icon">${recipe.favorite ? '❤️' : '🤍'}</span><span>${recipe.favorite ? t('removeFromFavorites') : t('addToFavorites')}</span>
         </button>
         <button class="action-btn danger" onclick="deleteRecipe('${escHtml(recipe.id)}')">
           <span class="ab-icon">🗑️</span><span>${t('deleteRecipe')}</span>
@@ -2479,6 +2702,28 @@ function removeFormImage(i) {
   renderFormImagePreviews();
 }
 
+async function fetchRecipeImage(recipeName) {
+  try {
+    const query = encodeURIComponent(recipeName);
+    const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${query}&prop=pageimages&format=json&pithumbsize=600&origin=*`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const pages = data.query && data.query.pages;
+    if (!pages) return null;
+    const page = Object.values(pages)[0];
+    if (page && page.thumbnail && page.thumbnail.source) {
+      // Fetch image as base64 via proxy
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(page.thumbnail.source)}`;
+      const imgRes = await fetch(proxyUrl);
+      const imgData = await imgRes.json();
+      if (imgData.contents && imgData.contents.startsWith('data:image')) {
+        return imgData.contents;
+      }
+    }
+  } catch {}
+  return null;
+}
+
 async function submitRecipeForm() {
   const name = document.getElementById('f-name').value.trim();
   if (!name) { showToast(t('fieldName') + ' required', 'error'); return; }
@@ -2501,6 +2746,14 @@ async function submitRecipeForm() {
   const tagsRaw = document.getElementById('f-tags').value.trim();
   const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
 
+  // Auto-fetch image from Wikipedia if no images provided
+  let finalImages = [...pendingImages];
+  if (finalImages.length === 0) {
+    showLoading('🔍 Searching image...');
+    const autoImg = await fetchRecipeImage(name);
+    if (autoImg) finalImages = [autoImg];
+  }
+
   const data = {
     name,
     ingredients,
@@ -2514,7 +2767,7 @@ async function submitRecipeForm() {
     tags,
     notes: document.getElementById('f-notes').value.trim() || null,
     sourceUrl: document.getElementById('f-source').value.trim() || null,
-    images: pendingImages,
+    images: finalImages,
   };
 
   showLoading(t('savingRecipe'));
@@ -2558,8 +2811,8 @@ function openTranslateModal(recipe) {
         <p style="font-size:15px;color:var(--c-text-muted);margin-bottom:24px;">${t('translateTo')}</p>
         <div style="display:flex;flex-direction:column;gap:12px;max-width:280px;margin:0 auto;">
           ${['he','ru','en'].map(lang => `
-            <button class="btn-primary" style="${currentLang===lang?'opacity:0.4;cursor:not-allowed;':''}"
-              onclick="${currentLang===lang?'':'translateRecipe(window._sharedRecipeData,\''+lang+'\')'}">
+            <button class="btn-primary"
+              onclick="translateRecipe(window._sharedRecipeData,'${lang}')">
               ${{he:'🇮🇱 '+t('translateHe'), ru:'🇷🇺 '+t('translateRu'), en:'🇺🇸 '+t('translateEn')}[lang]}
             </button>`).join('')}
         </div>
@@ -2831,9 +3084,88 @@ function openAddRecipeToShoppingModal() {
 }
 
 // =====================================================================
+// FONT SIZE
+// =====================================================================
+function setFontSize(size) {
+  document.documentElement.style.setProperty('--font-size-base', size + 'px');
+  localStorage.setItem('fontSize', size);
+  document.querySelectorAll('.fsize-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.fsize) === size);
+  });
+}
+
+// =====================================================================
+// BACKUP & RESTORE
+// =====================================================================
+function exportBackup() {
+  const backup = {
+    version: APP_VERSION,
+    exportedAt: new Date().toISOString(),
+    recipes: allRecipes,
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `recipebook-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function importBackup(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  try {
+    const text = await file.text();
+    const backup = JSON.parse(text);
+    const recipes = backup.recipes || backup; // support both wrapped and raw array
+    if (!Array.isArray(recipes)) throw new Error('Invalid format');
+    showLoading(t('savingRecipe'));
+    const col = db.collection('users').doc(currentUser.uid).collection('recipes');
+    let count = 0;
+    for (const recipe of recipes) {
+      const { id: _id, createdAt: _c, updatedAt: _u, ...data } = recipe;
+      data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+      await col.add(data);
+      count++;
+    }
+    hideLoading();
+    showToast(t('backupSuccess') + ` (${count})`, 'success');
+  } catch (e) {
+    hideLoading();
+    showToast(t('backupError') + ': ' + e.message, 'error');
+  }
+}
+
+// =====================================================================
+// PWA INSTALL
+// =====================================================================
+function installPWA() {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.then(() => { deferredInstallPrompt = null; });
+  } else {
+    showToast(t('installNotAvailable'), 'info');
+  }
+}
+
+// =====================================================================
 // INIT
 // =====================================================================
 function init() {
+  // Show version
+  const vLabel = t('versionLabel') + ' ' + APP_VERSION;
+  const hv = document.getElementById('header-version');
+  if (hv) hv.textContent = vLabel;
+  const av = document.getElementById('auth-version');
+  if (av) av.textContent = vLabel;
+
+  // Restore font size
+  const savedSize = parseInt(localStorage.getItem('fontSize')) || 16;
+  setFontSize(savedSize);
+
   // Apply lang
   setLang(currentLang);
 
@@ -2854,6 +3186,12 @@ function init() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW:', e));
   }
+
+  // Capture PWA install prompt
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+  });
 
   // Set up setup screen lang buttons
   document.querySelectorAll('.setup-card [data-lang]').forEach(btn => {
