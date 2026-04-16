@@ -45,6 +45,133 @@
   --font-size-base: 16px;
 }
 
+/* ===== DARK THEME ===== */
+[data-theme="dark"] {
+  --c-bg: #1a1612;
+  --c-surface: #242018;
+  --c-surface2: #2e2820;
+  --c-border: #3d3428;
+  --c-text: #f0ead8;
+  --c-text-muted: #a09070;
+  --c-text-light: #6a5a44;
+}
+
+/* ===== NEW FEATURE CSS ===== */
+/* Detail times row */
+.detail-times {
+  font-size: 13px; color: var(--c-text-muted);
+  padding: 6px 16px; display: flex; gap: 12px; flex-wrap: wrap;
+}
+/* Serving multiplier */
+.serving-mult-row { display:flex; align-items:center; gap:8px; padding:8px 16px; flex-wrap:wrap; }
+.mult-btn {
+  padding:5px 12px; border-radius:20px; font-size:13px; font-weight:700;
+  border: 2px solid var(--c-border); background: var(--c-surface2); color:var(--c-text-muted);
+  transition: all 0.15s; cursor:pointer;
+}
+.mult-btn.active { background:var(--c-primary); color:#fff; border-color:var(--c-primary); }
+/* Last cooked */
+.detail-last-cooked { font-size:13px; color:var(--c-text-muted); padding:4px 16px; }
+/* Nutrition */
+.detail-nutrition {
+  font-size: 12px; color: var(--c-text-muted);
+  padding: 6px 16px 10px; line-height: 1.6;
+  background: var(--c-surface2); border-radius: var(--radius-sm);
+  margin: 0 16px 8px;
+}
+/* Cooking mode overlay */
+#cooking-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: var(--c-bg); display: flex; flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.cooking-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-bottom: 1px solid var(--c-border);
+  flex-shrink: 0;
+}
+.cooking-exit-btn {
+  padding: 8px 14px; border-radius: 8px; background: var(--c-surface2);
+  color: var(--c-text-muted); font-size: 14px; font-weight: 600; cursor: pointer; border: none;
+}
+.cooking-recipe-name { font-size: 16px; font-weight: 700; color: var(--c-text); text-align: center; flex: 1; padding: 0 8px; }
+.cooking-step-counter { font-size: 13px; color: var(--c-text-muted); font-weight: 600; white-space: nowrap; }
+.cooking-progress {
+  display: flex; justify-content: center; gap: 6px; padding: 12px 16px;
+  flex-wrap: wrap; flex-shrink: 0;
+}
+.cooking-dot {
+  width: 10px; height: 10px; border-radius: 50%; background: var(--c-border);
+  transition: all 0.2s;
+}
+.cooking-dot.active { background: var(--c-primary); transform: scale(1.3); }
+.cooking-dot.done { background: var(--c-success); }
+.cooking-step-area {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 24px 20px; overflow-y: auto;
+}
+.cooking-step-text {
+  font-size: 22px; line-height: 1.6; text-align: center; color: var(--c-text);
+  max-width: 600px;
+}
+.cooking-nav {
+  display: flex; gap: 12px; padding: 16px 20px;
+  flex-shrink: 0; padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+.cooking-nav-btn {
+  flex: 1; padding: 18px; font-size: 17px; font-weight: 700;
+  border-radius: var(--radius); border: 2px solid var(--c-border);
+  background: var(--c-surface); color: var(--c-text); cursor: pointer;
+  transition: all 0.15s; min-height: 64px;
+}
+.cooking-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.cooking-nav-btn.cooking-nav-next {
+  background: var(--c-primary); color: #fff; border-color: var(--c-primary);
+}
+.cooking-nav-btn.cooking-nav-next:disabled { background: var(--c-border); border-color: var(--c-border); }
+/* View/sort bar */
+.view-sort-bar {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  padding: 0 16px 10px;
+}
+.sort-select {
+  padding: 6px 10px; border: 1px solid var(--c-border); border-radius: 8px;
+  font-size: 13px; background: var(--c-surface); color: var(--c-text); cursor: pointer;
+}
+.view-toggle { display: flex; border: 1px solid var(--c-border); border-radius: 8px; overflow: hidden; }
+.view-toggle-btn {
+  padding: 6px 10px; font-size: 16px; background: var(--c-surface); color: var(--c-text-muted);
+  border: none; cursor: pointer; transition: all 0.15s;
+}
+.view-toggle-btn.active { background: var(--c-primary); color: #fff; }
+/* List view */
+.recipe-grid.list-view { grid-template-columns: 1fr !important; gap: 8px !important; }
+.recipe-grid.list-view .recipe-card {
+  display: flex; flex-direction: row; height: 80px; align-items: stretch;
+}
+.recipe-grid.list-view .recipe-card > div:first-child { width: 80px; flex-shrink: 0; }
+.recipe-grid.list-view .recipe-card .card-image { width: 100%; height: 100%; object-fit: cover; }
+.recipe-grid.list-view .recipe-card .card-emoji-thumb {
+  width: 80px; height: 80px; font-size: 28px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.recipe-grid.list-view .card-body { flex: 1; padding: 8px 12px; justify-content: center; }
+.recipe-grid.list-view .card-desc-text { display: none; }
+/* Dark mode toggle */
+.settings-toggle {
+  width: 44px; height: 26px; border-radius: 13px; background: var(--c-border);
+  position: relative; transition: background 0.3s; flex-shrink: 0;
+}
+.settings-toggle.on { background: var(--c-primary); }
+.settings-toggle::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 20px; height: 20px; border-radius: 50%; background: #fff;
+  transition: transform 0.3s; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.settings-toggle.on::after { transform: translateX(18px); }
+/* Tool: egg calc row */
+.egg-calc-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:4px 0; }
+
 /* ===== RESET & BASE ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { height: 100%; font-size: var(--font-size-base); }
@@ -1128,6 +1255,18 @@ service cloud.firestore {
         </div>
       </div>
       <div class="category-filters" id="category-filters"></div>
+      <div class="view-sort-bar">
+        <select class="sort-select" id="sort-select" onchange="setSortMode(this.value)">
+          <option value="date" data-i18n="sortDate">תאריך</option>
+          <option value="name" data-i18n="sortName">שם</option>
+          <option value="rating" data-i18n="sortRating">דירוג</option>
+          <option value="category" data-i18n="sortCategory">קטגוריה</option>
+        </select>
+        <div class="view-toggle">
+          <button id="btn-view-grid" class="view-toggle-btn active" onclick="setViewMode('grid')" title="Grid">⊞</button>
+          <button id="btn-view-list" class="view-toggle-btn" onclick="setViewMode('list')" title="List">☰</button>
+        </div>
+      </div>
       <div class="recipe-grid" id="recipe-grid"></div>
     </div>
 
@@ -1207,6 +1346,89 @@ service cloud.firestore {
           </div>
         </div>
 
+        <!-- EGG SIZE CALCULATOR -->
+        <div class="tool-card" id="tool-eggs">
+          <div class="tool-card-title">
+            <span class="tool-card-title-left">🥚 <span data-i18n="toolEggTitle">מחשבון ביצים</span></span>
+            <button class="tool-collapse-btn" onclick="toggleToolCard('tool-eggs')">▲</button>
+          </div>
+          <div class="tool-card-body">
+            <div class="egg-calc-row">
+              <input type="number" id="egg-count" value="1" min="1" class="conv-number" style="max-width:80px;" oninput="updateEggCalc()">
+              <select id="egg-from" class="conv-unit-select" onchange="updateEggCalc()">
+                <option value="S">S (38g)</option>
+                <option value="M">M (44g)</option>
+                <option value="L" selected>L (56g)</option>
+                <option value="XL">XL (63g)</option>
+              </select>
+              <span style="font-size:16px;font-weight:700;color:var(--c-text-muted);">=</span>
+              <select id="egg-to" class="conv-unit-select" onchange="updateEggCalc()">
+                <option value="S">S (38g)</option>
+                <option value="M" selected>M (44g)</option>
+                <option value="L">L (56g)</option>
+                <option value="XL">XL (63g)</option>
+              </select>
+            </div>
+            <div id="egg-result" style="font-size:20px;font-weight:800;color:var(--c-primary);text-align:center;padding:12px 0;"></div>
+          </div>
+        </div>
+
+        <!-- PAN SIZE CONVERTER -->
+        <div class="tool-card" id="tool-pan">
+          <div class="tool-card-title">
+            <span class="tool-card-title-left">📐 <span data-i18n="toolPanTitle">גדלי תבניות</span></span>
+            <button class="tool-collapse-btn" onclick="toggleToolCard('tool-pan')">▲</button>
+          </div>
+          <div class="tool-card-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+              <div>
+                <div style="font-weight:700;font-size:13px;margin-bottom:8px;">⭕ עגולה</div>
+                <div class="input-group" style="margin-bottom:8px;">
+                  <label style="font-size:12px;">קוטר (ס"מ)</label>
+                  <input type="number" id="pan-round-d" value="24" min="1" class="conv-number" oninput="updatePanCalc()">
+                </div>
+              </div>
+              <div>
+                <div style="font-weight:700;font-size:13px;margin-bottom:8px;">▭ מלבנית</div>
+                <div class="input-group" style="margin-bottom:8px;">
+                  <label style="font-size:12px;">אורך × רוחב (ס"מ)</label>
+                  <div style="display:flex;gap:6px;">
+                    <input type="number" id="pan-rect-w" value="20" min="1" class="conv-number" oninput="updatePanCalc()">
+                    <input type="number" id="pan-rect-l" value="30" min="1" class="conv-number" oninput="updatePanCalc()">
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="pan-result" class="conv-results" style="margin-top:8px;"></div>
+          </div>
+        </div>
+
+        <!-- COOKING TIMES TABLE -->
+        <div class="tool-card" id="tool-cooktimes">
+          <div class="tool-card-title">
+            <span class="tool-card-title-left">🌡️ <span data-i18n="toolCookTimeTitle">זמני בישול</span></span>
+            <button class="tool-collapse-btn" onclick="toggleToolCard('tool-cooktimes')">▲</button>
+          </div>
+          <div class="tool-card-body">
+            <div style="overflow-x:auto;"><table class="temp-table" id="cooktimes-table"></table></div>
+          </div>
+        </div>
+
+        <!-- SEASONING GUIDE -->
+        <div class="tool-card" id="tool-season">
+          <div class="tool-card-title">
+            <span class="tool-card-title-left">🧂 <span data-i18n="toolSeasonTitle">מדריך תיבול</span></span>
+            <button class="tool-collapse-btn" onclick="toggleToolCard('tool-season')">▲</button>
+          </div>
+          <div class="tool-card-body">
+            <div class="conv-input-row">
+              <input type="number" id="season-weight" value="500" min="50" class="conv-number" oninput="updateSeasonGuide()">
+              <select id="season-product" class="conv-unit-select" onchange="updateSeasonGuide()"></select>
+            </div>
+            <div id="season-result" class="conv-results"></div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -1216,6 +1438,17 @@ service cloud.firestore {
         <div class="settings-card">
           <div class="settings-card-header" data-i18n="profileHeader">Profile</div>
           <div class="profile-block" id="settings-profile"></div>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-card-header" data-i18n="darkModeHeader">תצוגה</div>
+          <div class="settings-item" onclick="toggleDarkMode()" style="cursor:pointer;">
+            <div class="settings-item-left">
+              <span class="settings-item-icon" id="dark-mode-icon">🌙</span>
+              <span class="settings-item-label" data-i18n="darkMode">מצב חשוך</span>
+            </div>
+            <div class="settings-toggle" id="dark-mode-toggle"></div>
+          </div>
         </div>
 
         <div class="settings-card">
@@ -1505,6 +1738,39 @@ const TRANSLATIONS = {
     toolTimerDismiss: 'עצור התראה',
     toolSubsTitle: 'תחליפי מצרכים',
     subsSearchPh: 'חפש מצרך...',
+    totalTime: 'סה"כ',
+    cookedIt: 'בישלתי! 👨‍🍳',
+    lastCooked: 'בושל לאחרונה',
+    daysAgo: 'ימים',
+    today: 'היום',
+    yesterday: 'אתמול',
+    cookedRecorded: '👨‍🍳 בישול נרשם!',
+    cookingMode: '▶ מצב בישול',
+    cookingModeStep: 'שלב',
+    cookingModeOf: 'מתוך',
+    cookingModeExit: 'יציאה',
+    cookingModePrev: '◀ הקודם',
+    cookingModeNext: 'הבא ▶',
+    cookingModeNoSteps: 'אין שלבים',
+    nutritionPer: 'לפי מנה',
+    nutritionCal: 'קל׳',
+    nutritionProtein: 'חלבון',
+    nutritionFat: 'שומן',
+    nutritionCarbs: 'פחמימות',
+    g: 'ג׳',
+    sortBy: 'מיון',
+    sortDate: 'תאריך',
+    sortName: 'שם',
+    sortRating: 'דירוג',
+    sortCategory: 'קטגוריה',
+    viewGrid: 'רשת',
+    viewList: 'רשימה',
+    darkMode: 'מצב חשוך',
+    darkModeHeader: 'תצוגה',
+    toolEggTitle: 'מחשבון ביצים',
+    toolPanTitle: 'גדלי תבניות',
+    toolCookTimeTitle: 'זמני בישול',
+    toolSeasonTitle: 'מדריך תיבול',
   },
   ru: {
     appName: 'Рецептник',
@@ -1670,6 +1936,39 @@ const TRANSLATIONS = {
     toolTimerDismiss: 'Стоп сигнал',
     toolSubsTitle: 'Замена ингредиентов',
     subsSearchPh: 'Поиск ингредиента...',
+    totalTime: 'Итого',
+    cookedIt: 'Готовил! 👨‍🍳',
+    lastCooked: 'Последний раз',
+    daysAgo: 'дн.',
+    today: 'Сегодня',
+    yesterday: 'Вчера',
+    cookedRecorded: '👨‍🍳 Записано!',
+    cookingMode: '▶ Готовить',
+    cookingModeStep: 'Шаг',
+    cookingModeOf: 'из',
+    cookingModeExit: 'Выход',
+    cookingModePrev: '◀ Назад',
+    cookingModeNext: 'Далее ▶',
+    cookingModeNoSteps: 'Нет шагов',
+    nutritionPer: 'на порцию',
+    nutritionCal: 'ккал',
+    nutritionProtein: 'белок',
+    nutritionFat: 'жиры',
+    nutritionCarbs: 'углев.',
+    g: 'г',
+    sortBy: 'Сорт.',
+    sortDate: 'Дата',
+    sortName: 'Имя',
+    sortRating: 'Рейтинг',
+    sortCategory: 'Категория',
+    viewGrid: 'Сетка',
+    viewList: 'Список',
+    darkMode: 'Тёмная тема',
+    darkModeHeader: 'Внешний вид',
+    toolEggTitle: 'Калькулятор яиц',
+    toolPanTitle: 'Размеры форм',
+    toolCookTimeTitle: 'Время готовки',
+    toolSeasonTitle: 'Гид по специям',
   },
   en: {
     appName: 'RecipeBook',
@@ -1835,6 +2134,39 @@ const TRANSLATIONS = {
     toolTimerDismiss: 'Stop alert',
     toolSubsTitle: 'Ingredient Substitutions',
     subsSearchPh: 'Search ingredient...',
+    totalTime: 'Total',
+    cookedIt: 'I cooked this! 👨‍🍳',
+    lastCooked: 'Last cooked',
+    daysAgo: 'days ago',
+    today: 'Today',
+    yesterday: 'Yesterday',
+    cookedRecorded: '👨‍🍳 Cook recorded!',
+    cookingMode: '▶ Cook Mode',
+    cookingModeStep: 'Step',
+    cookingModeOf: 'of',
+    cookingModeExit: 'Exit',
+    cookingModePrev: '◀ Prev',
+    cookingModeNext: 'Next ▶',
+    cookingModeNoSteps: 'No steps',
+    nutritionPer: 'per serving',
+    nutritionCal: 'kcal',
+    nutritionProtein: 'protein',
+    nutritionFat: 'fat',
+    nutritionCarbs: 'carbs',
+    g: 'g',
+    sortBy: 'Sort',
+    sortDate: 'Date',
+    sortName: 'Name',
+    sortRating: 'Rating',
+    sortCategory: 'Category',
+    viewGrid: 'Grid',
+    viewList: 'List',
+    darkMode: 'Dark mode',
+    darkModeHeader: 'Appearance',
+    toolEggTitle: 'Egg Calculator',
+    toolPanTitle: 'Pan Sizes',
+    toolCookTimeTitle: 'Cooking Times',
+    toolSeasonTitle: 'Seasoning Guide',
   }
 };
 
@@ -1859,7 +2191,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.8';
+const APP_VERSION = '1.3.9';
 
 // =====================================================================
 // APP STATE
@@ -1878,6 +2210,12 @@ let editingRecipeId = null;
 let pendingImages = []; // base64 strings for current form
 let formRating = 0;
 let deferredInstallPrompt = null;
+let detailServingMult = 1;
+let currentOpenRecipeId = null;
+let cookingModeWakeLock = null;
+let cookingModeStep = 0;
+let viewMode = localStorage.getItem('viewMode') || 'grid';
+let sortMode = localStorage.getItem('sortMode') || 'date';
 
 // =====================================================================
 // i18n
@@ -2140,6 +2478,7 @@ function renderSettingsProfile() {
   // Set saved claude key
   const ck = document.getElementById('settings-claude-key');
   if (ck) ck.value = localStorage.getItem('claudeKey') || '';
+  updateDarkModeUI();
 }
 
 function saveClaudeKey() {
@@ -2254,7 +2593,7 @@ function selectCategory(cat) {
 
 function filterRecipes() {
   const q = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
-  filteredRecipes = allRecipes.filter(r => {
+  let filtered = allRecipes.filter(r => {
     const matchCat = currentCategory === 'all' ||
       (currentCategory === 'favorites' ? r.favorite === true : r.category === currentCategory);
     const matchQ = !q ||
@@ -2264,12 +2603,15 @@ function filterRecipes() {
       (r.ingredients && r.ingredients.some(i => i.name && i.name.toLowerCase().includes(q)));
     return matchCat && matchQ;
   });
+  filteredRecipes = applySortMode(filtered);
   renderRecipeGrid();
 }
 
 function renderRecipeGrid() {
   const grid = document.getElementById('recipe-grid');
   if (!grid) return;
+  // Apply list/grid class
+  grid.classList.toggle('list-view', viewMode === 'list');
   if (filteredRecipes.length === 0) {
     grid.innerHTML = `
       <div class="empty-state" style="grid-column:1/-1;">
@@ -2285,6 +2627,8 @@ function renderRecipeGrid() {
     const diffClass = r.difficulty ? `diff-${r.difficulty}` : 'diff-easy';
     const diffLabel = r.difficulty ? t(r.difficulty) : '';
     const stars = r.rating ? '★'.repeat(r.rating) : '';
+    const cookedBadge = (r.cookedDates && r.cookedDates.length > 0)
+      ? `<span style="font-size:11px;color:var(--c-text-muted);">👨‍🍳 ${r.cookedDates.length}</span>` : '';
     let imgHtml;
     if (r.images && r.images.length > 0) {
       imgHtml = `<img class="card-image" src="${r.images[0]}" alt="${escHtml(r.name)}" loading="lazy">`;
@@ -2304,6 +2648,7 @@ function renderRecipeGrid() {
           <div class="card-meta">
             <span class="card-time">${escHtml(timeStr)}</span>
             ${diffLabel ? `<span class="difficulty-badge ${diffClass}">${escHtml(diffLabel)}</span>` : ''}
+            ${cookedBadge}
           </div>
           ${catLabel ? `<div class="card-cat">${catEmoji} ${escHtml(catLabel)}</div>` : ''}
           ${stars ? `<div class="card-rating" style="margin-top:2px;">${escHtml(stars)}</div>` : ''}
@@ -2334,6 +2679,8 @@ function openRecipeDetail(id, readOnly = false, sharedUid = null) {
 }
 
 function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
+  currentOpenRecipeId = recipe.id;
+  detailServingMult = 1;
   const heroInner = (recipe.images && recipe.images.length > 0)
     ? `<img class="detail-hero" src="${recipe.images[0]}" alt="${escHtml(recipe.name)}">`
     : `<div class="detail-hero-emoji">${getCategoryEmoji(recipe.category) || '🍽️'}</div>`;
@@ -2356,11 +2703,47 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
     recipe.rating ? `<div class="meta-chip"><span>${'★'.repeat(recipe.rating)}${'☆'.repeat(5 - recipe.rating)}</span></div>` : '',
   ].filter(Boolean).join('');
 
+  // Times row
+  const prepT = recipe.prepTime || 0;
+  const cookT = recipe.cookTime || 0;
+  const timesHtml = (prepT > 0 || cookT > 0) ? `
+    <div class="detail-times">
+      <span>⏱️ ${t('prepTime')}: ${prepT}${t('minutes')}</span>
+      <span>🍳 ${t('cookTime')}: ${cookT}${t('minutes')}</span>
+      <span>⏰ ${t('totalTime')}: ${prepT + cookT}${t('minutes')}</span>
+    </div>` : '';
+
+  // Last cooked
+  const lastCookedText = getLastCookedText(recipe);
+  const lastCookedHtml = lastCookedText
+    ? `<div class="detail-last-cooked">👨‍🍳 ${t('lastCooked')}: ${escHtml(lastCookedText)}</div>` : '';
+
+  // Nutrition
+  const nutritionHtml = recipe.nutrition ? `
+    <div class="detail-nutrition">
+      🔥 ${recipe.nutrition.calories}${t('nutritionCal')} &nbsp;·&nbsp;
+      🥩 ${recipe.nutrition.protein}${t('g')} ${t('nutritionProtein')} &nbsp;·&nbsp;
+      🧈 ${recipe.nutrition.fat}${t('g')} ${t('nutritionFat')} &nbsp;·&nbsp;
+      🌾 ${recipe.nutrition.carbs}${t('g')} ${t('nutritionCarbs')}
+      <span style="font-size:11px;color:var(--c-text-light);">(${t('nutritionPer')})</span>
+    </div>` : '';
+
+  // Serving multiplier row
+  const activeHalf = detailServingMult === 0.5;
+  const servingMultHtml = `
+    <div class="serving-mult-row">
+      <span style="font-size:13px;color:var(--c-text-muted);">${t('servings')}:</span>
+      <button class="mult-btn ${activeHalf ? 'active' : ''}" onclick="setServingMult(0.5)">×½</button>
+      <button class="mult-btn ${detailServingMult === 1 ? 'active' : ''}" onclick="setServingMult(1)">×1</button>
+      <button class="mult-btn ${detailServingMult === 2 ? 'active' : ''}" onclick="setServingMult(2)">×2</button>
+      <button class="mult-btn ${detailServingMult === 3 ? 'active' : ''}" onclick="setServingMult(3)">×3</button>
+    </div>`;
+
   const ingredientsHtml = (recipe.ingredients && recipe.ingredients.length > 0)
     ? recipe.ingredients.map((ing, i) => `
         <label class="ingredient-check-item" id="ing-item-${i}">
           <input type="checkbox" onchange="toggleIngCheck(${i})">
-          <span>${escHtml(ing.quantity || '')} ${escHtml(ing.unit || '')} ${escHtml(ing.name || '')}</span>
+          <span>${escHtml(multiplyQty(ing.quantity))} ${escHtml(ing.unit || '')} ${escHtml(ing.name || '')}</span>
         </label>`).join('')
     : `<p style="color:var(--c-text-muted);font-size:14px;">${t('noIngredients')}</p>`;
 
@@ -2408,6 +2791,12 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
         <button class="action-btn ${recipe.favorite ? 'fav-active' : ''}" onclick="toggleFavorite('${escHtml(recipe.id)}')">
           <span class="ab-icon">${recipe.favorite ? '❤️' : '🤍'}</span><span>${recipe.favorite ? t('removeFromFavorites') : t('addToFavorites')}</span>
         </button>
+        <button class="action-btn" onclick="markAsCooked('${escHtml(recipe.id)}')">
+          <span class="ab-icon">👨‍🍳</span><span>${t('cookedIt')}</span>
+        </button>
+        <button class="action-btn" onclick="openCookingMode('${escHtml(recipe.id)}')">
+          <span class="ab-icon">▶</span><span>${t('cookingMode')}</span>
+        </button>
         <button class="action-btn danger" onclick="deleteRecipe('${escHtml(recipe.id)}')">
           <span class="ab-icon">🗑️</span><span>${t('deleteRecipe')}</span>
         </button>
@@ -2425,9 +2814,13 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
       <div style="overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;">
         ${heroHtml}
         <div class="detail-meta-bar">${metaItems}</div>
+        ${timesHtml}
+        ${lastCookedHtml}
+        ${nutritionHtml}
         <div class="detail-section">
           <h3>${t('ingredients')}</h3>
-          ${ingredientsHtml}
+          ${servingMultHtml}
+          <div id="detail-ingredients-list">${ingredientsHtml}</div>
         </div>
         ${stepsHtml ? `<div class="detail-section"><h3>${t('steps')}</h3>${stepsHtml}</div>` : ''}
         ${tagsHtml}
@@ -2441,6 +2834,191 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
 function toggleIngCheck(i) {
   const item = document.getElementById('ing-item-' + i);
   if (item) item.classList.toggle('checked', item.querySelector('input').checked);
+}
+
+// =====================================================================
+// SERVING MULTIPLIER
+// =====================================================================
+function multiplyQty(qty) {
+  if (!qty) return '';
+  const n = parseFloat(qty);
+  if (isNaN(n)) return qty;
+  const result = n * detailServingMult;
+  return result % 1 === 0 ? result.toString() : result.toFixed(1);
+}
+
+function setServingMult(factor) {
+  detailServingMult = factor;
+  document.querySelectorAll('.mult-btn').forEach(b => {
+    const txt = b.textContent.trim();
+    const isHalf = txt === '×½';
+    const btnFactor = isHalf ? 0.5 : parseFloat(txt.replace('×',''));
+    b.classList.toggle('active', btnFactor === factor);
+  });
+  const recipe = allRecipes.find(r => r.id === currentOpenRecipeId);
+  if (recipe) renderDetailIngredients(recipe);
+}
+
+function renderDetailIngredients(recipe) {
+  const container = document.getElementById('detail-ingredients-list');
+  if (!container) return;
+  if (!recipe.ingredients || recipe.ingredients.length === 0) {
+    container.innerHTML = `<p style="color:var(--c-text-muted);font-size:14px;">${t('noIngredients')}</p>`;
+    return;
+  }
+  container.innerHTML = recipe.ingredients.map((ing, i) => `
+    <label class="ingredient-check-item" id="ing-item-${i}">
+      <input type="checkbox" onchange="toggleIngCheck(${i})">
+      <span>${escHtml(multiplyQty(ing.quantity))} ${escHtml(ing.unit || '')} ${escHtml(ing.name || '')}</span>
+    </label>`).join('');
+}
+
+// =====================================================================
+// COOK HISTORY
+// =====================================================================
+function getLastCookedText(recipe) {
+  if (!recipe.cookedDates || recipe.cookedDates.length === 0) return '';
+  const dates = [...recipe.cookedDates].sort().reverse();
+  const last = new Date(dates[0]);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.floor((today - last) / 86400000);
+  if (diff === 0) return t('today');
+  if (diff === 1) return t('yesterday');
+  return `${diff} ${t('daysAgo')}`;
+}
+
+async function markAsCooked(recipeId) {
+  const today = new Date().toISOString().split('T')[0];
+  try {
+    await db.collection('users').doc(currentUser.uid).collection('recipes').doc(recipeId)
+      .update({ cookedDates: firebase.firestore.FieldValue.arrayUnion(today) });
+    const recipe = allRecipes.find(r => r.id === recipeId);
+    if (recipe) {
+      if (!recipe.cookedDates) recipe.cookedDates = [];
+      if (!recipe.cookedDates.includes(today)) recipe.cookedDates.push(today);
+    }
+    showToast(t('cookedRecorded'), 'success');
+    if (recipe) renderRecipeDetailModal(recipe);
+    filterRecipes();
+  } catch(e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// =====================================================================
+// COOKING MODE
+// =====================================================================
+async function openCookingMode(recipeId) {
+  const recipe = allRecipes.find(r => r.id === recipeId);
+  if (!recipe) return;
+  cookingModeStep = 0;
+  try { cookingModeWakeLock = await navigator.wakeLock?.request('screen'); } catch {}
+  renderCookingMode(recipe);
+}
+
+function renderCookingMode(recipe) {
+  let overlay = document.getElementById('cooking-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'cooking-overlay';
+    document.body.appendChild(overlay);
+  }
+  const steps = recipe.steps || [];
+  const totalSteps = steps.length;
+  const step = steps[cookingModeStep] || t('cookingModeNoSteps');
+  const isFirst = cookingModeStep === 0;
+  const isLast = cookingModeStep >= totalSteps - 1;
+
+  overlay.innerHTML = `
+    <div class="cooking-header">
+      <button class="cooking-exit-btn" onclick="exitCookingMode()">✕ ${t('cookingModeExit')}</button>
+      <div class="cooking-recipe-name">${escHtml(recipe.name)}</div>
+      <div class="cooking-step-counter">${t('cookingModeStep')} ${cookingModeStep + 1} ${t('cookingModeOf')} ${totalSteps}</div>
+    </div>
+    <div class="cooking-progress">
+      ${steps.map((_, i) => `<div class="cooking-dot ${i === cookingModeStep ? 'active' : i < cookingModeStep ? 'done' : ''}"></div>`).join('')}
+    </div>
+    <div class="cooking-step-area">
+      <div class="cooking-step-text">${escHtml(step)}</div>
+    </div>
+    <div class="cooking-nav">
+      <button class="cooking-nav-btn" onclick="cookingStepPrev()" ${isFirst ? 'disabled' : ''}>
+        ${t('cookingModePrev')}
+      </button>
+      <button class="cooking-nav-btn cooking-nav-next" onclick="cookingStepNext()" ${isLast ? 'disabled' : ''}>
+        ${t('cookingModeNext')}
+      </button>
+    </div>`;
+}
+
+function cookingStepNext() {
+  const recipe = allRecipes.find(r => r.id === currentOpenRecipeId);
+  if (!recipe) return;
+  if (cookingModeStep < (recipe.steps?.length || 1) - 1) {
+    cookingModeStep++;
+    renderCookingMode(recipe);
+  }
+}
+
+function cookingStepPrev() {
+  const recipe = allRecipes.find(r => r.id === currentOpenRecipeId);
+  if (!recipe) return;
+  if (cookingModeStep > 0) {
+    cookingModeStep--;
+    renderCookingMode(recipe);
+  }
+}
+
+async function exitCookingMode() {
+  document.getElementById('cooking-overlay')?.remove();
+  try { await cookingModeWakeLock?.release(); cookingModeWakeLock = null; } catch {}
+}
+
+// =====================================================================
+// VIEW MODE & SORT
+// =====================================================================
+function setViewMode(mode) {
+  viewMode = mode;
+  localStorage.setItem('viewMode', mode);
+  const grid = document.querySelector('.recipe-grid');
+  if (grid) grid.classList.toggle('list-view', mode === 'list');
+  document.getElementById('btn-view-grid')?.classList.toggle('active', mode === 'grid');
+  document.getElementById('btn-view-list')?.classList.toggle('active', mode === 'list');
+}
+
+function setSortMode(mode) {
+  sortMode = mode;
+  localStorage.setItem('sortMode', mode);
+  filterRecipes();
+}
+
+function applySortMode(recipes) {
+  const sorted = [...recipes];
+  switch(sortMode) {
+    case 'name':     return sorted.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+    case 'rating':   return sorted.sort((a,b) => (b.rating||0) - (a.rating||0));
+    case 'category': return sorted.sort((a,b) => (a.category||'').localeCompare(b.category||''));
+    default:         return sorted.sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+  }
+}
+
+// =====================================================================
+// DARK MODE
+// =====================================================================
+function toggleDarkMode() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const newTheme = isDark ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+  updateDarkModeUI();
+}
+
+function updateDarkModeUI() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const toggle = document.getElementById('dark-mode-toggle');
+  const icon = document.getElementById('dark-mode-icon');
+  if (toggle) toggle.classList.toggle('on', isDark);
+  if (icon) icon.textContent = isDark ? '☀️' : '🌙';
 }
 
 function toggleDetailHero() {
@@ -2625,10 +3203,12 @@ async function callClaude(messages, maxTokens = 1500) {
 
 const RECIPE_PROMPT = `You are a recipe parser. Extract the complete recipe from the provided content.
 Return ONLY valid JSON with this exact structure:
-{"name":"...","ingredients":[{"name":"...","quantity":"...","unit":"..."}],"steps":["..."],"prepTime":15,"cookTime":30,"servings":4,"difficulty":"easy","category":"dinner","notes":"...","sourceUrl":""}
+{"name":"...","ingredients":[{"name":"...","quantity":"...","unit":"..."}],"steps":["..."],"prepTime":15,"cookTime":30,"servings":4,"difficulty":"easy","category":"dinner","notes":"...","sourceUrl":"","nutrition":{"calories":350,"protein":20,"fat":12,"carbs":40}}
 difficulty: "easy", "medium", or "hard"
 category: breakfast/lunch/dinner/dessert/snack/drink/other
+prepTime: number (prep time in minutes, 0 if unknown), cookTime: number (cook time in minutes, 0 if unknown)
 Times in minutes (integers). Use null if unknown.
+Include estimated nutrition per serving if it can be reasonably estimated from the ingredients; omit the nutrition field if uncertain.
 LANG_PLACEHOLDER
 If no recipe found, return {"error":"No recipe found"}`;
 
@@ -2649,6 +3229,7 @@ function parseClaudeResponse(text) {
   cleaned = cleaned.substring(start, end + 1);
   const obj = JSON.parse(cleaned);
   if (obj.error) throw new Error(t('errorNoRecipe'));
+  // nutrition is already part of obj if Claude returned it
   return obj;
 }
 
@@ -3039,10 +3620,13 @@ function openEditRecipe(id) {
   setTimeout(() => openRecipeForm(recipe), 50);
 }
 
+let pendingNutrition = null;
+
 function openRecipeForm(data = {}) {
   editingRecipeId = editingRecipeId || null;
   if (data.images) pendingImages = [...data.images];
   formRating = data.rating || formRating || 0;
+  pendingNutrition = data.nutrition || null;
 
   const ings = (data.ingredients && data.ingredients.length > 0)
     ? data.ingredients
@@ -3354,6 +3938,7 @@ async function submitRecipeForm() {
     sourceUrl: document.getElementById('f-source').value.trim() || null,
     images: pendingImages,
   };
+  if (pendingNutrition) data.nutrition = pendingNutrition;
 
   showLoading(t('savingRecipe'));
   try {
@@ -3786,6 +4371,16 @@ function init() {
   // Restore font size
   const savedSize = parseInt(localStorage.getItem('fontSize')) || 16;
   setFontSize(savedSize);
+
+  // Restore dark mode
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  updateDarkModeUI();
+
+  // Restore view mode and sort mode
+  setViewMode(viewMode);
+  const sortSel = document.getElementById('sort-select');
+  if (sortSel) sortSel.value = sortMode;
 
   // Apply lang
   setLang(currentLang);
@@ -4276,6 +4871,109 @@ function toggleToolCard(id) {
   if (btn) btn.textContent = toolCollapsed[id] ? '▼' : '▲';
 }
 
+// ── Egg Size Calculator ──
+const EGG_WEIGHTS = { S: 38, M: 44, L: 56, XL: 63 };
+function updateEggCalc() {
+  const count = parseFloat(document.getElementById('egg-count')?.value) || 1;
+  const from = document.getElementById('egg-from')?.value;
+  const to = document.getElementById('egg-to')?.value;
+  const result = document.getElementById('egg-result');
+  if (!result) return;
+  const totalG = count * (EGG_WEIGHTS[from] || 56);
+  const needed = totalG / (EGG_WEIGHTS[to] || 44);
+  result.textContent = `${count} ${from} = ${needed.toFixed(1)} ${to}`;
+}
+
+// ── Pan Size Converter ──
+function updatePanCalc() {
+  const d  = parseFloat(document.getElementById('pan-round-d')?.value) || 24;
+  const rw = parseFloat(document.getElementById('pan-rect-w')?.value) || 20;
+  const rl = parseFloat(document.getElementById('pan-rect-l')?.value) || 30;
+  const h  = 5;
+  const roundVol = Math.PI * Math.pow(d/2, 2) * h;
+  const rectVol  = rw * rl * h;
+  const ratio    = roundVol / rectVol;
+  const res = document.getElementById('pan-result');
+  if (!res) return;
+  res.innerHTML = `
+    <div class="conv-result-item"><span class="conv-result-label">⭕ נפח עגולה (ø${d})</span><span class="conv-result-value">${Math.round(roundVol)} cm³</span></div>
+    <div class="conv-result-item"><span class="conv-result-label">▭ נפח מלבנית (${rw}×${rl})</span><span class="conv-result-value">${Math.round(rectVol)} cm³</span></div>
+    <div class="conv-result-item highlight"><span class="conv-result-label">יחס מרכיבים</span><span class="conv-result-value">×${ratio.toFixed(2)}</span></div>`;
+}
+
+// ── Cooking Times Table ──
+const COOK_TIMES_DATA = [
+  { prod:{he:'עוף שלם',ru:'Целая курица',en:'Whole chicken'}, temp:82, time:{he:'45 ד׳/ק"ג',ru:'45 мин/кг',en:'45 min/kg'}, method:{he:'תנור',ru:'Духовка',en:'Oven'} },
+  { prod:{he:'חזה עוף',ru:'Куриная грудка',en:'Chicken breast'}, temp:74, time:{he:'20-25 ד׳',ru:'20-25 мин',en:'20-25 min'}, method:{he:'מחבת/תנור',ru:'Сковорода/Духовка',en:'Pan/Oven'} },
+  { prod:{he:'בקר בינוני',ru:'Говядина (средняя)',en:'Beef (medium)'}, temp:63, time:{he:'25 ד׳/ק"ג',ru:'25 мин/кг',en:'25 min/kg'}, method:{he:'תנור',ru:'Духовка',en:'Oven'} },
+  { prod:{he:'בקר well-done',ru:'Говядина (прожарено)',en:'Beef (well-done)'}, temp:71, time:{he:'35 ד׳/ק"ג',ru:'35 мин/кг',en:'35 min/kg'}, method:{he:'תנור',ru:'Духовка',en:'Oven'} },
+  { prod:{he:'חזיר',ru:'Свинина',en:'Pork'}, temp:71, time:{he:'30 ד׳/ק"ג',ru:'30 мин/кг',en:'30 min/kg'}, method:{he:'תנור',ru:'Духовка',en:'Oven'} },
+  { prod:{he:'דג שלם',ru:'Целая рыба',en:'Whole fish'}, temp:63, time:{he:'10 ד׳/ס"מ',ru:'10 мин/см',en:'10 min/cm'}, method:{he:'תנור',ru:'Духовка',en:'Oven'} },
+  { prod:{he:'פילה דג',ru:'Филе рыбы',en:'Fish fillet'}, temp:63, time:{he:'10-12 ד׳',ru:'10-12 мин',en:'10-12 min'}, method:{he:'מחבת',ru:'Сковорода',en:'Pan'} },
+  { prod:{he:'הודו שלם',ru:'Целая индейка',en:'Whole turkey'}, temp:82, time:{he:'40 ד׳/ק"ג',ru:'40 мин/кг',en:'40 min/kg'}, method:{he:'תנור',ru:'Духовка',en:'Oven'} },
+];
+
+function renderCookTimesTable() {
+  const table = document.getElementById('cooktimes-table');
+  if (!table) return;
+  const lang = currentLang || 'he';
+  const headers = {he:['מוצר','טמפ׳ פנימית','זמן','שיטה'], ru:['Продукт','Темп.','Время','Метод'], en:['Product','Internal temp','Time','Method']};
+  const hdrs = headers[lang] || headers.en;
+  let html = `<thead><tr>${hdrs.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>`;
+  COOK_TIMES_DATA.forEach(row => {
+    html += `<tr>
+      <td><b>${row.prod[lang]||row.prod.en}</b></td>
+      <td>${row.temp}°C</td>
+      <td>${row.time[lang]||row.time.en}</td>
+      <td style="font-size:12px;color:var(--c-text-muted);">${row.method[lang]||row.method.en}</td>
+    </tr>`;
+  });
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
+// ── Seasoning Guide ──
+const SEASON_DATA = [
+  { key:'chicken', name:{he:'עוף',ru:'Курица',en:'Chicken'},
+    saltPer100:1.2, pepperPer100:0.3, extraHe:'שום גרנולרי: 0.5ג׳/100ג׳', extraRu:'Чеснок гранул.: 0.5г/100г', extraEn:'Garlic powder: 0.5g/100g' },
+  { key:'beef', name:{he:'בקר',ru:'Говядина',en:'Beef'},
+    saltPer100:1.5, pepperPer100:0.4, extraHe:'פפריקה: 0.5ג׳/100ג׳', extraRu:'Паприка: 0.5г/100г', extraEn:'Paprika: 0.5g/100g' },
+  { key:'fish', name:{he:'דג',ru:'Рыба',en:'Fish'},
+    saltPer100:1.0, pepperPer100:0.2, extraHe:'לימון + שמיר', extraRu:'Лимон + укроп', extraEn:'Lemon + dill' },
+  { key:'vegetables', name:{he:'ירקות קלויים',ru:'Запечёные овощи',en:'Roasted vegetables'},
+    saltPer100:0.8, pepperPer100:0.2, extraHe:'שמן זית: 1כף/300ג׳', extraRu:'Масло: 1ст.л./300г', extraEn:'Olive oil: 1tbsp/300g' },
+  { key:'pasta', name:{he:'מים לפסטה (1L)',ru:'Вода для пасты (1л)',en:'Pasta water (1L)'},
+    saltPer100:null, pepperPer100:null, extraHe:'מלח: 7-10 גרם לליטר', extraRu:'Соль: 7-10г на литр', extraEn:'Salt: 7-10g per liter' },
+];
+
+function renderSeasonProducts() {
+  const sel = document.getElementById('season-product');
+  if (!sel) return;
+  const lang = currentLang || 'he';
+  sel.innerHTML = SEASON_DATA.map(p => `<option value="${p.key}">${p.name[lang]||p.name.en}</option>`).join('');
+}
+
+function updateSeasonGuide() {
+  const weight = parseFloat(document.getElementById('season-weight')?.value) || 500;
+  const key = document.getElementById('season-product')?.value;
+  const product = SEASON_DATA.find(p => p.key === key) || SEASON_DATA[0];
+  const res = document.getElementById('season-result');
+  if (!res) return;
+  const lang = currentLang || 'he';
+  if (!product.saltPer100) {
+    const extra = product[`extra${lang.charAt(0).toUpperCase()+lang.slice(1)}`] || product.extraEn || '';
+    res.innerHTML = `<div class="conv-result-item highlight" style="grid-column:1/-1;"><span class="conv-result-label">${escHtml(extra)}</span></div>`;
+    return;
+  }
+  const salt = (weight * product.saltPer100 / 100).toFixed(1);
+  const pepper = (weight * product.pepperPer100 / 100).toFixed(1);
+  const extra = product[`extra${lang.charAt(0).toUpperCase()+lang.slice(1)}`] || product.extraEn || '';
+  res.innerHTML = `
+    <div class="conv-result-item"><span class="conv-result-label">🧂 מלח / Соль / Salt</span><span class="conv-result-value">${salt}ג׳</span></div>
+    <div class="conv-result-item"><span class="conv-result-label">🌶️ פלפל / Перец / Pepper</span><span class="conv-result-value">${pepper}ג׳</span></div>
+    <div class="conv-result-item highlight" style="grid-column:1/-1;"><span class="conv-result-label" style="font-size:13px;">${escHtml(extra)}</span></div>`;
+}
+
 function initToolsView() {
   renderConvUnits();
   updateConv();
@@ -4284,8 +4982,13 @@ function initToolsView() {
   renderSubs();
   const sp = document.getElementById('subs-search');
   if (sp) sp.placeholder = t('subsSearchPh');
+  updateEggCalc();
+  updatePanCalc();
+  renderCookTimesTable();
+  renderSeasonProducts();
+  updateSeasonGuide();
   // Restore collapse state on all cards
-  ['tool-converter','tool-oven','tool-timers','tool-subs'].forEach(id => {
+  ['tool-converter','tool-oven','tool-timers','tool-subs','tool-eggs','tool-pan','tool-cooktimes','tool-season'].forEach(id => {
     const card = document.getElementById(id);
     const btn  = card?.querySelector('.tool-collapse-btn');
     if (card) card.classList.toggle('collapsed', !!toolCollapsed[id]);
