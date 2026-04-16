@@ -1407,9 +1407,16 @@ service cloud.firestore {
         <div class="tool-card" id="tool-cooktimes">
           <div class="tool-card-title">
             <span class="tool-card-title-left">🌡️ <span data-i18n="toolCookTimeTitle">זמני בישול</span></span>
-            <button class="tool-collapse-btn" onclick="toggleToolCard('tool-cooktimes')">▲</button>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <div class="view-toggle" style="font-size:12px;">
+                <button id="ct-btn-c" class="view-toggle-btn active" onclick="setCookTempUnit('C')">°C</button>
+                <button id="ct-btn-f" class="view-toggle-btn" onclick="setCookTempUnit('F')">°F</button>
+              </div>
+              <button class="tool-collapse-btn" onclick="toggleToolCard('tool-cooktimes')">▲</button>
+            </div>
           </div>
           <div class="tool-card-body">
+            <p style="font-size:11px;color:var(--c-text-muted);padding:0 0 8px;" data-i18n="cookTimesNote">* טמפ׳ פנימית = מדחום בתוך הבשר. טמפ׳ תנור = הגדרת התנור.</p>
             <div style="overflow-x:auto;"><table class="temp-table" id="cooktimes-table"></table></div>
           </div>
         </div>
@@ -1770,6 +1777,7 @@ const TRANSLATIONS = {
     toolEggTitle: 'מחשבון ביצים',
     toolPanTitle: 'גדלי תבניות',
     toolCookTimeTitle: 'זמני בישול',
+    cookTimesNote: '* טמפ׳ פנימית = מדחום בתוך הבשר. טמפ׳ תנור = הגדרת התנור.',
     toolSeasonTitle: 'מדריך תיבול',
   },
   ru: {
@@ -1968,6 +1976,7 @@ const TRANSLATIONS = {
     toolEggTitle: 'Калькулятор яиц',
     toolPanTitle: 'Размеры форм',
     toolCookTimeTitle: 'Время готовки',
+    cookTimesNote: '* Внутренняя темп. = термометр внутри мяса. Темп. духовки = настройка духовки.',
     toolSeasonTitle: 'Гид по специям',
   },
   en: {
@@ -2166,6 +2175,7 @@ const TRANSLATIONS = {
     toolEggTitle: 'Egg Calculator',
     toolPanTitle: 'Pan Sizes',
     toolCookTimeTitle: 'Cooking Times',
+    cookTimesNote: '* Internal temp = thermometer inside meat. Oven temp = oven setting.',
     toolSeasonTitle: 'Seasoning Guide',
   }
 };
@@ -2191,7 +2201,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.9';
+const APP_VERSION = '1.3.10';
 
 // =====================================================================
 // APP STATE
@@ -4902,30 +4912,104 @@ function updatePanCalc() {
 }
 
 // ── Cooking Times Table ──
+let cookTempUnit = 'C'; // 'C' or 'F'
+
+function setCookTempUnit(unit) {
+  cookTempUnit = unit;
+  document.getElementById('ct-btn-c')?.classList.toggle('active', unit === 'C');
+  document.getElementById('ct-btn-f')?.classList.toggle('active', unit === 'F');
+  renderCookTimesTable();
+}
+
+function cToDisplay(c) {
+  if (cookTempUnit === 'F') return Math.round(c * 9/5 + 32) + '°F';
+  return c + '°C';
+}
+
+// ovenC = oven/pan temperature; internalC = safe internal meat temperature
 const COOK_TIMES_DATA = [
-  { prod:{he:'עוף שלם',ru:'Целая курица',en:'Whole chicken'}, temp:82, time:{he:'45 ד׳/ק"ג',ru:'45 мин/кг',en:'45 min/kg'}, method:{he:'תנור',ru:'Духовка',en:'Oven'} },
-  { prod:{he:'חזה עוף',ru:'Куриная грудка',en:'Chicken breast'}, temp:74, time:{he:'20-25 ד׳',ru:'20-25 мин',en:'20-25 min'}, method:{he:'מחבת/תנור',ru:'Сковорода/Духовка',en:'Pan/Oven'} },
-  { prod:{he:'בקר בינוני',ru:'Говядина (средняя)',en:'Beef (medium)'}, temp:63, time:{he:'25 ד׳/ק"ג',ru:'25 мин/кг',en:'25 min/kg'}, method:{he:'תנור',ru:'Духовка',en:'Oven'} },
-  { prod:{he:'בקר well-done',ru:'Говядина (прожарено)',en:'Beef (well-done)'}, temp:71, time:{he:'35 ד׳/ק"ג',ru:'35 мин/кг',en:'35 min/kg'}, method:{he:'תנור',ru:'Духовка',en:'Oven'} },
-  { prod:{he:'חזיר',ru:'Свинина',en:'Pork'}, temp:71, time:{he:'30 ד׳/ק"ג',ru:'30 мин/кг',en:'30 min/kg'}, method:{he:'תנור',ru:'Духовка',en:'Oven'} },
-  { prod:{he:'דג שלם',ru:'Целая рыба',en:'Whole fish'}, temp:63, time:{he:'10 ד׳/ס"מ',ru:'10 мин/см',en:'10 min/cm'}, method:{he:'תנור',ru:'Духовка',en:'Oven'} },
-  { prod:{he:'פילה דג',ru:'Филе рыбы',en:'Fish fillet'}, temp:63, time:{he:'10-12 ד׳',ru:'10-12 мин',en:'10-12 min'}, method:{he:'מחבת',ru:'Сковорода',en:'Pan'} },
-  { prod:{he:'הודו שלם',ru:'Целая индейка',en:'Whole turkey'}, temp:82, time:{he:'40 ד׳/ק"ג',ru:'40 мин/кг',en:'40 min/kg'}, method:{he:'תנור',ru:'Духовка',en:'Oven'} },
+  // ── Poultry ──
+  { prod:{he:'עוף שלם',ru:'Целая курица',en:'Whole chicken'},
+    ovenC:190, internalC:82,
+    time:{he:'45-50 ד׳/ק"ג',ru:'45-50 мин/кг',en:'45-50 min/kg'},
+    method:{he:'תנור',ru:'Духовка',en:'Oven'} },
+  { prod:{he:'חזה עוף',ru:'Куриная грудка',en:'Chicken breast'},
+    ovenC:200, internalC:74,
+    time:{he:'20-25 ד׳',ru:'20-25 мин',en:'20-25 min'},
+    method:{he:'תנור/מחבת',ru:'Духовка/Сковорода',en:'Oven/Pan'} },
+  { prod:{he:'ירכי/כנפי עוף',ru:'Бёдра/крылья',en:'Chicken thighs/wings'},
+    ovenC:200, internalC:82,
+    time:{he:'35-40 ד׳',ru:'35-40 мин',en:'35-40 min'},
+    method:{he:'תנור',ru:'Духовка',en:'Oven'} },
+  { prod:{he:'הודו שלם',ru:'Целая индейка',en:'Whole turkey'},
+    ovenC:165, internalC:82,
+    time:{he:'40-45 ד׳/ק"ג',ru:'40-45 мин/кг',en:'40-45 min/kg'},
+    method:{he:'תנור',ru:'Духовка',en:'Oven'} },
+  // ── Beef ──
+  { prod:{he:'בקר — מדיום-רייר',ru:'Говядина (medium-rare)',en:'Beef — medium-rare'},
+    ovenC:180, internalC:57,
+    time:{he:'20 ד׳/ק"ג',ru:'20 мин/кг',en:'20 min/kg'},
+    method:{he:'תנור',ru:'Духовка',en:'Oven'} },
+  { prod:{he:'בקר — מדיום',ru:'Говядина (medium)',en:'Beef — medium'},
+    ovenC:180, internalC:63,
+    time:{he:'25-30 ד׳/ק"ג',ru:'25-30 мин/кг',en:'25-30 min/kg'},
+    method:{he:'תנור',ru:'Духовка',en:'Oven'} },
+  { prod:{he:'בקר — וול-דאן',ru:'Говядина (well-done)',en:'Beef — well-done'},
+    ovenC:180, internalC:71,
+    time:{he:'35-40 ד׳/ק"ג',ru:'35-40 мин/кг',en:'35-40 min/kg'},
+    method:{he:'תנור',ru:'Духовка',en:'Oven'} },
+  { prod:{he:'המבורגר/בשר טחון',ru:'Фарш/котлеты',en:'Ground beef/burgers'},
+    ovenC:220, internalC:71,
+    time:{he:'8-10 ד׳ לצד',ru:'8-10 мин/сторону',en:'8-10 min/side'},
+    method:{he:'מחבת/גריל',ru:'Сковорода/Гриль',en:'Pan/Grill'} },
+  // ── Lamb & Pork ──
+  { prod:{he:'כבש — מדיום',ru:'Баранина (medium)',en:'Lamb — medium'},
+    ovenC:180, internalC:63,
+    time:{he:'25-30 ד׳/ק"ג',ru:'25-30 мин/кг',en:'25-30 min/kg'},
+    method:{he:'תנור',ru:'Духовка',en:'Oven'} },
+  { prod:{he:'חזיר/עגל',ru:'Свинина/Телятина',en:'Pork/Veal'},
+    ovenC:180, internalC:71,
+    time:{he:'30-35 ד׳/ק"ג',ru:'30-35 мин/кг',en:'30-35 min/kg'},
+    method:{he:'תנור',ru:'Духовка',en:'Oven'} },
+  // ── Fish & Seafood ──
+  { prod:{he:'דג שלם',ru:'Целая рыба',en:'Whole fish'},
+    ovenC:200, internalC:63,
+    time:{he:'10 ד׳/ס"מ עובי',ru:'10 мин/см',en:'10 min/cm thickness'},
+    method:{he:'תנור',ru:'Духовка',en:'Oven'} },
+  { prod:{he:'פילה דג',ru:'Филе рыбы',en:'Fish fillet'},
+    ovenC:200, internalC:63,
+    time:{he:'10-15 ד׳',ru:'10-15 мин',en:'10-15 min'},
+    method:{he:'מחבת/תנור',ru:'Сковорода/Духовка',en:'Pan/Oven'} },
+  { prod:{he:'שרימפס/קלמרי',ru:'Креветки/кальмар',en:'Shrimp/calamari'},
+    ovenC:220, internalC:null,
+    time:{he:'2-3 ד׳ לצד',ru:'2-3 мин/сторону',en:'2-3 min/side'},
+    method:{he:'מחבת',ru:'Сковорода',en:'Pan'} },
+  { prod:{he:'סלמון פילה',ru:'Филе лосося',en:'Salmon fillet'},
+    ovenC:200, internalC:63,
+    time:{he:'12-15 ד׳',ru:'12-15 мин',en:'12-15 min'},
+    method:{he:'תנור/מחבת',ru:'Духовка/Сковорода',en:'Oven/Pan'} },
 ];
 
 function renderCookTimesTable() {
   const table = document.getElementById('cooktimes-table');
   if (!table) return;
   const lang = currentLang || 'he';
-  const headers = {he:['מוצר','טמפ׳ פנימית','זמן','שיטה'], ru:['Продукт','Темп.','Время','Метод'], en:['Product','Internal temp','Time','Method']};
+  const headers = {
+    he:['מוצר', `תנור`, `פנימי *`, 'זמן', 'שיטה'],
+    ru:['Продукт', `Духовка`, `Внутри *`, 'Время', 'Метод'],
+    en:['Product', `Oven`, `Internal *`, 'Time', 'Method']
+  };
   const hdrs = headers[lang] || headers.en;
   let html = `<thead><tr>${hdrs.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>`;
   COOK_TIMES_DATA.forEach(row => {
+    const ovenDisp     = cToDisplay(row.ovenC);
+    const internalDisp = row.internalC ? `<b>${cToDisplay(row.internalC)}</b>` : '—';
     html += `<tr>
-      <td><b>${row.prod[lang]||row.prod.en}</b></td>
-      <td>${row.temp}°C</td>
-      <td>${row.time[lang]||row.time.en}</td>
-      <td style="font-size:12px;color:var(--c-text-muted);">${row.method[lang]||row.method.en}</td>
+      <td>${row.prod[lang]||row.prod.en}</td>
+      <td style="white-space:nowrap;">${ovenDisp}</td>
+      <td style="white-space:nowrap;">${internalDisp}</td>
+      <td style="white-space:nowrap;">${row.time[lang]||row.time.en}</td>
+      <td style="font-size:11px;color:var(--c-text-muted);white-space:nowrap;">${row.method[lang]||row.method.en}</td>
     </tr>`;
   });
   html += '</tbody>';
