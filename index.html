@@ -1753,6 +1753,7 @@ const TRANSLATIONS = {
     uploadDragHint: 'גרור תמונה לכאן',
     ninja: 'נינג׳ה',
     imageSaved: 'התמונה עודכנה!',
+    backToExit: 'לחץ שוב ליציאה',
     navTools: 'כלים',
     toolConvTitle: 'המרת מידות ומשקלות',
     convWeight: '⚖️ משקל',
@@ -1958,6 +1959,7 @@ const TRANSLATIONS = {
     uploadDragHint: 'Перетащите фото сюда',
     ninja: 'Ниндзя',
     imageSaved: 'Фото обновлено!',
+    backToExit: 'Нажмите ещё раз для выхода',
     navTools: 'Инструм.',
     toolConvTitle: 'Конвертер мер и весов',
     convWeight: '⚖️ Вес',
@@ -2163,6 +2165,7 @@ const TRANSLATIONS = {
     uploadDragHint: 'Drag image here',
     ninja: 'Ninja',
     imageSaved: 'Image updated!',
+    backToExit: 'Press again to exit',
     navTools: 'Tools',
     toolConvTitle: 'Unit Converter',
     convWeight: '⚖️ Weight',
@@ -2235,7 +2238,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.11';
+const APP_VERSION = '1.3.12';
 
 // =====================================================================
 // APP STATE
@@ -2367,6 +2370,7 @@ function openModal(html) {
   const mc = document.getElementById('modal-container');
   document.getElementById('modal-content').innerHTML = html;
   mc.classList.add('open');
+  history.pushState({ pwa: 'modal' }, '');
 }
 
 // Close modal on backdrop click
@@ -2589,7 +2593,7 @@ async function toggleFavorite(id) {
 // =====================================================================
 // VIEWS
 // =====================================================================
-function switchView(view) {
+function switchView(view, pushHistory = true) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + view).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
@@ -2598,6 +2602,7 @@ function switchView(view) {
   if (view === 'shopping') renderShoppingView();
   if (view === 'settings') renderSettingsProfile();
   if (view === 'tools') initToolsView();
+  if (pushHistory && view !== 'recipes') history.pushState({ pwa: 'view', view }, '');
 }
 
 // =====================================================================
@@ -2963,6 +2968,7 @@ async function openCookingMode(recipeId) {
   if (!recipe) return;
   cookingModeStep = 0;
   try { cookingModeWakeLock = await navigator.wakeLock?.request('screen'); } catch {}
+  history.pushState({ pwa: 'cooking' }, '');
   renderCookingMode(recipe);
 }
 
@@ -4417,6 +4423,48 @@ function installPWA() {
 }
 
 // =====================================================================
+// ANDROID BACK BUTTON (PWA)
+// =====================================================================
+let _backPressedOnce = false;
+
+function initBackButton() {
+  // Seed the history so the first back press triggers popstate instead of closing
+  history.pushState({ pwa: 'home' }, '');
+
+  window.addEventListener('popstate', () => {
+    // 1. Cooking mode overlay
+    if (document.getElementById('cooking-overlay')) {
+      exitCookingMode();
+      history.pushState({ pwa: 'modal' }, ''); // modal is still open underneath
+      return;
+    }
+
+    // 2. Modal open
+    const mc = document.getElementById('modal-container');
+    if (mc && mc.classList.contains('open')) {
+      closeModal();
+      history.pushState({ pwa: 'home' }, '');
+      return;
+    }
+
+    // 3. Non-home view active
+    const activeView = document.querySelector('.view.active');
+    if (activeView && activeView.id !== 'view-recipes') {
+      switchView('recipes', false); // switch without pushing another state
+      history.pushState({ pwa: 'home' }, '');
+      return;
+    }
+
+    // 4. Already on home — "press again to exit" pattern
+    if (_backPressedOnce) return; // let browser handle (close PWA)
+    _backPressedOnce = true;
+    showToast(t('backToExit'), 'info');
+    history.pushState({ pwa: 'home' }, ''); // stay in app
+    setTimeout(() => { _backPressedOnce = false; }, 2200);
+  });
+}
+
+// =====================================================================
 // INIT
 // =====================================================================
 function init() {
@@ -4461,6 +4509,9 @@ function init() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW:', e));
   }
+
+  // Android back button handler
+  initBackButton();
 
   // Capture PWA install prompt
   window.addEventListener('beforeinstallprompt', e => {
