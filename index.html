@@ -627,12 +627,24 @@ body.ltr .search-icon { right: auto; left: 14px; }
 /* Upload zone */
 .upload-zone {
   border: 2px dashed var(--c-border); border-radius: var(--radius);
-  padding: 32px 20px; text-align: center; cursor: pointer;
+  padding: 20px; text-align: center;
   transition: all var(--transition); background: var(--c-bg);
 }
-.upload-zone:hover, .upload-zone.drag-over {
-  border-color: var(--c-primary); background: #fff5f0;
+.upload-zone.drag-over { border-color: var(--c-primary); background: #fff5f0; }
+
+/* Gallery / Camera pick buttons */
+.img-pick-btns {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 0;
 }
+.img-pick-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 13px 8px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; border: 2px solid var(--c-border);
+}
+.img-pick-gallery { background: var(--c-surface); color: var(--c-text); }
+.img-pick-gallery:hover { border-color: var(--c-primary); color: var(--c-primary); }
+.img-pick-camera  { background: var(--c-primary); color: #fff; border-color: var(--c-primary); }
+.img-pick-camera:hover { background: var(--c-primary-dark); }
 .upload-zone .upload-icon { font-size: 40px; margin-bottom: 12px; }
 .upload-zone p { font-size: 14px; color: var(--c-text-muted); }
 .upload-zone strong { color: var(--c-primary); }
@@ -1114,8 +1126,11 @@ select option { background: var(--c-surface); color: var(--c-text); }
   backdrop-filter: blur(4px); transition: all 0.2s ease;
   border: none; cursor: pointer;
 }
-.hero-change-btn {
+.hero-change-wrap {
   position: absolute; bottom: 6px; left: 10px;
+  display: flex; gap: 6px;
+}
+.hero-change-btn {
   background: rgba(0,0,0,0.48); color: #fff;
   border-radius: 50%; width: 34px; height: 34px;
   display: flex; align-items: center; justify-content: center;
@@ -1731,6 +1746,12 @@ const TRANSLATIONS = {
     updateExisting: 'עדכן את המתכון הקיים',
     saveAsNew: 'שמור כמתכון חדש נפרד',
     changeImage: 'החלף תמונה',
+    changeImageGallery: 'בחר מגלריה',
+    changeImageCamera: 'צלם עכשיו',
+    pickGallery: 'גלריה',
+    pickCamera: 'מצלמה',
+    uploadDragHint: 'גרור תמונה לכאן',
+    ninja: '🥷 נינג׳ה',
     imageSaved: 'התמונה עודכנה!',
     navTools: 'כלים',
     toolConvTitle: 'המרת מידות ומשקלות',
@@ -1930,6 +1951,12 @@ const TRANSLATIONS = {
     updateExisting: 'Обновить существующий рецепт',
     saveAsNew: 'Сохранить как новый рецепт',
     changeImage: 'Заменить фото',
+    changeImageGallery: 'Из галереи',
+    changeImageCamera: 'Сфотографировать',
+    pickGallery: 'Галерея',
+    pickCamera: 'Камера',
+    uploadDragHint: 'Перетащите фото сюда',
+    ninja: '🥷 Ниндзя',
     imageSaved: 'Фото обновлено!',
     navTools: 'Инструм.',
     toolConvTitle: 'Конвертер мер и весов',
@@ -2129,6 +2156,12 @@ const TRANSLATIONS = {
     updateExisting: 'Update the existing recipe',
     saveAsNew: 'Save as a new separate recipe',
     changeImage: 'Change Image',
+    changeImageGallery: 'Choose from gallery',
+    changeImageCamera: 'Take photo',
+    pickGallery: 'Gallery',
+    pickCamera: 'Camera',
+    uploadDragHint: 'Drag image here',
+    ninja: '🥷 Ninja',
     imageSaved: 'Image updated!',
     navTools: 'Tools',
     toolConvTitle: 'Unit Converter',
@@ -2184,9 +2217,10 @@ const CATEGORY_EMOJIS = {
   breakfast: '🍳', lunch: '🥗', dinner: '🍝', dessert: '🍰',
   snack: '🥨', drink: '🥤', other: '🍽️',
   meat: '🥩', fish: '🐟', chicken: '🍗',
-  sides: '🍟', salads: '🥗', sandwiches: '🥪'
+  sides: '🍟', salads: '🥗', sandwiches: '🥪',
+  ninja: '🥷',
 };
-const DEFAULT_CATEGORIES = ['meat','chicken','fish','salads','sides','sandwiches','dessert','snack','drink','other'];
+const DEFAULT_CATEGORIES = ['meat','chicken','fish','salads','sides','sandwiches','dessert','snack','drink','ninja','other'];
 
 let userCategories = JSON.parse(localStorage.getItem('userCategories') || 'null');
 function getCategories() {
@@ -2201,7 +2235,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.10';
+const APP_VERSION = '1.3.11';
 
 // =====================================================================
 // APP STATE
@@ -2695,10 +2729,16 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
     ? `<img class="detail-hero" src="${recipe.images[0]}" alt="${escHtml(recipe.name)}">`
     : `<div class="detail-hero-emoji">${getCategoryEmoji(recipe.category) || '🍽️'}</div>`;
   const changeBtn = (!readOnly)
-    ? `<label class="hero-change-btn" title="${t('changeImage')}">📷
-        <input type="file" accept="image/*" style="display:none"
-          onchange="saveNewHeroImage(event,'${escHtml(recipe.id)}')">
-       </label>` : '';
+    ? `<div class="hero-change-wrap">
+        <label class="hero-change-btn" title="${t('changeImageGallery')}">🖼️
+          <input type="file" accept="image/*" style="display:none"
+            onchange="saveNewHeroImage(event,'${escHtml(recipe.id)}')">
+        </label>
+        <label class="hero-change-btn" title="${t('changeImageCamera')}">📷
+          <input type="file" accept="image/*" capture="environment" style="display:none"
+            onchange="saveNewHeroImage(event,'${escHtml(recipe.id)}')">
+        </label>
+       </div>` : '';
   const heroHtml = `<div class="detail-hero-wrap" id="detail-hero-wrap">
     ${heroInner}
     <button class="hero-toggle-btn" id="hero-toggle-btn" onclick="toggleDetailHero()">${t('heroCollapse')}</button>
@@ -3081,13 +3121,22 @@ function openAddRecipeModal() {
       </div>
       <!-- TAB: IMAGE -->
       <div class="tab-content active" id="tab-image">
-        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()"
+        <div class="upload-zone" id="upload-zone"
           ondragover="event.preventDefault();this.classList.add('drag-over')"
           ondragleave="this.classList.remove('drag-over')"
           ondrop="handleDrop(event)">
-          <div class="upload-icon">📷</div>
-          <p>${t('uploadHint')}</p>
-          <p style="font-size:12px;color:var(--c-text-light);margin-top:6px;">${t('uploadHint2')}</p>
+          <div class="upload-icon">🖼️</div>
+          <p style="font-size:13px;color:var(--c-text-muted);">${t('uploadDragHint')}</p>
+        </div>
+        <div class="img-pick-btns">
+          <label class="img-pick-btn img-pick-gallery">
+            🖼️ ${t('pickGallery')}
+            <input type="file" accept="image/*" multiple style="display:none" onchange="handleFileInput(event)">
+          </label>
+          <label class="img-pick-btn img-pick-camera">
+            📷 ${t('pickCamera')}
+            <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleFileInput(event)">
+          </label>
         </div>
         <input type="file" id="file-input" accept="image/*" multiple style="display:none" onchange="handleFileInput(event)">
         <div class="image-previews" id="image-previews-add"></div>
