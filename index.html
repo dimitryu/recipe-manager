@@ -569,8 +569,12 @@ body.ltr .search-icon { right: auto; left: 14px; }
   display: flex; gap: 8px; padding: 12px 16px;
   overflow-x: auto; scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  flex-wrap: nowrap;
 }
 .category-filters::-webkit-scrollbar { display: none; }
+@media (min-width: 640px) {
+  .category-filters { flex-wrap: wrap; overflow-x: visible; }
+}
 .cat-chip {
   padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
   white-space: nowrap; border: 1.5px solid var(--c-border);
@@ -2531,7 +2535,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.19';
+const APP_VERSION = '1.3.20';
 
 // =====================================================================
 // APP STATE
@@ -4292,51 +4296,45 @@ async function analyzeVideo(url) {
 
     } else if (/facebook\.com\/(reel|watch|video|share\/v|share\/r)|fb\.watch/i.test(url)) {
       // ── Facebook Reels / Videos ──
-      showLoading('📄 ' + t('analyzingVideo'));
-      let fbTitle = '', fbDesc = '', fbPageText = '';
-
-      // Try oEmbed for public videos
-      try {
-        const oeRaw = await fetchPageContent(
-          `https://www.facebook.com/plugins/video/oembed.json/?url=${encodeURIComponent(url)}`, 8000);
-        if (oeRaw) {
-          const oe = JSON.parse(oeRaw);
-          if (oe.title) fbTitle = oe.title;
-          if (oe.author_name) fbDesc = `By: ${oe.author_name}`;
-        }
-      } catch {}
-
-      // Fetch page via Jina Reader
-      try {
-        fbPageText = (await fetchPageContent(url, 14000) || '').substring(0, 6000);
-      } catch {}
-
-      if (!fbTitle && fbPageText) {
-        const m = fbPageText.match(/(?:caption|description|story)[:\s"]+([^\n"]{10,400})/i);
-        if (m) fbTitle = m[1].trim();
-      }
-
-      let fbContent = `Facebook Video\nURL: ${url}\n`;
-      if (fbTitle) fbContent += `Title/Caption: ${fbTitle}\n`;
-      if (fbDesc)  fbContent += `${fbDesc}\n`;
-      if (fbPageText) fbContent += `\nPage Content:\n${fbPageText}\n`;
-
-      if (!fbTitle && !fbPageText) {
-        throw new Error(currentLang==='he'
-          ? 'לא ניתן לחלץ תוכן מ-Facebook. נסה להדביק את הטקסט ישירות בלשונית "טקסט".'
-          : currentLang==='ru'
-          ? 'Не удалось извлечь контент из Facebook. Попробуйте вставить текст на вкладке «Текст».'
-          : 'Could not extract content from Facebook. Try pasting text in the "Text" tab.');
-      }
-
-      showLoading('🤖 ' + t('analyzingVideo'));
-      const fbResponse = await callClaude([{
-        role: 'user', content: getRecipePrompt() + '\n\n' + fbContent
-      }], 2000);
-      const fbParsed = parseClaudeResponse(fbResponse);
-      if (!fbParsed.sourceUrl) fbParsed.sourceUrl = url;
+      // Facebook is a closed platform — scraping always fails (login required, oEmbed needs App Token).
+      // Show a guided paste-box so the user can copy the caption/description manually.
       hideLoading();
-      openRecipeForm(fbParsed);
+      const fbUrl = url;
+      const isHe = currentLang === 'he', isRu = currentLang === 'ru';
+      const guideTitle  = isHe ? '📘 Facebook — העתק טקסט ידנית' : isRu ? '📘 Facebook — скопируйте текст вручную' : '📘 Facebook — paste text manually';
+      const guideSteps  = isHe
+        ? '1. פתח את הרילס/סרטון ב-Facebook\n2. מצא את תיאור המתכון (כיתוב מתחת לסרטון)\n3. לחץ על "ראה עוד" / "...\"\n4. העתק את הטקסט המלא והדבק כאן:'
+        : isRu
+        ? '1. Откройте Reel/видео в Facebook\n2. Найдите описание рецепта под видео\n3. Нажмите «Ещё» / «...»\n4. Скопируйте весь текст и вставьте сюда:'
+        : '1. Open the Reel/video in Facebook\n2. Find the recipe description (caption below the video)\n3. Tap "See more" / "..."\n4. Copy the full text and paste it here:';
+      const analyzeBtn  = isHe ? '🤖 נתח' : isRu ? '🤖 Анализ' : '🤖 Analyze';
+      const cancelBtn   = isHe ? 'ביטול' : isRu ? 'Отмена' : 'Cancel';
+      openModal(`
+        <div style="padding:4px 0 8px;">
+          <h3 style="margin:0 0 12px;font-size:17px;">${guideTitle}</h3>
+          <pre style="white-space:pre-wrap;font-size:12px;color:var(--c-text-muted);background:var(--c-surface2);
+            border-radius:8px;padding:10px;margin:0 0 12px;line-height:1.6;">${guideSteps}</pre>
+          <textarea id="fb-paste-box" rows="7" style="width:100%;box-sizing:border-box;border:1.5px solid var(--c-border);
+            border-radius:10px;padding:10px;font-size:14px;resize:vertical;background:var(--c-surface);color:var(--c-text);"
+            placeholder="${isHe?'הדבק כאן את טקסט המתכון...':isRu?'Вставьте текст рецепта сюда...':'Paste recipe text here...'}"></textarea>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button class="btn-primary" style="flex:1;" onclick="
+              (async()=>{
+                const txt=(document.getElementById('fb-paste-box')?.value||'').trim();
+                if(!txt){showToast('${isHe?'אנא הדבק טקסט':'Please paste text'}','error');return;}
+                closeModal();
+                showLoading('🤖 ${isHe?'מנתח...':isRu?'Анализ...':'Analyzing...'}');
+                try{
+                  const r=await callClaude([{role:'user',content:getRecipePrompt()+'\\n\\nFacebook video URL: ${fbUrl.replace(/'/g,"\\'")}\\n\\n'+txt}],2000);
+                  const p=parseClaudeResponse(r);
+                  if(!p.sourceUrl)p.sourceUrl='${fbUrl.replace(/'/g,"\\'")}';
+                  hideLoading();openRecipeForm(p);
+                }catch(e){hideLoading();showToast(e.message,'error');}
+              })()">${analyzeBtn}</button>
+            <button class="btn-secondary" onclick="closeModal();">${cancelBtn}</button>
+          </div>
+        </div>`);
+      return;
 
     } else {
       // Generic URL (TikTok, etc.) — fetch page text
@@ -5531,17 +5529,42 @@ function renderTimers() {
   }).join('');
 }
 
+// Persistent AudioContext — created once and unlocked on first user gesture (iOS fix)
+let _sharedAudioCtx = null;
+function _getAudioCtx() {
+  if (!_sharedAudioCtx) {
+    _sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return _sharedAudioCtx;
+}
+function unlockAudio() {
+  try {
+    const ctx = _getAudioCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    // Play a silent 1-sample buffer to satisfy iOS unlock requirement
+    const buf = ctx.createBuffer(1, 1, 22050);
+    const src = ctx.createBufferSource();
+    src.buffer = buf; src.connect(ctx.destination); src.start(0);
+  } catch {}
+}
+function _doBeep(ctx) {
+  [0, 0.35, 0.7].forEach(delay => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.value = 880;
+    g.gain.setValueAtTime(0.35, ctx.currentTime + delay);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.28);
+    o.start(ctx.currentTime + delay); o.stop(ctx.currentTime + delay + 0.28);
+  });
+}
 function playTimerBeep() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    [0, 0.35, 0.7].forEach(delay => {
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      o.connect(g); g.connect(ctx.destination);
-      o.frequency.value = 880;
-      g.gain.setValueAtTime(0.35, ctx.currentTime + delay);
-      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.28);
-      o.start(ctx.currentTime + delay); o.stop(ctx.currentTime + delay + 0.28);
-    });
+    const ctx = _getAudioCtx();
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(() => _doBeep(ctx)).catch(() => {});
+    } else {
+      _doBeep(ctx);
+    }
   } catch {}
   if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
 }
@@ -5586,6 +5609,7 @@ function toggleTimer(id) {
   if (tmr.running) {
     clearInterval(tmr.interval); tmr.interval = null; tmr.running = false;
   } else {
+    unlockAudio(); // iOS: unlock AudioContext on the user gesture that starts the timer
     tmr.running = true;
     tmr.interval = setInterval(() => tickTimer(id), 1000);
   }
@@ -5645,6 +5669,7 @@ function qtStartFromInput() {
 }
 
 function qtStart(totalSec) {
+  unlockAudio(); // iOS: unlock AudioContext on the user gesture that starts the timer
   if (_qtInterval) { clearInterval(_qtInterval); _qtInterval = null; }
   _qtTotal = totalSec;
   _qtSec = totalSec;
