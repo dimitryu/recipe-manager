@@ -2535,7 +2535,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.20';
+const APP_VERSION = '1.3.21';
 
 // =====================================================================
 // APP STATE
@@ -2558,6 +2558,8 @@ let detailServingMult = 1;
 let currentOpenRecipeId = null;
 let cookingModeWakeLock = null;
 let cookingModeStep = 0;
+let cookingModeActive = false;
+let _noSleepVideo = null; // canvas-stream fallback for iOS <16.4
 let viewMode = localStorage.getItem('viewMode') || 'grid';
 let sortMode = localStorage.getItem('sortMode') || 'date';
 
@@ -3393,11 +3395,74 @@ async function markAsCooked(recipeId) {
 // =====================================================================
 // COOKING MODE
 // =====================================================================
+// ── Wake Lock helpers ────────────────────────────────────────────────
+async function _acquireWakeLock() {
+  try {
+    cookingModeWakeLock = await navigator.wakeLock.request('screen');
+    // Re-acquire automatically if the system releases it (iOS 16.4+ behaviour)
+    cookingModeWakeLock.addEventListener('release', () => {
+      cookingModeWakeLock = null;
+      if (cookingModeActive && document.visibilityState === 'visible') {
+        _acquireWakeLock();
+      }
+    });
+  } catch {}
+}
+
+function _startNoSleep() {
+  // Canvas-stream video trick — keeps screen awake on iOS <16.4 and older Android
+  if (_noSleepVideo) return;
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1; canvas.height = 1;
+    const ctx2d = canvas.getContext('2d');
+    let _raf;
+    const draw = () => { if (_noSleepVideo) { ctx2d.clearRect(0,0,1,1); _raf = requestAnimationFrame(draw); } };
+    _raf = requestAnimationFrame(draw);
+
+    const stream = canvas.captureStream(1); // 1 fps
+    const v = document.createElement('video');
+    v.srcObject = stream;
+    v.muted = true;
+    v.setAttribute('playsinline', '');
+    v.setAttribute('webkit-playsinline', '');
+    v.style.cssText = 'position:fixed;top:-2px;left:-2px;width:1px;height:1px;opacity:0.001;pointer-events:none;z-index:-9999;';
+    document.body.appendChild(v);
+    v.play().catch(() => {});
+    v._raf = _raf;
+    _noSleepVideo = v;
+  } catch {}
+}
+
+function _stopNoSleep() {
+  if (_noSleepVideo) {
+    cancelAnimationFrame(_noSleepVideo._raf);
+    _noSleepVideo.pause();
+    _noSleepVideo.srcObject = null;
+    _noSleepVideo.remove();
+    _noSleepVideo = null;
+  }
+}
+
+// Re-acquire wake lock when tab becomes visible again (e.g. user returns from another app)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && cookingModeActive) {
+    if ('wakeLock' in navigator) _acquireWakeLock();
+  }
+});
+
 async function openCookingMode(recipeId) {
   const recipe = allRecipes.find(r => r.id === recipeId);
   if (!recipe) return;
   cookingModeStep = 0;
-  try { cookingModeWakeLock = await navigator.wakeLock?.request('screen'); } catch {}
+  cookingModeActive = true;
+  // Use Wake Lock API where available (iOS 16.4+, Chrome 84+, Firefox 126+)
+  if ('wakeLock' in navigator) {
+    await _acquireWakeLock();
+  } else {
+    // Fallback: canvas-stream video keeps screen awake on older iOS / Android
+    _startNoSleep();
+  }
   history.pushState({ pwa: 'cooking' }, '');
   renderCookingMode(recipe);
 }
@@ -3481,8 +3546,10 @@ function cookingStepPrev() {
 }
 
 async function exitCookingMode() {
+  cookingModeActive = false;
   document.getElementById('cooking-overlay')?.remove();
   try { await cookingModeWakeLock?.release(); cookingModeWakeLock = null; } catch {}
+  _stopNoSleep();
 }
 
 // =====================================================================
@@ -3775,14 +3842,24 @@ function openAddRecipeModal() {
         </div>
         <!-- Facebook panel -->
         <div class="platform-panel" id="vp-facebook">
-          <div class="input-group">
+          <!-- URL field (optional — used as sourceUrl) -->
+          <div class="input-group" style="margin-bottom:10px;">
             <input type="url" id="facebook-input" placeholder="${t('facebookPh')}" inputmode="url">
-            <div style="font-size:12px;color:var(--c-text-muted);margin-top:8px;background:var(--c-surface2);border-radius:8px;padding:10px 12px;line-height:1.7;">
-              <strong style="color:var(--c-text);">📋 ${currentLang==='ru'?'Как найти рецепт':currentLang==='he'?'איך למצוא מתכון':'How to find recipe'}:</strong><br>
-              1. ${currentLang==='ru'?'Откройте Reel':currentLang==='he'?'פתח ריל/וידאו':'Open Reel/video'}<br>
-              2. ${currentLang==='ru'?'Нажмите ⋯':currentLang==='he'?'לחץ על ⋯':'Tap ⋯'}<br>
-              3. ${currentLang==='ru'?'Скопируйте ссылку':currentLang==='he'?'העתק קישור':'Copy link'}
-            </div>
+          </div>
+          <!-- Step-by-step guide -->
+          <div style="font-size:12px;color:var(--c-text-muted);background:var(--c-surface2);border-radius:8px;padding:10px 12px;line-height:1.8;margin-bottom:10px;">
+            <strong style="color:var(--c-text);">📋 ${currentLang==='ru'?'Как найти рецепт':currentLang==='he'?'איך למצוא מתכון':'How to find the recipe'}:</strong><br>
+            1. ${currentLang==='ru'?'Откройте Reel/видео в Facebook':currentLang==='he'?'פתח את הריל/סרטון ב-Facebook':'Open the Reel/video in Facebook'}<br>
+            2. ${currentLang==='ru'?'Найдите описание под видео и нажмите «Ещё»':currentLang==='he'?'מצא את הכיתוב מתחת לסרטון ולחץ "ראה עוד"':'Find the caption below the video, tap "See more"'}<br>
+            3. ${currentLang==='ru'?'Скопируйте весь текст рецепта':currentLang==='he'?'העתק את כל טקסט המתכון':'Copy the full recipe text'}<br>
+            4. ${currentLang==='ru'?'Вставьте в поле ниже':currentLang==='he'?'הדבק בתיבה למטה':'Paste it in the box below'}
+          </div>
+          <!-- Paste area — always visible, no popup -->
+          <div class="input-group" style="margin-bottom:10px;">
+            <textarea id="facebook-text" rows="6"
+              style="width:100%;box-sizing:border-box;border:1.5px solid var(--c-border);border-radius:10px;
+                     padding:10px;font-size:14px;resize:vertical;background:var(--c-surface);color:var(--c-text);"
+              placeholder="${currentLang==='ru'?'Вставьте текст рецепта сюда...':currentLang==='he'?'הדבק כאן את טקסט המתכון...':'Paste recipe text here...'}"></textarea>
           </div>
           <button class="btn-primary" onclick="analyzeFacebook()">${t('analyzeUrl')}</button>
         </div>
@@ -4130,10 +4207,26 @@ function analyzeTiktok() {
   if (!url) { showToast(t('invalidUrl'), 'error'); return; }
   analyzeVideo(url);
 }
-function analyzeFacebook() {
-  const url = (document.getElementById('facebook-input')?.value || '').trim();
-  if (!url) { showToast(t('invalidUrl'), 'error'); return; }
-  analyzeVideo(url);
+async function analyzeFacebook() {
+  const url  = (document.getElementById('facebook-input')?.value || '').trim();
+  const text = (document.getElementById('facebook-text')?.value  || '').trim();
+  if (!text) {
+    showToast(currentLang==='he'?'אנא הדבק את טקסט המתכון':currentLang==='ru'?'Пожалуйста, вставьте текст рецепта':'Please paste the recipe text', 'error');
+    document.getElementById('facebook-text')?.focus();
+    return;
+  }
+  showLoading('🤖 ' + t('analyzingVideo'));
+  try {
+    const content = `Facebook video${url ? '\nURL: ' + url : ''}\n\n${text}`;
+    const r = await callClaude([{ role: 'user', content: getRecipePrompt() + '\n\n' + content }], 2000);
+    const parsed = parseClaudeResponse(r);
+    if (!parsed.sourceUrl && url) parsed.sourceUrl = url;
+    hideLoading();
+    openRecipeForm(parsed);
+  } catch(e) {
+    hideLoading();
+    showToast(e.message, 'error');
+  }
 }
 
 async function analyzeVideo(url) {
@@ -4295,45 +4388,14 @@ async function analyzeVideo(url) {
       openRecipeForm(igParsed);
 
     } else if (/facebook\.com\/(reel|watch|video|share\/v|share\/r)|fb\.watch/i.test(url)) {
-      // ── Facebook Reels / Videos ──
-      // Facebook is a closed platform — scraping always fails (login required, oEmbed needs App Token).
-      // Show a guided paste-box so the user can copy the caption/description manually.
+      // Facebook is handled entirely by analyzeFacebook() — paste area is in the panel itself.
+      // This branch is only hit if someone calls analyzeVideo() with a Facebook URL directly.
       hideLoading();
-      const fbUrl = url;
-      const isHe = currentLang === 'he', isRu = currentLang === 'ru';
-      const guideTitle  = isHe ? '📘 Facebook — העתק טקסט ידנית' : isRu ? '📘 Facebook — скопируйте текст вручную' : '📘 Facebook — paste text manually';
-      const guideSteps  = isHe
-        ? '1. פתח את הרילס/סרטון ב-Facebook\n2. מצא את תיאור המתכון (כיתוב מתחת לסרטון)\n3. לחץ על "ראה עוד" / "...\"\n4. העתק את הטקסט המלא והדבק כאן:'
-        : isRu
-        ? '1. Откройте Reel/видео в Facebook\n2. Найдите описание рецепта под видео\n3. Нажмите «Ещё» / «...»\n4. Скопируйте весь текст и вставьте сюда:'
-        : '1. Open the Reel/video in Facebook\n2. Find the recipe description (caption below the video)\n3. Tap "See more" / "..."\n4. Copy the full text and paste it here:';
-      const analyzeBtn  = isHe ? '🤖 נתח' : isRu ? '🤖 Анализ' : '🤖 Analyze';
-      const cancelBtn   = isHe ? 'ביטול' : isRu ? 'Отмена' : 'Cancel';
-      openModal(`
-        <div style="padding:4px 0 8px;">
-          <h3 style="margin:0 0 12px;font-size:17px;">${guideTitle}</h3>
-          <pre style="white-space:pre-wrap;font-size:12px;color:var(--c-text-muted);background:var(--c-surface2);
-            border-radius:8px;padding:10px;margin:0 0 12px;line-height:1.6;">${guideSteps}</pre>
-          <textarea id="fb-paste-box" rows="7" style="width:100%;box-sizing:border-box;border:1.5px solid var(--c-border);
-            border-radius:10px;padding:10px;font-size:14px;resize:vertical;background:var(--c-surface);color:var(--c-text);"
-            placeholder="${isHe?'הדבק כאן את טקסט המתכון...':isRu?'Вставьте текст рецепта сюда...':'Paste recipe text here...'}"></textarea>
-          <div style="display:flex;gap:8px;margin-top:10px;">
-            <button class="btn-primary" style="flex:1;" onclick="
-              (async()=>{
-                const txt=(document.getElementById('fb-paste-box')?.value||'').trim();
-                if(!txt){showToast('${isHe?'אנא הדבק טקסט':'Please paste text'}','error');return;}
-                closeModal();
-                showLoading('🤖 ${isHe?'מנתח...':isRu?'Анализ...':'Analyzing...'}');
-                try{
-                  const r=await callClaude([{role:'user',content:getRecipePrompt()+'\\n\\nFacebook video URL: ${fbUrl.replace(/'/g,"\\'")}\\n\\n'+txt}],2000);
-                  const p=parseClaudeResponse(r);
-                  if(!p.sourceUrl)p.sourceUrl='${fbUrl.replace(/'/g,"\\'")}';
-                  hideLoading();openRecipeForm(p);
-                }catch(e){hideLoading();showToast(e.message,'error');}
-              })()">${analyzeBtn}</button>
-            <button class="btn-secondary" onclick="closeModal();">${cancelBtn}</button>
-          </div>
-        </div>`);
+      showVideoPlatform('facebook');
+      // Pre-fill the URL field so the user only needs to paste the text
+      const inp = document.getElementById('facebook-input');
+      if (inp && !inp.value) inp.value = url;
+      document.getElementById('facebook-text')?.focus();
       return;
 
     } else {
