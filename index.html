@@ -747,7 +747,12 @@ body.ltr .search-icon { right: auto; left: 14px; }
   animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-.modal-sheet.modal-lg { max-height: 100vh; height: 95vh; border-radius: 20px 20px 0 0; }
+.modal-sheet.modal-lg {
+  height: auto;
+  min-height: 40vh;
+  max-height: 92vh;
+  border-radius: 20px 20px 0 0;
+}
 .modal-sheet.modal-full { height: 100vh; max-height: 100vh; border-radius: 0; }
 .modal-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -777,45 +782,51 @@ body.ltr .search-icon { right: auto; left: 14px; }
   -webkit-overflow-scrolling: touch;
   border-bottom: 2px solid var(--c-border);
   flex-shrink: 0;
-  min-height: 50px;
 }
 .tab-bar::-webkit-scrollbar { display: none; }
 .tab-btn {
-  flex: 1 0 auto;
-  min-width: 60px;
-  padding: 7px 4px;
+  flex: 1 1 0;          /* equal-width, shrink allowed */
+  min-width: 44px;      /* absolute minimum per tab */
+  padding: 6px 2px;
   font-weight: 600;
   color: var(--c-text-muted);
   text-align: center;
   border-bottom: 2px solid transparent; margin-bottom: -2px;
-  transition: all var(--transition);
+  transition: color var(--transition), border-color var(--transition);
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  min-height: 50px; gap: 2px;
+  min-height: 48px; gap: 2px;
 }
-.tab-icon { font-size: 16px; line-height: 1; }
-.tab-lbl  { font-size: 9px; line-height: 1.2; word-break: break-word;
-             white-space: normal; max-width: 100%; }
-@media (min-width: 400px) {
-  .tab-lbl { font-size: 10px; }
+.tab-icon { font-size: 18px; line-height: 1; }
+/* On narrow phones hide text labels so all 7 icons fit in one row */
+.tab-lbl  { font-size: 9px; line-height: 1.2; white-space: nowrap; }
+@media (max-width: 479px) {
+  .tab-lbl  { display: none; }
+  .tab-btn  { min-height: 44px; min-width: 40px; }
+  .tab-icon { font-size: 20px; }
 }
-@media (min-width: 520px) {
-  .tab-btn  { flex-direction: row; gap: 5px; padding: 12px 6px; min-height: 46px; }
+@media (min-width: 480px) {
+  .tab-btn  { min-width: 56px; padding: 7px 3px; }
+  .tab-lbl  { font-size: 10px; }
+}
+@media (min-width: 560px) {
+  .tab-btn  { flex-direction: row; gap: 5px; padding: 11px 6px; min-height: 46px; }
   .tab-icon { font-size: 15px; }
-  .tab-lbl  { font-size: 12px; white-space: nowrap; word-break: normal; }
+  .tab-lbl  { font-size: 12px; }
 }
 @media (min-width: 680px) {
-  .tab-btn  { padding: 12px 16px; }
+  .tab-btn  { padding: 12px 14px; }
   .tab-lbl  { font-size: 13px; }
 }
 .tab-btn.active { color: var(--c-primary); border-bottom-color: var(--c-primary); }
+/* Tab content: hidden by default, scrollable when active */
 .tab-content { display: none; padding: 16px; }
 .tab-content.active {
   display: block;
-  flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  min-height: 0;
+  /* max-height lets the tab scroll without the modal going off-screen */
+  max-height: calc(92vh - 120px); /* 120px ≈ header(60px) + tab-bar(48px) */
 }
 @media (min-width: 520px) {
   .tab-content { padding: 20px; }
@@ -2476,7 +2487,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.17';
+const APP_VERSION = '1.3.18';
 
 // =====================================================================
 // APP STATE
