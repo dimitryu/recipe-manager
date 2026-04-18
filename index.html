@@ -228,6 +228,12 @@
   border: none; font-size: 11px; cursor: pointer; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center; padding: 0;
 }
+.header-timer-pause {
+  width: 28px; height: 28px; border-radius: 50%; background: var(--c-surface2); color: var(--c-text);
+  border: 1px solid var(--c-border); font-size: 13px; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+}
+.header-timer-pause.paused { background: var(--c-secondary); color: #fff; border-color: var(--c-secondary); }
 /* Tool drag & drop */
 .tool-card { position: relative; }
 .tool-drag-handle {
@@ -1425,16 +1431,17 @@ service cloud.firestore {
       <div class="header-timer-wrap" id="header-timer-wrap">
         <span class="header-timer-icon">⏱️</span>
         <input class="header-timer-input" id="header-timer-input" type="number"
-          min="1" max="180" inputmode="numeric" id="header-timer-input"
+          min="1" max="180" inputmode="numeric"
           onkeydown="if(event.key==='Enter')qtStartFromInput()"
           placeholder="דק׳">
         <button class="header-timer-go" onclick="qtStartFromInput()" title="Start timer">▶</button>
       </div>
       <!-- Quick timer — running state -->
-      <div class="header-timer-running" id="header-timer-running" onclick="_showQtRunningModal()">
+      <div class="header-timer-running" id="header-timer-running">
         <span class="header-timer-icon">⏱️</span>
         <span class="header-timer-count" id="header-timer-display">00:00</span>
-        <button class="header-timer-stop" onclick="event.stopPropagation();qtStop();" title="Stop">■</button>
+        <button class="header-timer-pause" id="header-timer-pause" onclick="qtHeaderTogglePause()" title="Pause/Resume">⏸</button>
+        <button class="header-timer-stop" onclick="qtStop()" title="Stop">■</button>
       </div>
       <div id="header-avatar"></div>
     </div>
@@ -1484,7 +1491,7 @@ service cloud.firestore {
       <div class="tools-view">
 
         <!-- UNIT CONVERTER -->
-        <div class="tool-card" id="tool-converter" draggable="true" ondragstart="toolDragStart(event)" ondragover="toolDragOver(event)" ondrop="toolDrop(event)" ondragleave="toolDragLeave(event)">
+        <div class="tool-card" id="tool-converter">
           <div class="tool-card-title">
             <span class="tool-card-title-left"><span class="tool-drag-handle" title="גרור">⠿</span>⚖️ <span data-i18n="toolConvTitle">המרת מידות ומשקלות</span></span>
             <button class="tool-collapse-btn" onclick="toggleToolCard('tool-converter')">▲</button>
@@ -1504,7 +1511,7 @@ service cloud.firestore {
         </div>
 
         <!-- OVEN TEMPERATURE TABLE -->
-        <div class="tool-card" id="tool-oven" draggable="true" ondragstart="toolDragStart(event)" ondragover="toolDragOver(event)" ondrop="toolDrop(event)" ondragleave="toolDragLeave(event)">
+        <div class="tool-card" id="tool-oven">
           <div class="tool-card-title">
             <span class="tool-card-title-left"><span class="tool-drag-handle" title="גרור">⠿</span>🌡️ <span data-i18n="toolOvenTitle">טמפרטורות תנור</span></span>
             <button class="tool-collapse-btn" onclick="toggleToolCard('tool-oven')">▲</button>
@@ -1517,7 +1524,7 @@ service cloud.firestore {
         </div>
 
         <!-- TIMERS -->
-        <div class="tool-card" id="tool-timers" draggable="true" ondragstart="toolDragStart(event)" ondragover="toolDragOver(event)" ondrop="toolDrop(event)" ondragleave="toolDragLeave(event)">
+        <div class="tool-card" id="tool-timers">
           <div class="tool-card-title">
             <span class="tool-card-title-left"><span class="tool-drag-handle" title="גרור">⠿</span>⏱️ <span data-i18n="toolTimerTitle">טיימרים</span></span>
             <div style="display:flex;gap:8px;align-items:center;">
@@ -1531,7 +1538,7 @@ service cloud.firestore {
         </div>
 
         <!-- SUBSTITUTIONS -->
-        <div class="tool-card" id="tool-subs" draggable="true" ondragstart="toolDragStart(event)" ondragover="toolDragOver(event)" ondrop="toolDrop(event)" ondragleave="toolDragLeave(event)">
+        <div class="tool-card" id="tool-subs">
           <div class="tool-card-title">
             <span class="tool-card-title-left"><span class="tool-drag-handle" title="גרור">⠿</span>🔄 <span data-i18n="toolSubsTitle">תחליפי מצרכים</span></span>
             <button class="tool-collapse-btn" onclick="toggleToolCard('tool-subs')">▲</button>
@@ -1543,7 +1550,7 @@ service cloud.firestore {
         </div>
 
         <!-- EGG SIZE CALCULATOR -->
-        <div class="tool-card" id="tool-eggs" draggable="true" ondragstart="toolDragStart(event)" ondragover="toolDragOver(event)" ondrop="toolDrop(event)" ondragleave="toolDragLeave(event)">
+        <div class="tool-card" id="tool-eggs">
           <div class="tool-card-title">
             <span class="tool-card-title-left"><span class="tool-drag-handle" title="גרור">⠿</span>🥚 <span data-i18n="toolEggTitle">מחשבון ביצים</span></span>
             <button class="tool-collapse-btn" onclick="toggleToolCard('tool-eggs')">▲</button>
@@ -1570,7 +1577,7 @@ service cloud.firestore {
         </div>
 
         <!-- PAN SIZE CONVERTER -->
-        <div class="tool-card" id="tool-pan" draggable="true" ondragstart="toolDragStart(event)" ondragover="toolDragOver(event)" ondrop="toolDrop(event)" ondragleave="toolDragLeave(event)">
+        <div class="tool-card" id="tool-pan">
           <div class="tool-card-title">
             <span class="tool-card-title-left"><span class="tool-drag-handle" title="גרור">⠿</span>📐 <span data-i18n="toolPanTitle">גדלי תבניות</span></span>
             <button class="tool-collapse-btn" onclick="toggleToolCard('tool-pan')">▲</button>
@@ -1600,7 +1607,7 @@ service cloud.firestore {
         </div>
 
         <!-- COOKING TIMES TABLE -->
-        <div class="tool-card" id="tool-cooktimes" draggable="true" ondragstart="toolDragStart(event)" ondragover="toolDragOver(event)" ondrop="toolDrop(event)" ondragleave="toolDragLeave(event)">
+        <div class="tool-card" id="tool-cooktimes">
           <div class="tool-card-title">
             <span class="tool-card-title-left"><span class="tool-drag-handle" title="גרור">⠿</span>🌡️ <span data-i18n="toolCookTimeTitle">זמני בישול</span></span>
             <div style="display:flex;gap:6px;align-items:center;">
@@ -1618,7 +1625,7 @@ service cloud.firestore {
         </div>
 
         <!-- SEASONING GUIDE -->
-        <div class="tool-card" id="tool-season" draggable="true" ondragstart="toolDragStart(event)" ondragover="toolDragOver(event)" ondrop="toolDrop(event)" ondragleave="toolDragLeave(event)">
+        <div class="tool-card" id="tool-season">
           <div class="tool-card-title">
             <span class="tool-card-title-left"><span class="tool-drag-handle" title="גרור">⠿</span>🧂 <span data-i18n="toolSeasonTitle">מדריך תיבול</span></span>
             <button class="tool-collapse-btn" onclick="toggleToolCard('tool-season')">▲</button>
@@ -2428,7 +2435,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.14';
+const APP_VERSION = '1.3.15';
 
 // =====================================================================
 // APP STATE
@@ -4794,9 +4801,12 @@ function init() {
     showScreen('setup-screen');
   }
 
-  // Register service worker
+  // Register service worker — reload page when new SW takes control (cache update)
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW:', e));
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      window.location.reload();
+    });
   }
 
   // Android back button handler
@@ -5252,10 +5262,23 @@ function _qtUpdateHeaderBtn() {
   const wrap    = document.getElementById('header-timer-wrap');
   const running = document.getElementById('header-timer-running');
   const disp    = document.getElementById('header-timer-display');
+  const pauseBtn= document.getElementById('header-timer-pause');
   const active  = _qtInterval || _qtPaused;
   if (wrap)    wrap.style.display    = active ? 'none' : 'flex';
   if (running) running.style.display = active ? 'flex' : 'none';
   if (disp && active) disp.textContent = _qtFmt(_qtSec);
+  if (pauseBtn) {
+    pauseBtn.textContent = _qtPaused ? '▶' : '⏸';
+    pauseBtn.classList.toggle('paused', _qtPaused);
+    pauseBtn.title = _qtPaused
+      ? (lang==='he'?'המשך':lang==='ru'?'Продолжить':'Resume')
+      : (lang==='he'?'השהה':lang==='ru'?'Пауза':'Pause');
+  }
+}
+
+function qtHeaderTogglePause() {
+  _qtPaused = !_qtPaused;
+  _qtUpdateHeaderBtn();
 }
 
 function _qtFireAlert() {
@@ -5569,8 +5592,9 @@ function initToolsView() {
   renderCookTimesTable();
   renderSeasonProducts();
   updateSeasonGuide();
-  // Restore drag order
+  // Restore drag order and init drag listeners
   applyToolsOrder();
+  initToolsDrag();
   // Restore collapse state on all cards
   TOOL_IDS.forEach(id => {
     const card = document.getElementById(id);
@@ -5580,52 +5604,10 @@ function initToolsView() {
   });
 }
 
-// ── Tool Drag & Drop ──
-let _toolDragId = null;
-
-function toolDragStart(e) {
-  // Only allow drag from the handle
-  if (!e.target.closest('.tool-drag-handle') && e.target.className !== 'tool-drag-handle') {
-    e.preventDefault(); return;
-  }
-  _toolDragId = e.currentTarget.id;
-  e.dataTransfer.effectAllowed = 'move';
-  e.dataTransfer.setData('text/plain', _toolDragId);
-  setTimeout(() => e.currentTarget.style.opacity = '0.5', 0);
-}
-
-function toolDragOver(e) {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
-  e.currentTarget.classList.add('drag-over');
-}
-
-function toolDragLeave(e) {
-  e.currentTarget.classList.remove('drag-over');
-}
-
-function toolDrop(e) {
-  e.preventDefault();
-  e.currentTarget.classList.remove('drag-over');
-  const targetId = e.currentTarget.id;
-  if (!_toolDragId || _toolDragId === targetId) { _toolDragId = null; return; }
-  const container = document.querySelector('.tools-view');
-  if (!container) return;
-  const dragEl  = document.getElementById(_toolDragId);
-  const targetEl = document.getElementById(targetId);
-  if (!dragEl || !targetEl) return;
-  dragEl.style.opacity = '1';
-  // Insert dragged card before or after target based on position
-  const rect = targetEl.getBoundingClientRect();
-  const midY = rect.top + rect.height / 2;
-  if (e.clientY < midY) {
-    container.insertBefore(dragEl, targetEl);
-  } else {
-    container.insertBefore(dragEl, targetEl.nextSibling);
-  }
-  _toolDragId = null;
-  saveToolsOrder();
-}
+// ── Tool Drag & Drop (touch + mouse, event delegation) ──
+let _tdEl = null;       // element being dragged
+let _tdGhost = null;    // clone shown while dragging
+let _tdStartY = 0;
 
 function saveToolsOrder() {
   const container = document.querySelector('.tools-view');
@@ -5645,14 +5627,85 @@ function applyToolsOrder() {
   });
 }
 
-// Reset opacity after failed drag
-document.addEventListener('dragend', () => {
-  if (_toolDragId) {
-    const el = document.getElementById(_toolDragId);
-    if (el) el.style.opacity = '1';
-    _toolDragId = null;
+// Initialise drag listeners on the tools container (called once from initToolsView)
+function initToolsDrag() {
+  const container = document.querySelector('.tools-view');
+  if (!container || container._dragInited) return;
+  container._dragInited = true;
+
+  // ── shared helpers ──
+  function cardAt(x, y) {
+    const els = document.elementsFromPoint(x, y);
+    for (const el of els) {
+      const c = el.closest?.('.tool-card');
+      if (c && c !== _tdEl) return c;
+    }
+    return null;
   }
-});
+
+  function insertNear(target, clientY) {
+    if (!target || !_tdEl) return;
+    const rect = target.getBoundingClientRect();
+    if (clientY < rect.top + rect.height / 2) {
+      container.insertBefore(_tdEl, target);
+    } else {
+      container.insertBefore(_tdEl, target.nextSibling);
+    }
+  }
+
+  function startDrag(sourceCard, clientY) {
+    _tdEl = sourceCard;
+    _tdStartY = clientY;
+    _tdEl.style.opacity = '0.45';
+    _tdEl.classList.add('drag-over');
+  }
+
+  function moveDrag(clientX, clientY) {
+    if (!_tdEl) return;
+    const target = cardAt(clientX, clientY);
+    if (target) insertNear(target, clientY);
+  }
+
+  function endDrag() {
+    if (!_tdEl) return;
+    _tdEl.style.opacity = '1';
+    _tdEl.classList.remove('drag-over');
+    _tdEl = null;
+    saveToolsOrder();
+  }
+
+  // ── TOUCH ──
+  container.addEventListener('touchstart', e => {
+    const handle = e.target.closest?.('.tool-drag-handle');
+    if (!handle) return;
+    e.preventDefault();
+    startDrag(handle.closest('.tool-card'), e.touches[0].clientY);
+  }, { passive: false });
+
+  container.addEventListener('touchmove', e => {
+    if (!_tdEl) return;
+    e.preventDefault();
+    moveDrag(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: false });
+
+  container.addEventListener('touchend', endDrag);
+  container.addEventListener('touchcancel', endDrag);
+
+  // ── MOUSE (desktop fallback) ──
+  container.addEventListener('mousedown', e => {
+    const handle = e.target.closest?.('.tool-drag-handle');
+    if (!handle) return;
+    e.preventDefault();
+    startDrag(handle.closest('.tool-card'), e.clientY);
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!_tdEl) return;
+    moveDrag(e.clientX, e.clientY);
+  });
+
+  document.addEventListener('mouseup', () => { if (_tdEl) endDrag(); });
+}
 </script>
 </body>
 </html>
