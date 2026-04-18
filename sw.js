@@ -1,4 +1,4 @@
-const CACHE_NAME = 'app-v1315';
+const CACHE_NAME = 'app-v1316';
 const ASSETS = [
   './',
   './index.html',
@@ -17,11 +17,15 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
+    caches.keys()
+      .then(keys => Promise.all(
         keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
-      )
-    ).then(() => self.clients.claim())
+      ))
+      .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
+      .then(clients => clients.forEach(client => {
+        try { client.navigate(client.url); } catch (e) {}
+      }))
   );
 });
 

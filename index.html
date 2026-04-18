@@ -763,13 +763,18 @@ body.ltr .search-icon { right: auto; left: 14px; }
 
 /* ===== ADD RECIPE MODAL TABS ===== */
 .tab-bar {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
   border-bottom: 2px solid var(--c-border);
   flex-shrink: 0;
 }
+.tab-bar::-webkit-scrollbar { display: none; }
 .tab-btn {
-  padding: 7px 2px;
+  flex: 1 0 auto;
+  min-width: 60px;
+  padding: 7px 4px;
   font-weight: 600;
   color: var(--c-text-muted);
   text-align: center;
@@ -1827,6 +1832,13 @@ const TRANSLATIONS = {
     tabImage: '📷 תמונה',
     tabUrl: '🔗 כתובת URL',
     tabVideo: '🎬 וידאו',
+    tabYoutube: '▶️ YouTube',
+    tabInstagram: '📸 Insta',
+    tabTiktok: '🎵 TikTok',
+    youtubePh: 'https://youtube.com/watch?v=...',
+    instagramPh: 'https://www.instagram.com/reel/...',
+    tiktokPh: 'https://www.tiktok.com/@user/video/...',
+    igHowTo: 'איך למצוא מתכון ב-Reels:\n1. פתח את הריל\n2. לחץ על ⋯ (שלוש נקודות)\n3. בחר "עוד" (More)\n4. העתק את קישור הריל',
     tabText: '✍️ טקסט',
     tabManual: '📝 ידני',
     uploadHint: 'גרור תמונה לכאן או <strong>לחץ לבחירה</strong>',
@@ -2036,6 +2048,13 @@ const TRANSLATIONS = {
     tabImage: '📷 Фото',
     tabUrl: '🔗 URL',
     tabVideo: '🎬 Видео',
+    tabYoutube: '▶️ YouTube',
+    tabInstagram: '📸 Insta',
+    tabTiktok: '🎵 TikTok',
+    youtubePh: 'https://youtube.com/watch?v=...',
+    instagramPh: 'https://www.instagram.com/reel/...',
+    tiktokPh: 'https://www.tiktok.com/@user/video/...',
+    igHowTo: 'Как найти рецепт в Reels:\n1. Откройте Reel\n2. Нажмите ⋯ (три точки)\n3. Выберите «Ещё» (More)\n4. Скопируйте ссылку на Reel',
     tabText: '✍️ Текст',
     tabManual: '📝 Вручную',
     uploadHint: 'Перетащите фото сюда или <strong>нажмите для выбора</strong>',
@@ -2245,6 +2264,13 @@ const TRANSLATIONS = {
     tabImage: '📷 Image',
     tabUrl: '🔗 URL',
     tabVideo: '🎬 Video',
+    tabYoutube: '▶️ YouTube',
+    tabInstagram: '📸 Insta',
+    tabTiktok: '🎵 TikTok',
+    youtubePh: 'https://youtube.com/watch?v=...',
+    instagramPh: 'https://www.instagram.com/reel/...',
+    tiktokPh: 'https://www.tiktok.com/@user/video/...',
+    igHowTo: 'How to find the recipe in Reels:\n1. Open the Reel\n2. Tap ⋯ (three dots)\n3. Choose "More"\n4. Copy the Reel link',
     tabText: '✍️ Text',
     tabManual: '📝 Manual',
     uploadHint: 'Drag image here or <strong>click to choose</strong>',
@@ -2435,7 +2461,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.15';
+const APP_VERSION = '1.3.16';
 
 // =====================================================================
 // APP STATE
@@ -3000,17 +3026,17 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
   const scalerHtml = (recipe.ingredients && recipe.ingredients.length > 1) ? `
     <div class="ing-scaler-wrap">
       <button class="ing-scaler-toggle" onclick="toggleIngScaler(this)"
-        id="ing-scaler-toggle-btn">⚖️ ${t('scalerByIngredient') || (lang==='he'?'חשב לפי מצרך':lang==='ru'?'Пересчёт по ингредиенту':'Scale by ingredient')}</button>
+        id="ing-scaler-toggle-btn">⚖️ ${t('scalerByIngredient') || (currentLang==='he'?'חשב לפי מצרך':currentLang==='ru'?'Пересчёт по ингредиенту':'Scale by ingredient')}</button>
       <div class="ing-scaler-body" id="ing-scaler-body">
         <div class="ing-scaler-row">
           <select class="ing-scaler-select" id="ing-scaler-select" onchange="clearScalerResult()">
             ${scalerIngOptions}
           </select>
           <input class="ing-scaler-input" id="ing-scaler-new-qty" type="number" min="0.01" step="any"
-            placeholder="${lang==='he'?'כמות חדשה':lang==='ru'?'Новое кол.':'New qty'}"
+            placeholder="${currentLang==='he'?'כמות חדשה':currentLang==='ru'?'Новое кол.':'New qty'}"
             inputmode="decimal">
           <button class="ing-scaler-calc-btn" onclick="calcIngScaler('${escHtml(recipe.id)}')">
-            ${lang==='he'?'חשב':lang==='ru'?'Считать':'Calc'}
+            ${currentLang==='he'?'חשב':currentLang==='ru'?'Считать':'Calc'}
           </button>
         </div>
         <div class="ing-scaler-result" id="ing-scaler-result"></div>
@@ -3180,12 +3206,12 @@ function calcIngScaler(recipeId) {
   const idx = parseInt(sel.value);
   const newQty = parseFloat(newQtyInput.value);
   if (isNaN(newQty) || newQty <= 0) {
-    resultEl.innerHTML = `<span style="color:var(--c-danger)">${lang==='he'?'הכנס כמות תקינה':lang==='ru'?'Введите корректное количество':'Enter a valid quantity'}</span>`;
+    resultEl.innerHTML = `<span style="color:var(--c-danger)">${currentLang==='he'?'הכנס כמות תקינה':currentLang==='ru'?'Введите корректное количество':'Enter a valid quantity'}</span>`;
     return;
   }
   const origQty = parseFloat(recipe.ingredients[idx]?.quantity);
   if (isNaN(origQty) || origQty <= 0) {
-    resultEl.innerHTML = `<span style="color:var(--c-danger)">${lang==='he'?'לא ניתן לחשב — כמות מקורית לא מספרית':lang==='ru'?'Невозможно вычислить — исходное кол. не число':'Cannot calculate — original qty is not numeric'}</span>`;
+    resultEl.innerHTML = `<span style="color:var(--c-danger)">${currentLang==='he'?'לא ניתן לחשב — כמות מקורית לא מספרית':currentLang==='ru'?'Невозможно вычислить — исходное кол. не число':'Cannot calculate — original qty is not numeric'}</span>`;
     return;
   }
   const factor = newQty / origQty;
@@ -3195,7 +3221,7 @@ function calcIngScaler(recipeId) {
     const highlight = i === idx ? ' style="font-weight:800;color:var(--c-primary)"' : '';
     return `<div${highlight}>${escHtml(String(scaled))} ${escHtml(ing.unit || '')} ${escHtml(ing.name || '')}</div>`;
   }).join('');
-  const factorLabel = lang==='he'?`פקטור ×${factor.toFixed(3)}`:lang==='ru'?`Коэффициент ×${factor.toFixed(3)}`:`Factor ×${factor.toFixed(3)}`;
+  const factorLabel = currentLang==='he'?`פקטור ×${factor.toFixed(3)}`:currentLang==='ru'?`Коэффициент ×${factor.toFixed(3)}`:`Factor ×${factor.toFixed(3)}`;
   resultEl.innerHTML = `<div style="font-size:11px;color:var(--c-text-light);margin-bottom:6px;">${factorLabel}</div>${lines}`;
 }
 
@@ -3265,8 +3291,8 @@ function renderCookingMode(recipe) {
       </div>`).join('')
     : `<div style="color:var(--c-text-muted);font-size:13px;padding:6px 0;">${t('noIngredients')}</div>`;
 
-  const ingPanelLabel = lang === 'he' ? `🧂 מצרכים (${ings.length})`
-    : lang === 'ru' ? `🧂 Ингредиенты (${ings.length})`
+  const ingPanelLabel = currentLang === 'he' ? `🧂 מצרכים (${ings.length})`
+    : currentLang === 'ru' ? `🧂 Ингредиенты (${ings.length})`
     : `🧂 Ingredients (${ings.length})`;
 
   overlay.innerHTML = `
@@ -3417,7 +3443,9 @@ function openAddRecipeModal() {
       <div class="tab-bar">
         <button class="tab-btn active" onclick="switchTab(this,'tab-image')">${tabLabel('tabImage')}</button>
         <button class="tab-btn" onclick="switchTab(this,'tab-url')">${tabLabel('tabUrl')}</button>
-        <button class="tab-btn" onclick="switchTab(this,'tab-video')">${tabLabel('tabVideo')}</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-youtube')">${tabLabel('tabYoutube')}</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-instagram')">${tabLabel('tabInstagram')}</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-tiktok')">${tabLabel('tabTiktok')}</button>
         <button class="tab-btn" onclick="switchTab(this,'tab-text')">${tabLabel('tabText')}</button>
         <button class="tab-btn" onclick="switchTab(this,'tab-manual')">${tabLabel('tabManual')}</button>
       </div>
@@ -3452,14 +3480,38 @@ function openAddRecipeModal() {
         </div>
         <button class="btn-primary" onclick="analyzeUrl()">${t('analyzeUrl')}</button>
       </div>
-      <!-- TAB: VIDEO -->
-      <div class="tab-content" id="tab-video">
+      <!-- TAB: YOUTUBE -->
+      <div class="tab-content" id="tab-youtube">
         <div class="input-group">
-          <label>${t('tabVideo')}</label>
-          <input type="url" id="video-input" placeholder="${t('videoPh')}">
-          <p style="font-size:12px;color:var(--c-text-muted);margin-top:6px;">${t('videoHint')}</p>
+          <label>${t('tabYoutube')}</label>
+          <input type="url" id="youtube-input" placeholder="${t('youtubePh')}" inputmode="url">
+          <p style="font-size:12px;color:var(--c-text-muted);margin-top:6px;">YouTube · Shorts</p>
         </div>
-        <button class="btn-primary" onclick="analyzeVideo()">${t('analyzeUrl')}</button>
+        <button class="btn-primary" onclick="analyzeYoutube()">${t('analyzeUrl')}</button>
+      </div>
+      <!-- TAB: INSTAGRAM -->
+      <div class="tab-content" id="tab-instagram">
+        <div class="input-group">
+          <label>${t('tabInstagram')}</label>
+          <input type="url" id="instagram-input" placeholder="${t('instagramPh')}" inputmode="url">
+          <div style="font-size:12px;color:var(--c-text-muted);margin-top:8px;background:var(--c-surface2);border-radius:8px;padding:10px 12px;line-height:1.7;">
+            <strong style="color:var(--c-text);">📋 ${currentLang==='ru'?'Как найти рецепт':currentLang==='he'?'איך למצוא מתכון':'How to find recipe'}:</strong><br>
+            1. ${currentLang==='ru'?'Откройте Reel':currentLang==='he'?'פתח את הריל':'Open the Reel'}<br>
+            2. ${currentLang==='ru'?'Нажмите ⋯':currentLang==='he'?'לחץ על ⋯':'Tap ⋯'} (${currentLang==='ru'?'три точки':currentLang==='he'?'שלוש נקודות':'three dots'})<br>
+            3. ${currentLang==='ru'?'Выберите «Ещё»':currentLang==='he'?'בחר "עוד"':'Choose "More"'}<br>
+            4. ${currentLang==='ru'?'Скопируйте ссылку':currentLang==='he'?'העתק את הקישור':'Copy the link'}
+          </div>
+        </div>
+        <button class="btn-primary" onclick="analyzeInstagram()">${t('analyzeUrl')}</button>
+      </div>
+      <!-- TAB: TIKTOK -->
+      <div class="tab-content" id="tab-tiktok">
+        <div class="input-group">
+          <label>${t('tabTiktok')}</label>
+          <input type="url" id="tiktok-input" placeholder="${t('tiktokPh')}" inputmode="url">
+          <p style="font-size:12px;color:var(--c-text-muted);margin-top:6px;">TikTok · vm.tiktok.com</p>
+        </div>
+        <button class="btn-primary" onclick="analyzeTiktok()">${t('analyzeUrl')}</button>
       </div>
       <!-- TAB: TEXT -->
       <div class="tab-content" id="tab-text">
@@ -3770,8 +3822,28 @@ function ytExtractDesc(html) {
   return og ? og[1] : '';
 }
 
-async function analyzeVideo() {
-  const url = document.getElementById('video-input').value.trim();
+// Platform-specific wrappers
+function analyzeYoutube() {
+  const url = (document.getElementById('youtube-input')?.value || '').trim();
+  if (!url) { showToast(t('invalidUrl'), 'error'); return; }
+  analyzeVideo(url);
+}
+function analyzeInstagram() {
+  const url = (document.getElementById('instagram-input')?.value || '').trim();
+  if (!url) { showToast(t('invalidUrl'), 'error'); return; }
+  analyzeVideo(url);
+}
+function analyzeTiktok() {
+  const url = (document.getElementById('tiktok-input')?.value || '').trim();
+  if (!url) { showToast(t('invalidUrl'), 'error'); return; }
+  analyzeVideo(url);
+}
+
+async function analyzeVideo(url) {
+  if (!url) {
+    // Legacy fallback: try old video-input element
+    url = (document.getElementById('video-input')?.value || '').trim();
+  }
   if (!url) { showToast(t('invalidUrl'), 'error'); return; }
   showLoading(t('analyzingVideo'));
 
@@ -5236,8 +5308,8 @@ function qtStart(totalSec) {
   _qtTotal = totalSec;
   _qtSec = totalSec;
   _qtPaused = false;
+  _qtInterval = setInterval(_qtTick, 1000); // set BEFORE update so active=true
   _qtUpdateHeaderBtn();
-  _qtInterval = setInterval(_qtTick, 1000);
 }
 
 function _qtTick() {
@@ -5271,8 +5343,8 @@ function _qtUpdateHeaderBtn() {
     pauseBtn.textContent = _qtPaused ? '▶' : '⏸';
     pauseBtn.classList.toggle('paused', _qtPaused);
     pauseBtn.title = _qtPaused
-      ? (lang==='he'?'המשך':lang==='ru'?'Продолжить':'Resume')
-      : (lang==='he'?'השהה':lang==='ru'?'Пауза':'Pause');
+      ? (currentLang==='he'?'המשך':currentLang==='ru'?'Продолжить':'Resume')
+      : (currentLang==='he'?'השהה':currentLang==='ru'?'Пауза':'Pause');
   }
 }
 
@@ -5287,10 +5359,10 @@ function _qtFireAlert() {
   <div class="qt-running-panel">
     <div style="font-size:48px;">⏰</div>
     <div class="qt-big-display" style="font-size:28px;color:var(--c-success);">
-      ${lang==='he'?'הטיימר הסתיים!':lang==='ru'?'Таймер готов!':'Timer done!'}
+      ${currentLang==='he'?'הטיימר הסתיים!':currentLang==='ru'?'Таймер готов!':'Timer done!'}
     </div>
     <button class="qt-start-btn" style="width:100%;background:var(--c-success)" onclick="closeModal()">
-      ${lang==='he'?'סגור':lang==='ru'?'Закрыть':'Close'}
+      ${currentLang==='he'?'סגור':currentLang==='ru'?'Закрыть':'Close'}
     </button>
   </div>`;
   openModal(html);
@@ -5300,16 +5372,16 @@ function _qtFireAlert() {
 function _showQtRunningModal() {
   const paused = _qtPaused;
   const html = `
-  <h3 style="margin:0 0 14px;font-size:17px;">⏱️ ${lang==='he'?'טיימר פעיל':lang==='ru'?'Таймер':'Timer'}</h3>
+  <h3 style="margin:0 0 14px;font-size:17px;">⏱️ ${currentLang==='he'?'טיימר פעיל':currentLang==='ru'?'Таймер':'Timer'}</h3>
   <div class="qt-running-panel">
     <div class="qt-big-display" id="qt-modal-display">${_qtFmt(_qtSec)}</div>
-    <div class="qt-running-name">${_qtFmt(_qtTotal)} ${lang==='he'?'סה"כ':lang==='ru'?'всего':'total'}</div>
+    <div class="qt-running-name">${_qtFmt(_qtTotal)} ${currentLang==='he'?'סה"כ':currentLang==='ru'?'всего':'total'}</div>
     <div class="qt-controls-row">
       <button class="qt-pause-btn" id="qt-modal-pause" onclick="qtModalTogglePause()">
-        ${paused ? (lang==='he'?'▶ המשך':lang==='ru'?'▶ Продолжить':'▶ Resume') : (lang==='he'?'⏸ השהה':lang==='ru'?'⏸ Пауза':'⏸ Pause')}
+        ${paused ? (currentLang==='he'?'▶ המשך':currentLang==='ru'?'▶ Продолжить':'▶ Resume') : (currentLang==='he'?'⏸ השהה':currentLang==='ru'?'⏸ Пауза':'⏸ Pause')}
       </button>
       <button class="qt-stop-btn" onclick="qtStop();closeModal();">
-        ${lang==='he'?'■ עצור':lang==='ru'?'■ Стоп':'■ Stop'}
+        ${currentLang==='he'?'■ עצור':currentLang==='ru'?'■ Стоп':'■ Stop'}
       </button>
     </div>
   </div>`;
@@ -5325,8 +5397,8 @@ function qtModalTogglePause() {
   _qtPaused = !_qtPaused;
   const pb = document.getElementById('qt-modal-pause');
   if (pb) pb.textContent = _qtPaused
-    ? (lang==='he'?'▶ המשך':lang==='ru'?'▶ Продолжить':'▶ Resume')
-    : (lang==='he'?'⏸ השהה':lang==='ru'?'⏸ Пауза':'⏸ Pause');
+    ? (currentLang==='he'?'▶ המשך':currentLang==='ru'?'▶ Продолжить':'▶ Resume')
+    : (currentLang==='he'?'⏸ השהה':currentLang==='ru'?'⏸ Пауза':'⏸ Pause');
   _qtUpdateHeaderBtn();
 }
 
