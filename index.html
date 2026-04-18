@@ -776,18 +776,13 @@ body.ltr .search-icon { right: auto; left: 14px; }
 
 /* ===== ADD RECIPE MODAL TABS ===== */
 .tab-bar {
-  display: flex;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
   border-bottom: 2px solid var(--c-border);
   flex-shrink: 0;
 }
-.tab-bar::-webkit-scrollbar { display: none; }
 .tab-btn {
-  flex: 1 1 0;          /* equal-width, shrink allowed */
-  min-width: 44px;      /* absolute minimum per tab */
-  padding: 6px 2px;
+  padding: 8px 4px;
   font-weight: 600;
   color: var(--c-text-muted);
   text-align: center;
@@ -795,41 +790,67 @@ body.ltr .search-icon { right: auto; left: 14px; }
   transition: color var(--transition), border-color var(--transition);
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  min-height: 48px; gap: 2px;
+  min-height: 52px; gap: 3px;
 }
 .tab-icon { font-size: 18px; line-height: 1; }
-/* On narrow phones hide text labels so all 7 icons fit in one row */
-.tab-lbl  { font-size: 9px; line-height: 1.2; white-space: nowrap; }
-@media (max-width: 479px) {
-  .tab-lbl  { display: none; }
-  .tab-btn  { min-height: 44px; min-width: 40px; }
-  .tab-icon { font-size: 20px; }
-}
+.tab-lbl  { font-size: 10px; line-height: 1.2; white-space: nowrap; }
 @media (min-width: 480px) {
-  .tab-btn  { min-width: 56px; padding: 7px 3px; }
-  .tab-lbl  { font-size: 10px; }
+  .tab-lbl { font-size: 11px; }
 }
 @media (min-width: 560px) {
-  .tab-btn  { flex-direction: row; gap: 5px; padding: 11px 6px; min-height: 46px; }
+  .tab-btn  { flex-direction: row; gap: 5px; padding: 11px 6px; }
   .tab-icon { font-size: 15px; }
   .tab-lbl  { font-size: 12px; }
 }
 @media (min-width: 680px) {
-  .tab-btn  { padding: 12px 14px; }
+  .tab-btn  { padding: 12px 16px; }
   .tab-lbl  { font-size: 13px; }
 }
 .tab-btn.active { color: var(--c-primary); border-bottom-color: var(--c-primary); }
+/* Platform picker inside video tab */
+.platform-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px; margin-bottom: 16px;
+}
+.platform-btn {
+  padding: 14px 8px; border-radius: 12px;
+  border: 2px solid var(--c-border); background: var(--c-surface2);
+  color: var(--c-text-muted); font-size: 13px; font-weight: 700;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  cursor: pointer; transition: all 0.15s;
+}
+.platform-btn .p-icon { font-size: 26px; line-height: 1; }
+.platform-btn:hover { border-color: var(--c-primary); color: var(--c-text); }
+.platform-btn.active {
+  border-color: var(--c-primary); background: var(--c-primary); color: #fff;
+}
+.platform-panel { display: none; }
+.platform-panel.active { display: block; }
 /* Tab content: hidden by default, scrollable when active */
 .tab-content { display: none; padding: 16px; }
 .tab-content.active {
-  display: block;
-  overflow-y: auto;
+  display: block; overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  /* max-height lets the tab scroll without the modal going off-screen */
-  max-height: calc(92vh - 120px); /* 120px ≈ header(60px) + tab-bar(48px) */
+  max-height: calc(92vh - 120px);
 }
-@media (min-width: 520px) {
-  .tab-content { padding: 20px; }
+@media (min-width: 520px) { .tab-content { padding: 20px; } }
+/* Recipe sort mode */
+.recipe-grid.sort-mode .recipe-card {
+  cursor: grab; border: 2px dashed transparent;
+  transition: border-color 0.15s, opacity 0.15s;
+}
+.recipe-grid.sort-mode .recipe-card:active { cursor: grabbing; }
+.recipe-grid.sort-mode .recipe-card.drag-over { border-color: var(--c-primary); opacity: 0.7; }
+.sort-mode-banner {
+  background: #fff3e0; border: 1.5px solid var(--c-secondary);
+  border-radius: 10px; padding: 10px 14px; margin: 0 16px 10px;
+  font-size: 13px; color: #e65100; font-weight: 600;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.sort-mode-save-btn {
+  background: var(--c-success); color: #fff; border: none;
+  border-radius: 8px; padding: 7px 14px; font-size: 13px;
+  font-weight: 700; cursor: pointer; white-space: nowrap;
 }
 
 /* Upload zone */
@@ -1495,7 +1516,9 @@ service cloud.firestore {
           <option value="name" data-i18n="sortName">שם</option>
           <option value="rating" data-i18n="sortRating">דירוג</option>
           <option value="category" data-i18n="sortCategory">קטגוריה</option>
+          <option value="custom" data-i18n="sortCustom" id="sort-custom-option" style="display:none">✋ ידני</option>
         </select>
+        <button id="btn-sort-mode" class="view-toggle-btn" onclick="toggleSortMode()" title="Reorder recipes" style="border-radius:8px;padding:6px 10px;font-size:13px;">✋</button>
         <div class="view-toggle">
           <button id="btn-view-grid" class="view-toggle-btn active" onclick="setViewMode('grid')" title="Grid">⊞</button>
           <button id="btn-view-list" class="view-toggle-btn" onclick="setViewMode('list')" title="List">☰</button>
@@ -1861,10 +1884,17 @@ const TRANSLATIONS = {
     tabYoutube: '▶️ YouTube',
     tabInstagram: '📸 Insta',
     tabTiktok: '🎵 TikTok',
+    tabFacebook: '📘 Facebook',
     youtubePh: 'https://youtube.com/watch?v=...',
     instagramPh: 'https://www.instagram.com/reel/...',
     tiktokPh: 'https://www.tiktok.com/@user/video/...',
+    facebookPh: 'https://www.facebook.com/reel/...',
     igHowTo: 'איך למצוא מתכון ב-Reels:\n1. פתח את הריל\n2. לחץ על ⋯ (שלוש נקודות)\n3. בחר "עוד" (More)\n4. העתק את קישור הריל',
+    fbHowTo: 'איך למצוא מתכון ב-Facebook:\n1. פתח ריל/וידאו\n2. לחץ על ⋯\n3. העתק את הקישור',
+    sortCustom: '✋ ידני',
+    sortModeOn: '✋ סדר מתכונים',
+    sortModeSave: '✓ שמור סדר',
+    sortModeTip: 'גרור מתכונים לסידור רצוי',
     tabText: '✍️ טקסט',
     tabManual: '📝 ידני',
     uploadHint: 'גרור תמונה לכאן או <strong>לחץ לבחירה</strong>',
@@ -2077,10 +2107,17 @@ const TRANSLATIONS = {
     tabYoutube: '▶️ YouTube',
     tabInstagram: '📸 Insta',
     tabTiktok: '🎵 TikTok',
+    tabFacebook: '📘 Facebook',
     youtubePh: 'https://youtube.com/watch?v=...',
     instagramPh: 'https://www.instagram.com/reel/...',
     tiktokPh: 'https://www.tiktok.com/@user/video/...',
+    facebookPh: 'https://www.facebook.com/reel/...',
     igHowTo: 'Как найти рецепт в Reels:\n1. Откройте Reel\n2. Нажмите ⋯ (три точки)\n3. Выберите «Ещё» (More)\n4. Скопируйте ссылку на Reel',
+    fbHowTo: 'Как найти рецепт на Facebook:\n1. Откройте Reel/видео\n2. Нажмите ⋯\n3. Скопируйте ссылку',
+    sortCustom: '✋ Свой',
+    sortModeOn: '✋ Сортировка',
+    sortModeSave: '✓ Сохранить',
+    sortModeTip: 'Перетащите рецепты в нужный порядок',
     tabText: '✍️ Текст',
     tabManual: '📝 Вручную',
     uploadHint: 'Перетащите фото сюда или <strong>нажмите для выбора</strong>',
@@ -2293,10 +2330,17 @@ const TRANSLATIONS = {
     tabYoutube: '▶️ YouTube',
     tabInstagram: '📸 Insta',
     tabTiktok: '🎵 TikTok',
+    tabFacebook: '📘 Facebook',
     youtubePh: 'https://youtube.com/watch?v=...',
     instagramPh: 'https://www.instagram.com/reel/...',
     tiktokPh: 'https://www.tiktok.com/@user/video/...',
+    facebookPh: 'https://www.facebook.com/reel/...',
     igHowTo: 'How to find the recipe in Reels:\n1. Open the Reel\n2. Tap ⋯ (three dots)\n3. Choose "More"\n4. Copy the Reel link',
+    fbHowTo: 'How to find the recipe on Facebook:\n1. Open the Reel/video\n2. Tap ⋯\n3. Copy the link',
+    sortCustom: '✋ Custom',
+    sortModeOn: '✋ Reorder',
+    sortModeSave: '✓ Save Order',
+    sortModeTip: 'Drag recipes to set your order',
     tabText: '✍️ Text',
     tabManual: '📝 Manual',
     uploadHint: 'Drag image here or <strong>click to choose</strong>',
@@ -2487,7 +2531,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.18';
+const APP_VERSION = '1.3.19';
 
 // =====================================================================
 // APP STATE
@@ -2936,7 +2980,7 @@ function renderRecipeGrid() {
     const catEmoji = r.category ? getCategoryEmoji(r.category) : '';
     const catLabel = r.category ? getCategoryLabel(r.category) : '';
     return `
-      <div class="recipe-card" onclick="openRecipeDetail('${escHtml(r.id)}')">
+      <div class="recipe-card" data-id="${escHtml(r.id)}" onclick="if(!_sortModeActive)openRecipeDetail('${escHtml(r.id)}')">
         <div style="position:relative;">
           ${imgHtml}
           <button class="fav-btn ${r.favorite ? 'active' : ''}" onclick="event.stopPropagation();toggleFavorite('${escHtml(r.id)}')" title="${r.favorite ? t('removeFromFavorites') : t('addToFavorites')}">${r.favorite ? '❤️' : '🤍'}</button>
@@ -3455,14 +3499,137 @@ function setSortMode(mode) {
   filterRecipes();
 }
 
+let _customOrder = JSON.parse(localStorage.getItem('customRecipeOrder') || '{}');
+let _sortModeActive = false;
+
 function applySortMode(recipes) {
   const sorted = [...recipes];
   switch(sortMode) {
     case 'name':     return sorted.sort((a,b) => (a.name||'').localeCompare(b.name||''));
     case 'rating':   return sorted.sort((a,b) => (b.rating||0) - (a.rating||0));
     case 'category': return sorted.sort((a,b) => (a.category||'').localeCompare(b.category||''));
+    case 'custom': {
+      const key = currentCategory || 'all';
+      const order = _customOrder[key] || [];
+      if (!order.length) return sorted.sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+      const idx = new Map(order.map((id,i) => [id,i]));
+      return sorted.sort((a,b) => (idx.has(a.id) ? idx.get(a.id) : 9999) - (idx.has(b.id) ? idx.get(b.id) : 9999));
+    }
     default:         return sorted.sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
   }
+}
+
+// =====================================================================
+// RECIPE SORT MODE (manual drag-to-reorder)
+// =====================================================================
+function toggleSortMode() {
+  _sortModeActive = !_sortModeActive;
+  const grid = document.getElementById('recipe-grid');
+  const btn  = document.getElementById('btn-sort-mode');
+
+  if (_sortModeActive) {
+    grid?.classList.add('sort-mode');
+    if (btn) { btn.classList.add('active'); btn.title = t('sortModeSave'); }
+    // Show banner
+    let banner = document.getElementById('sort-mode-banner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'sort-mode-banner';
+      banner.className = 'sort-mode-banner';
+      banner.innerHTML = `
+        <span>✋ ${t('sortModeTip')}</span>
+        <button class="sort-mode-save-btn" onclick="toggleSortMode()">
+          ${t('sortModeSave')}
+        </button>`;
+      grid?.parentNode?.insertBefore(banner, grid);
+    }
+    banner.style.display = 'flex';
+    initRecipeSort();
+  } else {
+    grid?.classList.remove('sort-mode');
+    if (btn) { btn.classList.remove('active'); btn.title = t('sortModeOn'); }
+    document.getElementById('sort-mode-banner')?.remove();
+    saveRecipeOrder();
+  }
+}
+
+function saveRecipeOrder() {
+  const cards = [...document.querySelectorAll('#recipe-grid .recipe-card')];
+  const ids = cards.map(c => c.dataset.id).filter(Boolean);
+  if (!ids.length) return;
+  const key = currentCategory || 'all';
+  _customOrder[key] = ids;
+  localStorage.setItem('customRecipeOrder', JSON.stringify(_customOrder));
+  // Show custom option in sort select and switch to it
+  const opt = document.getElementById('sort-custom-option');
+  if (opt) opt.style.display = '';
+  setSortMode('custom');
+  showToast(currentLang==='he'?'✓ הסדר נשמר!':currentLang==='ru'?'✓ Порядок сохранён!':'✓ Order saved!', 'success');
+}
+
+function initRecipeSort() {
+  const grid = document.getElementById('recipe-grid');
+  if (!grid || grid._recSortInited) return;
+  grid._recSortInited = true;
+  let _dragEl = null;
+
+  function recCardAt(x, y) {
+    const els = document.elementsFromPoint(x, y);
+    for (const el of els) {
+      const c = el.closest?.('.recipe-card');
+      if (c && c !== _dragEl) return c;
+    }
+    return null;
+  }
+  function insertNear(target, clientY) {
+    const mid = target.getBoundingClientRect().top + target.getBoundingClientRect().height / 2;
+    grid.insertBefore(_dragEl, clientY < mid ? target : target.nextSibling);
+  }
+  function startDrag(card) {
+    _dragEl = card;
+    card.style.opacity = '0.5';
+    card.style.boxShadow = '0 6px 24px rgba(0,0,0,0.25)';
+  }
+  function endDrag() {
+    if (!_dragEl) return;
+    _dragEl.style.opacity = '';
+    _dragEl.style.boxShadow = '';
+    _dragEl.classList.remove('drag-over');
+    _dragEl = null;
+  }
+
+  // Touch
+  grid.addEventListener('touchstart', e => {
+    if (!_sortModeActive) return;
+    const card = e.target.closest?.('.recipe-card');
+    if (!card) return;
+    e.preventDefault();
+    startDrag(card);
+  }, { passive: false });
+  grid.addEventListener('touchmove', e => {
+    if (!_dragEl) return;
+    e.preventDefault();
+    const t2 = e.touches[0];
+    const target = recCardAt(t2.clientX, t2.clientY);
+    if (target) insertNear(target, t2.clientY);
+  }, { passive: false });
+  grid.addEventListener('touchend', endDrag);
+  grid.addEventListener('touchcancel', endDrag);
+
+  // Mouse
+  grid.addEventListener('mousedown', e => {
+    if (!_sortModeActive) return;
+    const card = e.target.closest?.('.recipe-card');
+    if (!card) return;
+    e.preventDefault();
+    startDrag(card);
+  });
+  document.addEventListener('mousemove', e => {
+    if (!_dragEl || !_sortModeActive) return;
+    const target = recCardAt(e.clientX, e.clientY);
+    if (target) insertNear(target, e.clientY);
+  });
+  document.addEventListener('mouseup', () => { if (_dragEl && _sortModeActive) endDrag(); });
 }
 
 // =====================================================================
@@ -3527,10 +3694,8 @@ function openAddRecipeModal() {
       </div>
       <div class="tab-bar">
         <button class="tab-btn active" onclick="switchTab(this,'tab-image')">${tabLabel('tabImage')}</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-video')">${tabLabel('tabVideo')}</button>
         <button class="tab-btn" onclick="switchTab(this,'tab-url')">${tabLabel('tabUrl')}</button>
-        <button class="tab-btn" onclick="switchTab(this,'tab-youtube')">${tabLabel('tabYoutube')}</button>
-        <button class="tab-btn" onclick="switchTab(this,'tab-instagram')">${tabLabel('tabInstagram')}</button>
-        <button class="tab-btn" onclick="switchTab(this,'tab-tiktok')">${tabLabel('tabTiktok')}</button>
         <button class="tab-btn" onclick="switchTab(this,'tab-text')">${tabLabel('tabText')}</button>
         <button class="tab-btn" onclick="switchTab(this,'tab-manual')">${tabLabel('tabManual')}</button>
       </div>
@@ -3557,6 +3722,67 @@ function openAddRecipeModal() {
         <div class="image-previews" id="image-previews-add"></div>
         <button class="btn-primary mt-12" onclick="analyzeImages()">${t('analyzeImage')}</button>
       </div>
+      <!-- TAB: VIDEO (platform picker + inputs) -->
+      <div class="tab-content" id="tab-video">
+        <!-- 2×2 platform picker -->
+        <div class="platform-grid">
+          <button class="platform-btn active" id="vpbtn-youtube" onclick="showVideoPlatform('youtube')">
+            <span class="p-icon">▶️</span>YouTube
+          </button>
+          <button class="platform-btn" id="vpbtn-instagram" onclick="showVideoPlatform('instagram')">
+            <span class="p-icon">📸</span>Instagram
+          </button>
+          <button class="platform-btn" id="vpbtn-tiktok" onclick="showVideoPlatform('tiktok')">
+            <span class="p-icon">🎵</span>TikTok
+          </button>
+          <button class="platform-btn" id="vpbtn-facebook" onclick="showVideoPlatform('facebook')">
+            <span class="p-icon">📘</span>Facebook
+          </button>
+        </div>
+        <!-- YouTube panel -->
+        <div class="platform-panel active" id="vp-youtube">
+          <div class="input-group">
+            <input type="url" id="youtube-input" placeholder="${t('youtubePh')}" inputmode="url">
+            <p style="font-size:12px;color:var(--c-text-muted);margin-top:5px;">YouTube · Shorts</p>
+          </div>
+          <button class="btn-primary" onclick="analyzeYoutube()">${t('analyzeUrl')}</button>
+        </div>
+        <!-- Instagram panel -->
+        <div class="platform-panel" id="vp-instagram">
+          <div class="input-group">
+            <input type="url" id="instagram-input" placeholder="${t('instagramPh')}" inputmode="url">
+            <div style="font-size:12px;color:var(--c-text-muted);margin-top:8px;background:var(--c-surface2);border-radius:8px;padding:10px 12px;line-height:1.7;">
+              <strong style="color:var(--c-text);">📋 ${currentLang==='ru'?'Как найти рецепт':currentLang==='he'?'איך למצוא מתכון':'How to find recipe'}:</strong><br>
+              1. ${currentLang==='ru'?'Откройте Reel':currentLang==='he'?'פתח את הריל':'Open the Reel'}<br>
+              2. ${currentLang==='ru'?'Нажмите ⋯':currentLang==='he'?'לחץ על ⋯':'Tap ⋯'}<br>
+              3. ${currentLang==='ru'?'Выберите «Ещё»':currentLang==='he'?'בחר "עוד"':'Choose "More"'}<br>
+              4. ${currentLang==='ru'?'Скопируйте ссылку':currentLang==='he'?'העתק קישור':'Copy link'}
+            </div>
+          </div>
+          <button class="btn-primary" onclick="analyzeInstagram()">${t('analyzeUrl')}</button>
+        </div>
+        <!-- TikTok panel -->
+        <div class="platform-panel" id="vp-tiktok">
+          <div class="input-group">
+            <input type="url" id="tiktok-input" placeholder="${t('tiktokPh')}" inputmode="url">
+            <p style="font-size:12px;color:var(--c-text-muted);margin-top:5px;">TikTok · vm.tiktok.com</p>
+          </div>
+          <button class="btn-primary" onclick="analyzeTiktok()">${t('analyzeUrl')}</button>
+        </div>
+        <!-- Facebook panel -->
+        <div class="platform-panel" id="vp-facebook">
+          <div class="input-group">
+            <input type="url" id="facebook-input" placeholder="${t('facebookPh')}" inputmode="url">
+            <div style="font-size:12px;color:var(--c-text-muted);margin-top:8px;background:var(--c-surface2);border-radius:8px;padding:10px 12px;line-height:1.7;">
+              <strong style="color:var(--c-text);">📋 ${currentLang==='ru'?'Как найти рецепт':currentLang==='he'?'איך למצוא מתכון':'How to find recipe'}:</strong><br>
+              1. ${currentLang==='ru'?'Откройте Reel':currentLang==='he'?'פתח ריל/וידאו':'Open Reel/video'}<br>
+              2. ${currentLang==='ru'?'Нажмите ⋯':currentLang==='he'?'לחץ על ⋯':'Tap ⋯'}<br>
+              3. ${currentLang==='ru'?'Скопируйте ссылку':currentLang==='he'?'העתק קישור':'Copy link'}
+            </div>
+          </div>
+          <button class="btn-primary" onclick="analyzeFacebook()">${t('analyzeUrl')}</button>
+        </div>
+      </div>
       <!-- TAB: URL -->
       <div class="tab-content" id="tab-url">
         <div class="input-group">
@@ -3564,39 +3790,6 @@ function openAddRecipeModal() {
           <input type="url" id="url-input" placeholder="${t('urlPlaceholder')}">
         </div>
         <button class="btn-primary" onclick="analyzeUrl()">${t('analyzeUrl')}</button>
-      </div>
-      <!-- TAB: YOUTUBE -->
-      <div class="tab-content" id="tab-youtube">
-        <div class="input-group">
-          <label>${t('tabYoutube')}</label>
-          <input type="url" id="youtube-input" placeholder="${t('youtubePh')}" inputmode="url">
-          <p style="font-size:12px;color:var(--c-text-muted);margin-top:6px;">YouTube · Shorts</p>
-        </div>
-        <button class="btn-primary" onclick="analyzeYoutube()">${t('analyzeUrl')}</button>
-      </div>
-      <!-- TAB: INSTAGRAM -->
-      <div class="tab-content" id="tab-instagram">
-        <div class="input-group">
-          <label>${t('tabInstagram')}</label>
-          <input type="url" id="instagram-input" placeholder="${t('instagramPh')}" inputmode="url">
-          <div style="font-size:12px;color:var(--c-text-muted);margin-top:8px;background:var(--c-surface2);border-radius:8px;padding:10px 12px;line-height:1.7;">
-            <strong style="color:var(--c-text);">📋 ${currentLang==='ru'?'Как найти рецепт':currentLang==='he'?'איך למצוא מתכון':'How to find recipe'}:</strong><br>
-            1. ${currentLang==='ru'?'Откройте Reel':currentLang==='he'?'פתח את הריל':'Open the Reel'}<br>
-            2. ${currentLang==='ru'?'Нажмите ⋯':currentLang==='he'?'לחץ על ⋯':'Tap ⋯'} (${currentLang==='ru'?'три точки':currentLang==='he'?'שלוש נקודות':'three dots'})<br>
-            3. ${currentLang==='ru'?'Выберите «Ещё»':currentLang==='he'?'בחר "עוד"':'Choose "More"'}<br>
-            4. ${currentLang==='ru'?'Скопируйте ссылку':currentLang==='he'?'העתק את הקישור':'Copy the link'}
-          </div>
-        </div>
-        <button class="btn-primary" onclick="analyzeInstagram()">${t('analyzeUrl')}</button>
-      </div>
-      <!-- TAB: TIKTOK -->
-      <div class="tab-content" id="tab-tiktok">
-        <div class="input-group">
-          <label>${t('tabTiktok')}</label>
-          <input type="url" id="tiktok-input" placeholder="${t('tiktokPh')}" inputmode="url">
-          <p style="font-size:12px;color:var(--c-text-muted);margin-top:6px;">TikTok · vm.tiktok.com</p>
-        </div>
-        <button class="btn-primary" onclick="analyzeTiktok()">${t('analyzeUrl')}</button>
       </div>
       <!-- TAB: TEXT -->
       <div class="tab-content" id="tab-text">
@@ -3907,6 +4100,16 @@ function ytExtractDesc(html) {
   return og ? og[1] : '';
 }
 
+// Platform picker inside video tab
+function showVideoPlatform(platform) {
+  ['youtube','instagram','tiktok','facebook'].forEach(p => {
+    document.getElementById('vp-' + p)?.classList.toggle('active', p === platform);
+    document.getElementById('vpbtn-' + p)?.classList.toggle('active', p === platform);
+  });
+  // Focus the input for that platform
+  setTimeout(() => document.getElementById(platform + '-input')?.focus(), 50);
+}
+
 // Platform-specific wrappers
 function analyzeYoutube() {
   const url = (document.getElementById('youtube-input')?.value || '').trim();
@@ -3920,6 +4123,11 @@ function analyzeInstagram() {
 }
 function analyzeTiktok() {
   const url = (document.getElementById('tiktok-input')?.value || '').trim();
+  if (!url) { showToast(t('invalidUrl'), 'error'); return; }
+  analyzeVideo(url);
+}
+function analyzeFacebook() {
+  const url = (document.getElementById('facebook-input')?.value || '').trim();
   if (!url) { showToast(t('invalidUrl'), 'error'); return; }
   analyzeVideo(url);
 }
@@ -4081,6 +4289,54 @@ async function analyzeVideo(url) {
       if (!igParsed.sourceUrl) igParsed.sourceUrl = url;
       hideLoading();
       openRecipeForm(igParsed);
+
+    } else if (/facebook\.com\/(reel|watch|video|share\/v|share\/r)|fb\.watch/i.test(url)) {
+      // ── Facebook Reels / Videos ──
+      showLoading('📄 ' + t('analyzingVideo'));
+      let fbTitle = '', fbDesc = '', fbPageText = '';
+
+      // Try oEmbed for public videos
+      try {
+        const oeRaw = await fetchPageContent(
+          `https://www.facebook.com/plugins/video/oembed.json/?url=${encodeURIComponent(url)}`, 8000);
+        if (oeRaw) {
+          const oe = JSON.parse(oeRaw);
+          if (oe.title) fbTitle = oe.title;
+          if (oe.author_name) fbDesc = `By: ${oe.author_name}`;
+        }
+      } catch {}
+
+      // Fetch page via Jina Reader
+      try {
+        fbPageText = (await fetchPageContent(url, 14000) || '').substring(0, 6000);
+      } catch {}
+
+      if (!fbTitle && fbPageText) {
+        const m = fbPageText.match(/(?:caption|description|story)[:\s"]+([^\n"]{10,400})/i);
+        if (m) fbTitle = m[1].trim();
+      }
+
+      let fbContent = `Facebook Video\nURL: ${url}\n`;
+      if (fbTitle) fbContent += `Title/Caption: ${fbTitle}\n`;
+      if (fbDesc)  fbContent += `${fbDesc}\n`;
+      if (fbPageText) fbContent += `\nPage Content:\n${fbPageText}\n`;
+
+      if (!fbTitle && !fbPageText) {
+        throw new Error(currentLang==='he'
+          ? 'לא ניתן לחלץ תוכן מ-Facebook. נסה להדביק את הטקסט ישירות בלשונית "טקסט".'
+          : currentLang==='ru'
+          ? 'Не удалось извлечь контент из Facebook. Попробуйте вставить текст на вкладке «Текст».'
+          : 'Could not extract content from Facebook. Try pasting text in the "Text" tab.');
+      }
+
+      showLoading('🤖 ' + t('analyzingVideo'));
+      const fbResponse = await callClaude([{
+        role: 'user', content: getRecipePrompt() + '\n\n' + fbContent
+      }], 2000);
+      const fbParsed = parseClaudeResponse(fbResponse);
+      if (!fbParsed.sourceUrl) fbParsed.sourceUrl = url;
+      hideLoading();
+      openRecipeForm(fbParsed);
 
     } else {
       // Generic URL (TikTok, etc.) — fetch page text
