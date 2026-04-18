@@ -129,6 +129,113 @@
   background: var(--c-primary); color: #fff; border-color: var(--c-primary);
 }
 .cooking-nav-btn.cooking-nav-next:disabled { background: var(--c-border); border-color: var(--c-border); }
+/* Cooking mode ingredients panel */
+.cooking-ing-panel {
+  flex-shrink: 0; border-top: 1px solid var(--c-border); background: var(--c-surface);
+}
+.cooking-ing-toggle {
+  width: 100%; padding: 10px 16px; background: none; border: none; cursor: pointer;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 700; color: var(--c-text-muted); text-align: start;
+}
+.cooking-ing-toggle:hover { background: var(--c-surface2); }
+.cooking-ing-toggle .cit-arrow { margin-inline-start: auto; transition: transform 0.2s; font-style: normal; }
+.cooking-ing-panel.open .cit-arrow { transform: rotate(180deg); }
+.cooking-ing-body {
+  max-height: 220px; overflow-y: auto; padding: 4px 16px 12px;
+  display: none;
+}
+.cooking-ing-panel.open .cooking-ing-body { display: block; }
+.cooking-ing-item {
+  font-size: 14px; padding: 5px 0; border-bottom: 1px solid var(--c-border);
+  color: var(--c-text); display: flex; gap: 6px;
+}
+.cooking-ing-item:last-child { border-bottom: none; }
+/* Ingredient scaler */
+.ing-scaler-wrap {
+  padding: 10px 16px 0; margin-bottom: -4px;
+}
+.ing-scaler-toggle {
+  background: none; border: 1px dashed var(--c-border); border-radius: 8px;
+  padding: 6px 12px; font-size: 13px; color: var(--c-text-muted); cursor: pointer; width: 100%;
+  text-align: center; transition: all 0.15s;
+}
+.ing-scaler-toggle:hover { background: var(--c-surface2); border-color: var(--c-primary); color: var(--c-primary); }
+.ing-scaler-body {
+  margin-top: 10px; padding: 12px; background: var(--c-surface2);
+  border-radius: var(--radius-sm); display: none;
+}
+.ing-scaler-body.open { display: block; }
+.ing-scaler-row { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 10px; flex-wrap: wrap; }
+.ing-scaler-select {
+  flex: 1; min-width: 0; padding: 8px 10px; border-radius: 8px;
+  border: 1.5px solid var(--c-border); background: var(--c-surface); color: var(--c-text);
+  font-size: 13px;
+}
+.ing-scaler-input {
+  width: 90px; flex-shrink: 0; padding: 8px 10px; border-radius: 8px;
+  border: 1.5px solid var(--c-border); background: var(--c-surface); color: var(--c-text);
+  font-size: 13px; text-align: center;
+}
+.ing-scaler-calc-btn {
+  padding: 8px 14px; border-radius: 8px; background: var(--c-primary); color: #fff;
+  border: none; font-size: 13px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+}
+.ing-scaler-result {
+  font-size: 13px; color: var(--c-text-muted);
+  padding: 6px 0 2px; line-height: 1.8;
+}
+.ing-scaler-result strong { color: var(--c-primary); }
+/* Redesigned header timer */
+.header-timer-wrap {
+  display: flex; align-items: center; gap: 4px;
+  background: var(--c-surface2); border: 1.5px solid var(--c-border);
+  border-radius: 22px; padding: 4px 6px 4px 10px;
+  transition: all var(--transition);
+}
+.header-timer-wrap:focus-within { border-color: var(--c-primary); }
+.header-timer-icon { font-size: 16px; flex-shrink: 0; line-height: 1; }
+.header-timer-input {
+  width: 44px; border: none; background: transparent; font-size: 14px; font-weight: 600;
+  color: var(--c-text); text-align: center; outline: none; padding: 0;
+  -moz-appearance: textfield;
+}
+.header-timer-input::-webkit-inner-spin-button,
+.header-timer-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.header-timer-input::placeholder { color: var(--c-text-light); font-weight: 400; }
+.header-timer-go {
+  width: 28px; height: 28px; border-radius: 50%; background: var(--c-primary); color: #fff;
+  border: none; font-size: 12px; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+}
+.header-timer-go:hover { background: var(--c-primary-dark); }
+.header-timer-running {
+  display: none; align-items: center; gap: 6px;
+  background: #fff3e0; border: 1.5px solid var(--c-secondary);
+  border-radius: 22px; padding: 4px 6px 4px 10px; cursor: pointer;
+  animation: timer-pulse 2s infinite;
+}
+[data-theme="dark"] .header-timer-running {
+  background: #3a2800; border-color: var(--c-secondary);
+}
+.header-timer-count {
+  font-size: 14px; font-weight: 800; color: #e65100; font-variant-numeric: tabular-nums;
+  min-width: 42px; text-align: center;
+}
+[data-theme="dark"] .header-timer-count { color: var(--c-secondary); }
+.header-timer-stop {
+  width: 28px; height: 28px; border-radius: 50%; background: var(--c-danger); color: #fff;
+  border: none; font-size: 11px; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+}
+/* Tool drag & drop */
+.tool-card { position: relative; }
+.tool-drag-handle {
+  font-size: 18px; color: var(--c-text-light); cursor: grab; padding: 0 4px;
+  user-select: none; line-height: 1;
+}
+.tool-drag-handle:active { cursor: grabbing; }
+.tool-card.drag-over { outline: 2px dashed var(--c-primary); outline-offset: 2px; }
 /* View/sort bar */
 .view-sort-bar {
   display: flex; align-items: center; justify-content: flex-end; gap: 8px;
@@ -1314,9 +1421,21 @@ service cloud.firestore {
       </div>
     </div>
     <div class="header-right">
-      <button class="header-timer-btn" onclick="openQuickTimer()" id="header-timer-btn" title="Quick Timer">
-        ⏱️ <span id="header-timer-display" style="display:none;"></span>
-      </button>
+      <!-- Quick timer — idle state -->
+      <div class="header-timer-wrap" id="header-timer-wrap">
+        <span class="header-timer-icon">⏱️</span>
+        <input class="header-timer-input" id="header-timer-input" type="number"
+          min="1" max="180" inputmode="numeric" id="header-timer-input"
+          onkeydown="if(event.key==='Enter')qtStartFromInput()"
+          placeholder="דק׳">
+        <button class="header-timer-go" onclick="qtStartFromInput()" title="Start timer">▶</button>
+      </div>
+      <!-- Quick timer — running state -->
+      <div class="header-timer-running" id="header-timer-running" onclick="_showQtRunningModal()">
+        <span class="header-timer-icon">⏱️</span>
+        <span class="header-timer-count" id="header-timer-display">00:00</span>
+        <button class="header-timer-stop" onclick="event.stopPropagation();qtStop();" title="Stop">■</button>
+      </div>
       <div id="header-avatar"></div>
     </div>
   </header>
@@ -1365,9 +1484,9 @@ service cloud.firestore {
       <div class="tools-view">
 
         <!-- UNIT CONVERTER -->
-        <div class="tool-card" id="tool-converter">
+        <div class="tool-card" id="tool-converter" draggable="true" ondragstart="toolDragStart(event)" ondragover="toolDragOver(event)" ondrop="toolDrop(event)" ondragleave="toolDragLeave(event)">
           <div class="tool-card-title">
-            <span class="tool-card-title-left">⚖️ <span data-i18n="toolConvTitle">המרת מידות ומשקלות</span></span>
+            <span class="tool-card-title-left"><span class="tool-drag-handle" title="גרור">⠿</span>⚖️ <span data-i18n="toolConvTitle">המרת מידות ומשקלות</span></span>
             <button class="tool-collapse-btn" onclick="toggleToolCard('tool-converter')">▲</button>
           </div>
           <div class="tool-card-body">
@@ -1385,9 +1504,9 @@ service cloud.firestore {
         </div>
 
         <!-- OVEN TEMPERATURE TABLE -->
-        <div class="tool-card" id="tool-oven">
+        <div class="tool-card" id="tool-oven" draggable="true" ondragstart="toolDragStart(event)" ondragover="toolDragOver(event)" ondrop="toolDrop(event)" ondragleave="toolDragLeave(event)">
           <div class="tool-card-title">
-            <span class="tool-card-title-left">🌡️ <span data-i18n="toolOvenTitle">טמפרטורות תנור</span></span>
+            <span class="tool-card-title-left"><span class="tool-drag-handle" title="גרור">⠿</span>🌡️ <span data-i18n="toolOvenTitle">טמפרטורות תנור</span></span>
             <button class="tool-collapse-btn" onclick="toggleToolCard('tool-oven')">▲</button>
           </div>
           <div class="tool-card-body">
@@ -1398,9 +1517,9 @@ service cloud.firestore {
         </div>
 
         <!-- TIMERS -->
-        <div class="tool-card" id="tool-timers">
+        <div class="tool-card" id="tool-timers" draggable="true" ondragstart="toolDragStart(event)" ondragover="toolDragOver(event)" ondrop="toolDrop(event)" ondragleave="toolDragLeave(event)">
           <div class="tool-card-title">
-            <span class="tool-card-title-left">⏱️ <span data-i18n="toolTimerTitle">טיימרים</span></span>
+            <span class="tool-card-title-left"><span class="tool-drag-handle" title="גרור">⠿</span>⏱️ <span data-i18n="toolTimerTitle">טיימרים</span></span>
             <div style="display:flex;gap:8px;align-items:center;">
               <button class="btn-primary" style="padding:6px 14px;font-size:13px;" onclick="addTimer()" data-i18n="toolAddTimer">+ טיימר</button>
               <button class="tool-collapse-btn" onclick="toggleToolCard('tool-timers')">▲</button>
@@ -1412,9 +1531,9 @@ service cloud.firestore {
         </div>
 
         <!-- SUBSTITUTIONS -->
-        <div class="tool-card" id="tool-subs">
+        <div class="tool-card" id="tool-subs" draggable="true" ondragstart="toolDragStart(event)" ondragover="toolDragOver(event)" ondrop="toolDrop(event)" ondragleave="toolDragLeave(event)">
           <div class="tool-card-title">
-            <span class="tool-card-title-left">🔄 <span data-i18n="toolSubsTitle">תחליפי מצרכים</span></span>
+            <span class="tool-card-title-left"><span class="tool-drag-handle" title="גרור">⠿</span>🔄 <span data-i18n="toolSubsTitle">תחליפי מצרכים</span></span>
             <button class="tool-collapse-btn" onclick="toggleToolCard('tool-subs')">▲</button>
           </div>
           <div class="tool-card-body">
@@ -1424,9 +1543,9 @@ service cloud.firestore {
         </div>
 
         <!-- EGG SIZE CALCULATOR -->
-        <div class="tool-card" id="tool-eggs">
+        <div class="tool-card" id="tool-eggs" draggable="true" ondragstart="toolDragStart(event)" ondragover="toolDragOver(event)" ondrop="toolDrop(event)" ondragleave="toolDragLeave(event)">
           <div class="tool-card-title">
-            <span class="tool-card-title-left">🥚 <span data-i18n="toolEggTitle">מחשבון ביצים</span></span>
+            <span class="tool-card-title-left"><span class="tool-drag-handle" title="גרור">⠿</span>🥚 <span data-i18n="toolEggTitle">מחשבון ביצים</span></span>
             <button class="tool-collapse-btn" onclick="toggleToolCard('tool-eggs')">▲</button>
           </div>
           <div class="tool-card-body">
@@ -1451,9 +1570,9 @@ service cloud.firestore {
         </div>
 
         <!-- PAN SIZE CONVERTER -->
-        <div class="tool-card" id="tool-pan">
+        <div class="tool-card" id="tool-pan" draggable="true" ondragstart="toolDragStart(event)" ondragover="toolDragOver(event)" ondrop="toolDrop(event)" ondragleave="toolDragLeave(event)">
           <div class="tool-card-title">
-            <span class="tool-card-title-left">📐 <span data-i18n="toolPanTitle">גדלי תבניות</span></span>
+            <span class="tool-card-title-left"><span class="tool-drag-handle" title="גרור">⠿</span>📐 <span data-i18n="toolPanTitle">גדלי תבניות</span></span>
             <button class="tool-collapse-btn" onclick="toggleToolCard('tool-pan')">▲</button>
           </div>
           <div class="tool-card-body">
@@ -1481,9 +1600,9 @@ service cloud.firestore {
         </div>
 
         <!-- COOKING TIMES TABLE -->
-        <div class="tool-card" id="tool-cooktimes">
+        <div class="tool-card" id="tool-cooktimes" draggable="true" ondragstart="toolDragStart(event)" ondragover="toolDragOver(event)" ondrop="toolDrop(event)" ondragleave="toolDragLeave(event)">
           <div class="tool-card-title">
-            <span class="tool-card-title-left">🌡️ <span data-i18n="toolCookTimeTitle">זמני בישול</span></span>
+            <span class="tool-card-title-left"><span class="tool-drag-handle" title="גרור">⠿</span>🌡️ <span data-i18n="toolCookTimeTitle">זמני בישול</span></span>
             <div style="display:flex;gap:6px;align-items:center;">
               <div class="view-toggle" style="font-size:12px;">
                 <button id="ct-btn-c" class="view-toggle-btn active" onclick="setCookTempUnit('C')">°C</button>
@@ -1499,9 +1618,9 @@ service cloud.firestore {
         </div>
 
         <!-- SEASONING GUIDE -->
-        <div class="tool-card" id="tool-season">
+        <div class="tool-card" id="tool-season" draggable="true" ondragstart="toolDragStart(event)" ondragover="toolDragOver(event)" ondrop="toolDrop(event)" ondragleave="toolDragLeave(event)">
           <div class="tool-card-title">
-            <span class="tool-card-title-left">🧂 <span data-i18n="toolSeasonTitle">מדריך תיבול</span></span>
+            <span class="tool-card-title-left"><span class="tool-drag-handle" title="גרור">⠿</span>🧂 <span data-i18n="toolSeasonTitle">מדריך תיבול</span></span>
             <button class="tool-collapse-btn" onclick="toggleToolCard('tool-season')">▲</button>
           </div>
           <div class="tool-card-body">
@@ -1691,7 +1810,7 @@ const TRANSLATIONS = {
     addCategory: '+ הוסף קטגוריה',
     categoryName: 'שם קטגוריה',
     categoryEmoji: 'אמוג׳י',
-    translate: '🌐 תרגם',
+    translate: 'תרגם',
     translating: 'מתרגם...',
     translateTitle: 'תרגם מתכון',
     translateTo: 'תרגם ל:',
@@ -1814,9 +1933,11 @@ const TRANSLATIONS = {
     pickCamera: 'מצלמה',
     uploadDragHint: 'גרור תמונה לכאן',
     ninja: 'נינג׳ה',
+    bread: 'לחם',
     imageSaved: 'התמונה עודכנה!',
     backToExit: 'לחץ שוב ליציאה',
     quickTimerTitle: '⏱️ טיימר מהיר',
+    scalerByIngredient: '⚖️ חשב לפי מצרך',
     navTools: 'כלים',
     toolConvTitle: 'המרת מידות ומשקלות',
     convWeight: '⚖️ משקל',
@@ -1831,7 +1952,7 @@ const TRANSLATIONS = {
     toolSubsTitle: 'תחליפי מצרכים',
     subsSearchPh: 'חפש מצרך...',
     totalTime: 'סה"כ',
-    cookedIt: 'בישלתי! 👨‍🍳',
+    cookedIt: 'בישלתי!',
     lastCooked: 'בושל לאחרונה',
     daysAgo: 'ימים',
     today: 'היום',
@@ -1898,7 +2019,7 @@ const TRANSLATIONS = {
     addCategory: '+ Добавить категорию',
     categoryName: 'Название категории',
     categoryEmoji: 'Эмодзи',
-    translate: '🌐 Перевести',
+    translate: 'Перевести',
     translating: 'Перевожу...',
     translateTitle: 'Перевести рецепт',
     translateTo: 'Перевести на:',
@@ -2021,9 +2142,11 @@ const TRANSLATIONS = {
     pickCamera: 'Камера',
     uploadDragHint: 'Перетащите фото сюда',
     ninja: 'Ниндзя',
+    bread: 'Хлеб',
     imageSaved: 'Фото обновлено!',
     backToExit: 'Нажмите ещё раз для выхода',
     quickTimerTitle: '⏱️ Быстрый таймер',
+    scalerByIngredient: '⚖️ Пересчёт по ингредиенту',
     navTools: 'Инструм.',
     toolConvTitle: 'Конвертер мер и весов',
     convWeight: '⚖️ Вес',
@@ -2038,7 +2161,7 @@ const TRANSLATIONS = {
     toolSubsTitle: 'Замена ингредиентов',
     subsSearchPh: 'Поиск ингредиента...',
     totalTime: 'Итого',
-    cookedIt: 'Готовил! 👨‍🍳',
+    cookedIt: 'Готовил!',
     lastCooked: 'Последний раз',
     daysAgo: 'дн.',
     today: 'Сегодня',
@@ -2105,7 +2228,7 @@ const TRANSLATIONS = {
     addCategory: '+ Add Category',
     categoryName: 'Category name',
     categoryEmoji: 'Emoji',
-    translate: '🌐 Translate',
+    translate: 'Translate',
     translating: 'Translating...',
     translateTitle: 'Translate Recipe',
     translateTo: 'Translate to:',
@@ -2228,9 +2351,11 @@ const TRANSLATIONS = {
     pickCamera: 'Camera',
     uploadDragHint: 'Drag image here',
     ninja: 'Ninja',
+    bread: 'Bread',
     imageSaved: 'Image updated!',
     backToExit: 'Press again to exit',
     quickTimerTitle: '⏱️ Quick Timer',
+    scalerByIngredient: '⚖️ Scale by ingredient',
     navTools: 'Tools',
     toolConvTitle: 'Unit Converter',
     convWeight: '⚖️ Weight',
@@ -2245,7 +2370,7 @@ const TRANSLATIONS = {
     toolSubsTitle: 'Ingredient Substitutions',
     subsSearchPh: 'Search ingredient...',
     totalTime: 'Total',
-    cookedIt: 'I cooked this! 👨‍🍳',
+    cookedIt: 'I cooked this!',
     lastCooked: 'Last cooked',
     daysAgo: 'days ago',
     today: 'Today',
@@ -2286,9 +2411,9 @@ const CATEGORY_EMOJIS = {
   snack: '🥨', drink: '🥤', other: '🍽️',
   meat: '🥩', fish: '🐟', chicken: '🍗',
   sides: '🍟', salads: '🥗', sandwiches: '🥪',
-  ninja: '🥷',
+  ninja: '🥷', bread: '🍞',
 };
-const DEFAULT_CATEGORIES = ['meat','chicken','fish','salads','sides','sandwiches','dessert','snack','drink','ninja','other'];
+const DEFAULT_CATEGORIES = ['meat','chicken','fish','salads','sides','sandwiches','bread','dessert','snack','drink','ninja','other'];
 
 let userCategories = JSON.parse(localStorage.getItem('userCategories') || 'null');
 function getCategories() {
@@ -2303,7 +2428,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.13';
+const APP_VERSION = '1.3.14';
 
 // =====================================================================
 // APP STATE
@@ -2859,6 +2984,32 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
       <button class="mult-btn ${detailServingMult === 3 ? 'active' : ''}" onclick="setServingMult(3)">×3</button>
     </div>`;
 
+  // Ingredient scaler
+  const scalerIngOptions = (recipe.ingredients || [])
+    .map((ing, i) => {
+      const label = [ing.quantity, ing.unit, ing.name].filter(Boolean).join(' ');
+      return `<option value="${i}" data-qty="${escHtml(String(ing.quantity || ''))}">${escHtml(label)}</option>`;
+    }).join('');
+  const scalerHtml = (recipe.ingredients && recipe.ingredients.length > 1) ? `
+    <div class="ing-scaler-wrap">
+      <button class="ing-scaler-toggle" onclick="toggleIngScaler(this)"
+        id="ing-scaler-toggle-btn">⚖️ ${t('scalerByIngredient') || (lang==='he'?'חשב לפי מצרך':lang==='ru'?'Пересчёт по ингредиенту':'Scale by ingredient')}</button>
+      <div class="ing-scaler-body" id="ing-scaler-body">
+        <div class="ing-scaler-row">
+          <select class="ing-scaler-select" id="ing-scaler-select" onchange="clearScalerResult()">
+            ${scalerIngOptions}
+          </select>
+          <input class="ing-scaler-input" id="ing-scaler-new-qty" type="number" min="0.01" step="any"
+            placeholder="${lang==='he'?'כמות חדשה':lang==='ru'?'Новое кол.':'New qty'}"
+            inputmode="decimal">
+          <button class="ing-scaler-calc-btn" onclick="calcIngScaler('${escHtml(recipe.id)}')">
+            ${lang==='he'?'חשב':lang==='ru'?'Считать':'Calc'}
+          </button>
+        </div>
+        <div class="ing-scaler-result" id="ing-scaler-result"></div>
+      </div>
+    </div>` : '';
+
   const ingredientsHtml = (recipe.ingredients && recipe.ingredients.length > 0)
     ? recipe.ingredients.map((ing, i) => `
         <label class="ingredient-check-item" id="ing-item-${i}">
@@ -2940,6 +3091,7 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
         <div class="detail-section">
           <h3>${t('ingredients')}</h3>
           ${servingMultHtml}
+          ${scalerHtml}
           <div id="detail-ingredients-list">${ingredientsHtml}</div>
         </div>
         ${stepsHtml ? `<div class="detail-section"><h3>${t('steps')}</h3>${stepsHtml}</div>` : ''}
@@ -2991,6 +3143,53 @@ function renderDetailIngredients(recipe) {
       <input type="checkbox" onchange="toggleIngCheck(${i})">
       <span>${escHtml(multiplyQty(ing.quantity))} ${escHtml(ing.unit || '')} ${escHtml(ing.name || '')}</span>
     </label>`).join('');
+}
+
+// =====================================================================
+// INGREDIENT SCALER
+// =====================================================================
+function toggleIngScaler(btn) {
+  const body = document.getElementById('ing-scaler-body');
+  if (!body) return;
+  body.classList.toggle('open');
+  btn.style.borderStyle = body.classList.contains('open') ? 'solid' : 'dashed';
+  btn.style.borderColor = body.classList.contains('open') ? 'var(--c-primary)' : 'var(--c-border)';
+  btn.style.color = body.classList.contains('open') ? 'var(--c-primary)' : '';
+}
+
+function clearScalerResult() {
+  const r = document.getElementById('ing-scaler-result');
+  if (r) r.innerHTML = '';
+}
+
+function calcIngScaler(recipeId) {
+  const recipe = allRecipes.find(r => r.id === recipeId);
+  if (!recipe || !recipe.ingredients) return;
+  const sel = document.getElementById('ing-scaler-select');
+  const newQtyInput = document.getElementById('ing-scaler-new-qty');
+  const resultEl = document.getElementById('ing-scaler-result');
+  if (!sel || !newQtyInput || !resultEl) return;
+
+  const idx = parseInt(sel.value);
+  const newQty = parseFloat(newQtyInput.value);
+  if (isNaN(newQty) || newQty <= 0) {
+    resultEl.innerHTML = `<span style="color:var(--c-danger)">${lang==='he'?'הכנס כמות תקינה':lang==='ru'?'Введите корректное количество':'Enter a valid quantity'}</span>`;
+    return;
+  }
+  const origQty = parseFloat(recipe.ingredients[idx]?.quantity);
+  if (isNaN(origQty) || origQty <= 0) {
+    resultEl.innerHTML = `<span style="color:var(--c-danger)">${lang==='he'?'לא ניתן לחשב — כמות מקורית לא מספרית':lang==='ru'?'Невозможно вычислить — исходное кол. не число':'Cannot calculate — original qty is not numeric'}</span>`;
+    return;
+  }
+  const factor = newQty / origQty;
+  const lines = recipe.ingredients.map((ing, i) => {
+    const origN = parseFloat(ing.quantity);
+    const scaled = isNaN(origN) ? ing.quantity : (origN * factor % 1 === 0 ? (origN * factor).toString() : (origN * factor).toFixed(2));
+    const highlight = i === idx ? ' style="font-weight:800;color:var(--c-primary)"' : '';
+    return `<div${highlight}>${escHtml(String(scaled))} ${escHtml(ing.unit || '')} ${escHtml(ing.name || '')}</div>`;
+  }).join('');
+  const factorLabel = lang==='he'?`פקטור ×${factor.toFixed(3)}`:lang==='ru'?`Коэффициент ×${factor.toFixed(3)}`:`Factor ×${factor.toFixed(3)}`;
+  resultEl.innerHTML = `<div style="font-size:11px;color:var(--c-text-light);margin-bottom:6px;">${factorLabel}</div>${lines}`;
 }
 
 // =====================================================================
@@ -3050,6 +3249,19 @@ function renderCookingMode(recipe) {
   const isFirst = cookingModeStep === 0;
   const isLast = cookingModeStep >= totalSteps - 1;
 
+  // Build ingredients panel
+  const ings = recipe.ingredients || [];
+  const ingListHtml = ings.length
+    ? ings.map(ing => `<div class="cooking-ing-item">
+        <span style="color:var(--c-primary);font-weight:600;">${escHtml(String(ing.quantity || ''))} ${escHtml(ing.unit || '')}</span>
+        <span>${escHtml(ing.name || '')}</span>
+      </div>`).join('')
+    : `<div style="color:var(--c-text-muted);font-size:13px;padding:6px 0;">${t('noIngredients')}</div>`;
+
+  const ingPanelLabel = lang === 'he' ? `🧂 מצרכים (${ings.length})`
+    : lang === 'ru' ? `🧂 Ингредиенты (${ings.length})`
+    : `🧂 Ingredients (${ings.length})`;
+
   overlay.innerHTML = `
     <div class="cooking-header">
       <button class="cooking-exit-btn" onclick="exitCookingMode()">✕ ${t('cookingModeExit')}</button>
@@ -3062,6 +3274,13 @@ function renderCookingMode(recipe) {
     <div class="cooking-step-area">
       <div class="cooking-step-text">${escHtml(step)}</div>
     </div>
+    <div class="cooking-ing-panel" id="cooking-ing-panel">
+      <button class="cooking-ing-toggle" onclick="toggleCookingIngredients()">
+        ${ingPanelLabel}
+        <em class="cit-arrow">▼</em>
+      </button>
+      <div class="cooking-ing-body" id="cooking-ing-body">${ingListHtml}</div>
+    </div>
     <div class="cooking-nav">
       <button class="cooking-nav-btn" onclick="cookingStepPrev()" ${isFirst ? 'disabled' : ''}>
         ${t('cookingModePrev')}
@@ -3070,6 +3289,11 @@ function renderCookingMode(recipe) {
         ${t('cookingModeNext')}
       </button>
     </div>`;
+}
+
+function toggleCookingIngredients() {
+  const panel = document.getElementById('cooking-ing-panel');
+  if (panel) panel.classList.toggle('open');
 }
 
 function cookingStepNext() {
@@ -4983,66 +5207,18 @@ function deleteTimer(id) {
 }
 
 // ── Quick Header Timer ──
-let _qtSec = 0, _qtTotal = 0, _qtInterval = null, _qtPaused = false, _qtName = '';
+let _qtSec = 0, _qtTotal = 0, _qtInterval = null, _qtPaused = false;
 
-function openQuickTimer() {
-  if (_qtInterval || _qtPaused) {
-    // Timer already running — show the running panel
-    _showQtRunningModal();
+// Start timer from the inline header input
+function qtStartFromInput() {
+  const input = document.getElementById('header-timer-input');
+  const min = parseFloat(input?.value);
+  if (!min || min <= 0 || min > 180) {
+    if (input) { input.focus(); input.select(); }
     return;
   }
-  const presets = [
-    { label: '5\'', sec: 300 },
-    { label: '10\'', sec: 600 },
-    { label: '15\'', sec: 900 },
-    { label: '30\'', sec: 1800 },
-  ];
-  let _selectedSec = 0;
-
-  const html = `
-  <h3 style="margin:0 0 14px;font-size:17px;">${t('quickTimerTitle') || '⏱️ ' + (lang==='he'?'טיימר מהיר':lang==='ru'?'Быстрый таймер':'Quick Timer')}</h3>
-  <div class="quick-timer-sheet">
-    <div class="qt-presets">
-      ${presets.map(p=>`<button class="qt-preset-btn" data-sec="${p.sec}" onclick="qtSelectPreset(this,${p.sec})">${p.label}</button>`).join('')}
-    </div>
-    <div class="qt-custom-row">
-      <input class="qt-custom-input" id="qt-custom-min" type="number" min="1" max="180"
-        placeholder="${lang==='he'?'דקות...':lang==='ru'?'мин...':'min...'}"
-        oninput="qtSelectCustom(this.value)" inputmode="numeric">
-    </div>
-    <button class="qt-start-btn" id="qt-start-btn" onclick="qtStartFromModal()" disabled
-      style="opacity:0.4;width:100%;">
-      ${lang==='he'?'▶ התחל':lang==='ru'?'▶ Старт':'▶ Start'}
-    </button>
-  </div>`;
-
-  openModal(html);
-
-  window._qtSelectedSec = 0;
-}
-
-function qtSelectPreset(btn, sec) {
-  document.querySelectorAll('.qt-preset-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('qt-custom-min').value = '';
-  window._qtSelectedSec = sec;
-  const sb = document.getElementById('qt-start-btn');
-  if (sb) { sb.disabled = false; sb.style.opacity = '1'; }
-}
-
-function qtSelectCustom(val) {
-  document.querySelectorAll('.qt-preset-btn').forEach(b => b.classList.remove('active'));
-  const min = parseInt(val);
-  window._qtSelectedSec = (min > 0 && min <= 180) ? min * 60 : 0;
-  const sb = document.getElementById('qt-start-btn');
-  if (sb) { sb.disabled = !window._qtSelectedSec; sb.style.opacity = window._qtSelectedSec ? '1' : '0.4'; }
-}
-
-function qtStartFromModal() {
-  const sec = window._qtSelectedSec || 0;
-  if (!sec) return;
-  closeModal();
-  qtStart(sec);
+  if (input) input.value = '';
+  qtStart(Math.round(min * 60));
 }
 
 function qtStart(totalSec) {
@@ -5073,27 +5249,21 @@ function _qtFmt(sec) {
 }
 
 function _qtUpdateHeaderBtn() {
-  const btn = document.getElementById('header-timer-btn');
-  const disp = document.getElementById('header-timer-display');
-  if (!btn || !disp) return;
-  const active = _qtInterval || _qtPaused;
-  btn.classList.toggle('running', !!active);
-  if (active) {
-    disp.style.display = 'inline';
-    disp.textContent = _qtFmt(_qtSec);
-  } else {
-    disp.style.display = 'none';
-    disp.textContent = '';
-  }
+  const wrap    = document.getElementById('header-timer-wrap');
+  const running = document.getElementById('header-timer-running');
+  const disp    = document.getElementById('header-timer-display');
+  const active  = _qtInterval || _qtPaused;
+  if (wrap)    wrap.style.display    = active ? 'none' : 'flex';
+  if (running) running.style.display = active ? 'flex' : 'none';
+  if (disp && active) disp.textContent = _qtFmt(_qtSec);
 }
 
 function _qtFireAlert() {
   playTimerBeep();
-  // Show done modal
   const html = `
   <div class="qt-running-panel">
     <div style="font-size:48px;">⏰</div>
-    <div class="qt-big-display" style="font-size:32px;color:var(--c-success)">
+    <div class="qt-big-display" style="font-size:28px;color:var(--c-success);">
       ${lang==='he'?'הטיימר הסתיים!':lang==='ru'?'Таймер готов!':'Timer done!'}
     </div>
     <button class="qt-start-btn" style="width:100%;background:var(--c-success)" onclick="closeModal()">
@@ -5107,7 +5277,7 @@ function _qtFireAlert() {
 function _showQtRunningModal() {
   const paused = _qtPaused;
   const html = `
-  <h3 style="margin:0 0 14px;font-size:17px;">⏱️ ${lang==='he'?'טיימר פעיל':lang==='ru'?'Таймер':' Timer'}</h3>
+  <h3 style="margin:0 0 14px;font-size:17px;">⏱️ ${lang==='he'?'טיימר פעיל':lang==='ru'?'Таймер':'Timer'}</h3>
   <div class="qt-running-panel">
     <div class="qt-big-display" id="qt-modal-display">${_qtFmt(_qtSec)}</div>
     <div class="qt-running-name">${_qtFmt(_qtTotal)} ${lang==='he'?'סה"כ':lang==='ru'?'всего':'total'}</div>
@@ -5121,7 +5291,6 @@ function _showQtRunningModal() {
     </div>
   </div>`;
   openModal(html);
-  // Live update the modal display
   const _modalUpdate = setInterval(() => {
     const d = document.getElementById('qt-modal-display');
     if (!d) { clearInterval(_modalUpdate); return; }
@@ -5385,6 +5554,8 @@ function updateSeasonGuide() {
     <div class="conv-result-item highlight" style="grid-column:1/-1;"><span class="conv-result-label" style="font-size:13px;">${escHtml(extra)}</span></div>`;
 }
 
+const TOOL_IDS = ['tool-converter','tool-oven','tool-timers','tool-subs','tool-eggs','tool-pan','tool-cooktimes','tool-season'];
+
 function initToolsView() {
   renderConvUnits();
   updateConv();
@@ -5398,14 +5569,90 @@ function initToolsView() {
   renderCookTimesTable();
   renderSeasonProducts();
   updateSeasonGuide();
+  // Restore drag order
+  applyToolsOrder();
   // Restore collapse state on all cards
-  ['tool-converter','tool-oven','tool-timers','tool-subs','tool-eggs','tool-pan','tool-cooktimes','tool-season'].forEach(id => {
+  TOOL_IDS.forEach(id => {
     const card = document.getElementById(id);
     const btn  = card?.querySelector('.tool-collapse-btn');
     if (card) card.classList.toggle('collapsed', !!toolCollapsed[id]);
     if (btn)  btn.textContent = toolCollapsed[id] ? '▼' : '▲';
   });
 }
+
+// ── Tool Drag & Drop ──
+let _toolDragId = null;
+
+function toolDragStart(e) {
+  // Only allow drag from the handle
+  if (!e.target.closest('.tool-drag-handle') && e.target.className !== 'tool-drag-handle') {
+    e.preventDefault(); return;
+  }
+  _toolDragId = e.currentTarget.id;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', _toolDragId);
+  setTimeout(() => e.currentTarget.style.opacity = '0.5', 0);
+}
+
+function toolDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('drag-over');
+}
+
+function toolDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+
+function toolDrop(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const targetId = e.currentTarget.id;
+  if (!_toolDragId || _toolDragId === targetId) { _toolDragId = null; return; }
+  const container = document.querySelector('.tools-view');
+  if (!container) return;
+  const dragEl  = document.getElementById(_toolDragId);
+  const targetEl = document.getElementById(targetId);
+  if (!dragEl || !targetEl) return;
+  dragEl.style.opacity = '1';
+  // Insert dragged card before or after target based on position
+  const rect = targetEl.getBoundingClientRect();
+  const midY = rect.top + rect.height / 2;
+  if (e.clientY < midY) {
+    container.insertBefore(dragEl, targetEl);
+  } else {
+    container.insertBefore(dragEl, targetEl.nextSibling);
+  }
+  _toolDragId = null;
+  saveToolsOrder();
+}
+
+function saveToolsOrder() {
+  const container = document.querySelector('.tools-view');
+  if (!container) return;
+  const order = [...container.querySelectorAll('.tool-card')].map(c => c.id);
+  localStorage.setItem('toolsOrder', JSON.stringify(order));
+}
+
+function applyToolsOrder() {
+  const saved = JSON.parse(localStorage.getItem('toolsOrder') || 'null');
+  if (!saved || !saved.length) return;
+  const container = document.querySelector('.tools-view');
+  if (!container) return;
+  saved.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) container.appendChild(el);
+  });
+}
+
+// Reset opacity after failed drag
+document.addEventListener('dragend', () => {
+  if (_toolDragId) {
+    const el = document.getElementById(_toolDragId);
+    if (el) el.style.opacity = '1';
+    _toolDragId = null;
+  }
+});
 </script>
 </body>
 </html>
