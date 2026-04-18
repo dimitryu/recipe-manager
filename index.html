@@ -301,13 +301,77 @@ a { color: var(--c-primary); text-decoration: none; }
 .header-logo-icon { font-size: 28px; }
 .header-app-name { font-size: 18px; font-weight: 700; color: var(--c-primary); }
 .header-right { display: flex; align-items: center; gap: 12px; }
-.header-lang { display: flex; gap: 4px; }
-.hlang-btn {
-  padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;
-  color: var(--c-text-muted); border: 1.5px solid transparent;
-  transition: all var(--transition);
+.header-timer-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;
+  background: var(--c-surface2); color: var(--c-text-muted);
+  border: 1.5px solid var(--c-border); cursor: pointer;
+  transition: all var(--transition); white-space: nowrap;
 }
-.hlang-btn.active { background: var(--c-primary); color: #fff; }
+.header-timer-btn:hover { background: var(--c-border); }
+.header-timer-btn.running {
+  background: #fff3e0; border-color: var(--c-secondary); color: #e65100;
+  animation: timer-pulse 2s infinite;
+}
+[data-theme="dark"] .header-timer-btn.running {
+  background: #3a2800; border-color: var(--c-secondary); color: var(--c-secondary);
+}
+@keyframes timer-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232,93,4,0.3); }
+  50% { box-shadow: 0 0 0 4px rgba(232,93,4,0); }
+}
+/* Quick timer modal sheet */
+.quick-timer-sheet {
+  display: flex; flex-direction: column; gap: 14px; padding: 4px 0;
+}
+.qt-presets {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+}
+.qt-preset-btn {
+  padding: 12px 6px; border-radius: 12px; font-size: 14px; font-weight: 700;
+  background: var(--c-surface2); color: var(--c-text); border: 2px solid var(--c-border);
+  cursor: pointer; transition: all 0.15s; text-align: center;
+}
+.qt-preset-btn:hover, .qt-preset-btn.active {
+  background: var(--c-primary); color: #fff; border-color: var(--c-primary);
+}
+.qt-custom-row {
+  display: flex; align-items: center; gap: 8px;
+}
+.qt-custom-input {
+  flex: 1; padding: 10px 12px; border-radius: 10px; font-size: 15px;
+  border: 1.5px solid var(--c-border); background: var(--c-surface2);
+  color: var(--c-text); text-align: center;
+}
+.qt-start-btn {
+  padding: 10px 20px; border-radius: 10px; font-size: 15px; font-weight: 700;
+  background: var(--c-primary); color: #fff; border: none; cursor: pointer;
+  flex-shrink: 0;
+}
+.qt-running-panel {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  padding: 8px 0;
+}
+.qt-big-display {
+  font-size: 56px; font-weight: 800; color: var(--c-primary);
+  font-variant-numeric: tabular-nums; letter-spacing: -1px;
+  line-height: 1;
+}
+.qt-running-name {
+  font-size: 14px; color: var(--c-text-muted); text-align: center;
+}
+.qt-controls-row {
+  display: flex; gap: 10px; width: 100%;
+}
+.qt-stop-btn {
+  flex: 1; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 700;
+  background: var(--c-danger); color: #fff; border: none; cursor: pointer;
+}
+.qt-pause-btn {
+  flex: 1; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 700;
+  background: var(--c-surface2); color: var(--c-text); border: 1.5px solid var(--c-border);
+  cursor: pointer;
+}
 .user-avatar {
   width: 36px; height: 36px; border-radius: 50%; object-fit: cover;
   border: 2px solid var(--c-primary);
@@ -1250,11 +1314,9 @@ service cloud.firestore {
       </div>
     </div>
     <div class="header-right">
-      <div class="header-lang">
-        <button class="hlang-btn" data-lang="he" onclick="setLang('he')">עב</button>
-        <button class="hlang-btn" data-lang="ru" onclick="setLang('ru')">Ру</button>
-        <button class="hlang-btn" data-lang="en" onclick="setLang('en')">En</button>
-      </div>
+      <button class="header-timer-btn" onclick="openQuickTimer()" id="header-timer-btn" title="Quick Timer">
+        ⏱️ <span id="header-timer-display" style="display:none;"></span>
+      </button>
       <div id="header-avatar"></div>
     </div>
   </header>
@@ -1754,6 +1816,7 @@ const TRANSLATIONS = {
     ninja: 'נינג׳ה',
     imageSaved: 'התמונה עודכנה!',
     backToExit: 'לחץ שוב ליציאה',
+    quickTimerTitle: '⏱️ טיימר מהיר',
     navTools: 'כלים',
     toolConvTitle: 'המרת מידות ומשקלות',
     convWeight: '⚖️ משקל',
@@ -1960,6 +2023,7 @@ const TRANSLATIONS = {
     ninja: 'Ниндзя',
     imageSaved: 'Фото обновлено!',
     backToExit: 'Нажмите ещё раз для выхода',
+    quickTimerTitle: '⏱️ Быстрый таймер',
     navTools: 'Инструм.',
     toolConvTitle: 'Конвертер мер и весов',
     convWeight: '⚖️ Вес',
@@ -2166,6 +2230,7 @@ const TRANSLATIONS = {
     ninja: 'Ninja',
     imageSaved: 'Image updated!',
     backToExit: 'Press again to exit',
+    quickTimerTitle: '⏱️ Quick Timer',
     navTools: 'Tools',
     toolConvTitle: 'Unit Converter',
     convWeight: '⚖️ Weight',
@@ -2238,7 +2303,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.12';
+const APP_VERSION = '1.3.13';
 
 // =====================================================================
 // APP STATE
@@ -4915,6 +4980,168 @@ function deleteTimer(id) {
   if (tmr) { clearInterval(tmr.interval); stopTimerAlert(id); }
   timers = timers.filter(t => t.id !== id);
   renderTimers();
+}
+
+// ── Quick Header Timer ──
+let _qtSec = 0, _qtTotal = 0, _qtInterval = null, _qtPaused = false, _qtName = '';
+
+function openQuickTimer() {
+  if (_qtInterval || _qtPaused) {
+    // Timer already running — show the running panel
+    _showQtRunningModal();
+    return;
+  }
+  const presets = [
+    { label: '5\'', sec: 300 },
+    { label: '10\'', sec: 600 },
+    { label: '15\'', sec: 900 },
+    { label: '30\'', sec: 1800 },
+  ];
+  let _selectedSec = 0;
+
+  const html = `
+  <h3 style="margin:0 0 14px;font-size:17px;">${t('quickTimerTitle') || '⏱️ ' + (lang==='he'?'טיימר מהיר':lang==='ru'?'Быстрый таймер':'Quick Timer')}</h3>
+  <div class="quick-timer-sheet">
+    <div class="qt-presets">
+      ${presets.map(p=>`<button class="qt-preset-btn" data-sec="${p.sec}" onclick="qtSelectPreset(this,${p.sec})">${p.label}</button>`).join('')}
+    </div>
+    <div class="qt-custom-row">
+      <input class="qt-custom-input" id="qt-custom-min" type="number" min="1" max="180"
+        placeholder="${lang==='he'?'דקות...':lang==='ru'?'мин...':'min...'}"
+        oninput="qtSelectCustom(this.value)" inputmode="numeric">
+    </div>
+    <button class="qt-start-btn" id="qt-start-btn" onclick="qtStartFromModal()" disabled
+      style="opacity:0.4;width:100%;">
+      ${lang==='he'?'▶ התחל':lang==='ru'?'▶ Старт':'▶ Start'}
+    </button>
+  </div>`;
+
+  openModal(html);
+
+  window._qtSelectedSec = 0;
+}
+
+function qtSelectPreset(btn, sec) {
+  document.querySelectorAll('.qt-preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('qt-custom-min').value = '';
+  window._qtSelectedSec = sec;
+  const sb = document.getElementById('qt-start-btn');
+  if (sb) { sb.disabled = false; sb.style.opacity = '1'; }
+}
+
+function qtSelectCustom(val) {
+  document.querySelectorAll('.qt-preset-btn').forEach(b => b.classList.remove('active'));
+  const min = parseInt(val);
+  window._qtSelectedSec = (min > 0 && min <= 180) ? min * 60 : 0;
+  const sb = document.getElementById('qt-start-btn');
+  if (sb) { sb.disabled = !window._qtSelectedSec; sb.style.opacity = window._qtSelectedSec ? '1' : '0.4'; }
+}
+
+function qtStartFromModal() {
+  const sec = window._qtSelectedSec || 0;
+  if (!sec) return;
+  closeModal();
+  qtStart(sec);
+}
+
+function qtStart(totalSec) {
+  if (_qtInterval) { clearInterval(_qtInterval); _qtInterval = null; }
+  _qtTotal = totalSec;
+  _qtSec = totalSec;
+  _qtPaused = false;
+  _qtUpdateHeaderBtn();
+  _qtInterval = setInterval(_qtTick, 1000);
+}
+
+function _qtTick() {
+  if (_qtPaused) return;
+  _qtSec--;
+  _qtUpdateHeaderBtn();
+  if (_qtSec <= 0) {
+    clearInterval(_qtInterval); _qtInterval = null;
+    _qtSec = 0;
+    _qtUpdateHeaderBtn();
+    _qtFireAlert();
+  }
+}
+
+function _qtFmt(sec) {
+  const m = Math.floor(Math.abs(sec) / 60);
+  const s = Math.abs(sec) % 60;
+  return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+
+function _qtUpdateHeaderBtn() {
+  const btn = document.getElementById('header-timer-btn');
+  const disp = document.getElementById('header-timer-display');
+  if (!btn || !disp) return;
+  const active = _qtInterval || _qtPaused;
+  btn.classList.toggle('running', !!active);
+  if (active) {
+    disp.style.display = 'inline';
+    disp.textContent = _qtFmt(_qtSec);
+  } else {
+    disp.style.display = 'none';
+    disp.textContent = '';
+  }
+}
+
+function _qtFireAlert() {
+  playTimerBeep();
+  // Show done modal
+  const html = `
+  <div class="qt-running-panel">
+    <div style="font-size:48px;">⏰</div>
+    <div class="qt-big-display" style="font-size:32px;color:var(--c-success)">
+      ${lang==='he'?'הטיימר הסתיים!':lang==='ru'?'Таймер готов!':'Timer done!'}
+    </div>
+    <button class="qt-start-btn" style="width:100%;background:var(--c-success)" onclick="closeModal()">
+      ${lang==='he'?'סגור':lang==='ru'?'Закрыть':'Close'}
+    </button>
+  </div>`;
+  openModal(html);
+  navigator.vibrate && navigator.vibrate([400,100,400,100,400]);
+}
+
+function _showQtRunningModal() {
+  const paused = _qtPaused;
+  const html = `
+  <h3 style="margin:0 0 14px;font-size:17px;">⏱️ ${lang==='he'?'טיימר פעיל':lang==='ru'?'Таймер':' Timer'}</h3>
+  <div class="qt-running-panel">
+    <div class="qt-big-display" id="qt-modal-display">${_qtFmt(_qtSec)}</div>
+    <div class="qt-running-name">${_qtFmt(_qtTotal)} ${lang==='he'?'סה"כ':lang==='ru'?'всего':'total'}</div>
+    <div class="qt-controls-row">
+      <button class="qt-pause-btn" id="qt-modal-pause" onclick="qtModalTogglePause()">
+        ${paused ? (lang==='he'?'▶ המשך':lang==='ru'?'▶ Продолжить':'▶ Resume') : (lang==='he'?'⏸ השהה':lang==='ru'?'⏸ Пауза':'⏸ Pause')}
+      </button>
+      <button class="qt-stop-btn" onclick="qtStop();closeModal();">
+        ${lang==='he'?'■ עצור':lang==='ru'?'■ Стоп':'■ Stop'}
+      </button>
+    </div>
+  </div>`;
+  openModal(html);
+  // Live update the modal display
+  const _modalUpdate = setInterval(() => {
+    const d = document.getElementById('qt-modal-display');
+    if (!d) { clearInterval(_modalUpdate); return; }
+    d.textContent = _qtFmt(_qtSec);
+  }, 500);
+}
+
+function qtModalTogglePause() {
+  _qtPaused = !_qtPaused;
+  const pb = document.getElementById('qt-modal-pause');
+  if (pb) pb.textContent = _qtPaused
+    ? (lang==='he'?'▶ המשך':lang==='ru'?'▶ Продолжить':'▶ Resume')
+    : (lang==='he'?'⏸ השהה':lang==='ru'?'⏸ Пауза':'⏸ Pause');
+  _qtUpdateHeaderBtn();
+}
+
+function qtStop() {
+  if (_qtInterval) { clearInterval(_qtInterval); _qtInterval = null; }
+  _qtSec = 0; _qtTotal = 0; _qtPaused = false;
+  _qtUpdateHeaderBtn();
 }
 
 // ── Substitutions ──
