@@ -2535,7 +2535,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.21';
+const APP_VERSION = '1.3.22';
 
 // =====================================================================
 // APP STATE
@@ -3446,10 +3446,42 @@ function _stopNoSleep() {
 
 // Re-acquire wake lock when tab becomes visible again (e.g. user returns from another app)
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && cookingModeActive) {
-    if ('wakeLock' in navigator) _acquireWakeLock();
+  if (document.visibilityState === 'visible') {
+    // Re-acquire wake lock when returning from background
+    if (cookingModeActive && 'wakeLock' in navigator) _acquireWakeLock();
+    // Check all running timers — fire immediately if they expired while app was backgrounded
+    _syncTimersOnWake();
   }
 });
+
+function _syncTimersOnWake() {
+  const now = Date.now();
+
+  // ── Quick timer ──
+  if (_qtInterval && !_qtPaused && _qtEndTime) {
+    _qtSec = Math.max(0, Math.round((_qtEndTime - now) / 1000));
+    if (_qtSec <= 0) {
+      clearInterval(_qtInterval); _qtInterval = null;
+      _qtSec = 0;
+      _qtUpdateHeaderBtn();
+      _qtFireAlert(); // fire immediately — may have expired while backgrounded
+    } else {
+      _qtUpdateHeaderBtn();
+    }
+  }
+
+  // ── Multi-timers ──
+  timers.forEach(tmr => {
+    if (!tmr.running || tmr.done || !tmr.endTime) return;
+    tmr.remainSec = Math.max(0, Math.round((tmr.endTime - now) / 1000));
+    if (tmr.remainSec <= 0) {
+      tmr.remainSec = 0; tmr.running = false; tmr.done = true;
+      clearInterval(tmr.interval); tmr.interval = null;
+      startTimerAlert(tmr.id); // fire immediately
+      renderTimers();
+    }
+  });
+}
 
 async function openCookingMode(recipeId) {
   const recipe = allRecipes.find(r => r.id === recipeId);
@@ -5554,7 +5586,7 @@ function addTimer() {
   if (timers.length >= 5) { showToast('מקסימום 5 טיימרים', 'error'); return; }
   const id = ++timerIdSeq;
   timers.push({ id, label: '', totalSec: 5 * 60, remainSec: 5 * 60,
-    running: false, done: false, interval: null, alertInterval: null });
+    running: false, done: false, interval: null, alertInterval: null, endTime: 0 });
   renderTimers();
 }
 
@@ -5669,19 +5701,23 @@ function toggleTimer(id) {
   const tmr = timers.find(t => t.id === id);
   if (!tmr || tmr.done) return;
   if (tmr.running) {
+    // Pause: save correct remaining time from wall clock before stopping
+    if (tmr.endTime) tmr.remainSec = Math.max(0, Math.round((tmr.endTime - Date.now()) / 1000));
     clearInterval(tmr.interval); tmr.interval = null; tmr.running = false;
   } else {
     unlockAudio(); // iOS: unlock AudioContext on the user gesture that starts the timer
+    tmr.endTime = Date.now() + tmr.remainSec * 1000; // wall-clock anchor
     tmr.running = true;
-    tmr.interval = setInterval(() => tickTimer(id), 1000);
+    tmr.interval = setInterval(() => tickTimer(id), 500); // 500ms for smooth display
   }
   renderTimers();
 }
 
 function tickTimer(id) {
   const tmr = timers.find(t => t.id === id);
-  if (!tmr) return;
-  tmr.remainSec--;
+  if (!tmr || !tmr.running) return;
+  // Use wall-clock delta — survives iOS background throttling
+  tmr.remainSec = Math.max(0, Math.round((tmr.endTime - Date.now()) / 1000));
   if (tmr.remainSec <= 0) {
     tmr.remainSec = 0; tmr.running = false; tmr.done = true;
     clearInterval(tmr.interval); tmr.interval = null;
@@ -5704,7 +5740,7 @@ function resetTimer(id) {
   if (!tmr) return;
   clearInterval(tmr.interval); tmr.interval = null;
   stopTimerAlert(id);
-  tmr.running = false; tmr.done = false; tmr.remainSec = tmr.totalSec;
+  tmr.running = false; tmr.done = false; tmr.remainSec = tmr.totalSec; tmr.endTime = 0;
   renderTimers();
 }
 
@@ -5717,6 +5753,7 @@ function deleteTimer(id) {
 
 // ── Quick Header Timer ──
 let _qtSec = 0, _qtTotal = 0, _qtInterval = null, _qtPaused = false, _qtAlertInterval = null;
+let _qtEndTime = 0; // wall-clock: absolute ms timestamp when timer should fire
 
 // Start timer from the inline header input
 function qtStartFromInput() {
@@ -5734,19 +5771,20 @@ function qtStart(totalSec) {
   unlockAudio(); // iOS: unlock AudioContext on the user gesture that starts the timer
   if (_qtInterval) { clearInterval(_qtInterval); _qtInterval = null; }
   _qtTotal = totalSec;
-  _qtSec = totalSec;
+  _qtSec   = totalSec;
   _qtPaused = false;
-  _qtInterval = setInterval(_qtTick, 1000); // set BEFORE update so active=true
+  _qtEndTime = Date.now() + totalSec * 1000; // wall-clock anchor
+  _qtInterval = setInterval(_qtTick, 500); // 500ms for smoother display; wall-clock is authoritative
   _qtUpdateHeaderBtn();
 }
 
 function _qtTick() {
   if (_qtPaused) return;
-  _qtSec--;
+  // Use wall-clock delta — survives iOS background throttling
+  _qtSec = Math.max(0, Math.round((_qtEndTime - Date.now()) / 1000));
   _qtUpdateHeaderBtn();
   if (_qtSec <= 0) {
     clearInterval(_qtInterval); _qtInterval = null;
-    _qtSec = 0;
     _qtUpdateHeaderBtn();
     _qtFireAlert();
   }
@@ -5777,7 +5815,13 @@ function _qtUpdateHeaderBtn() {
 }
 
 function qtHeaderTogglePause() {
-  _qtPaused = !_qtPaused;
+  if (_qtPaused) {
+    // Resume: shift end-time forward by the time we were paused
+    _qtEndTime = Date.now() + _qtSec * 1000;
+    _qtPaused = false;
+  } else {
+    _qtPaused = true; // _qtSec holds correct remaining seconds from last tick
+  }
   _qtUpdateHeaderBtn();
 }
 
@@ -5837,7 +5881,12 @@ function _showQtRunningModal() {
 }
 
 function qtModalTogglePause() {
-  _qtPaused = !_qtPaused;
+  if (_qtPaused) {
+    _qtEndTime = Date.now() + _qtSec * 1000; // re-anchor end time on resume
+    _qtPaused = false;
+  } else {
+    _qtPaused = true;
+  }
   const pb = document.getElementById('qt-modal-pause');
   if (pb) pb.textContent = _qtPaused
     ? (currentLang==='he'?'▶ המשך':currentLang==='ru'?'▶ Продолжить':'▶ Resume')
@@ -5848,7 +5897,7 @@ function qtModalTogglePause() {
 function qtStop() {
   if (_qtInterval) { clearInterval(_qtInterval); _qtInterval = null; }
   if (_qtAlertInterval) { clearInterval(_qtAlertInterval); _qtAlertInterval = null; }
-  _qtSec = 0; _qtTotal = 0; _qtPaused = false;
+  _qtSec = 0; _qtTotal = 0; _qtPaused = false; _qtEndTime = 0;
   _qtUpdateHeaderBtn();
 }
 
