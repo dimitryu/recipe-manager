@@ -354,6 +354,14 @@ a { color: var(--c-primary); text-decoration: none; }
   transition: background var(--transition), transform var(--transition);
 }
 .btn-primary:hover { background: var(--c-primary-dark); transform: translateY(-1px); }
+.btn-secondary {
+  display: block; width: 100%; padding: 14px;
+  background: var(--c-surface2); color: var(--c-text); border-radius: var(--radius-sm);
+  border: 1.5px solid var(--c-border);
+  font-size: 16px; font-weight: 600; text-align: center;
+  transition: background var(--transition), transform var(--transition);
+}
+.btn-secondary:hover { background: var(--c-border); transform: translateY(-1px); }
 .btn-primary:active { transform: translateY(0); }
 .lang-selector { display: flex; gap: 8px; justify-content: center; margin-bottom: 20px; }
 .lang-btn {
@@ -769,6 +777,7 @@ body.ltr .search-icon { right: auto; left: 14px; }
   -webkit-overflow-scrolling: touch;
   border-bottom: 2px solid var(--c-border);
   flex-shrink: 0;
+  min-height: 50px;
 }
 .tab-bar::-webkit-scrollbar { display: none; }
 .tab-btn {
@@ -801,7 +810,13 @@ body.ltr .search-icon { right: auto; left: 14px; }
 }
 .tab-btn.active { color: var(--c-primary); border-bottom-color: var(--c-primary); }
 .tab-content { display: none; padding: 16px; }
-.tab-content.active { display: block; }
+.tab-content.active {
+  display: block;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  min-height: 0;
+}
 @media (min-width: 520px) {
   .tab-content { padding: 20px; }
 }
@@ -2461,7 +2476,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.16';
+const APP_VERSION = '1.3.17';
 
 // =====================================================================
 // APP STATE
@@ -3215,14 +3230,73 @@ function calcIngScaler(recipeId) {
     return;
   }
   const factor = newQty / origQty;
-  const lines = recipe.ingredients.map((ing, i) => {
+  const scaledIngredients = recipe.ingredients.map((ing) => {
     const origN = parseFloat(ing.quantity);
-    const scaled = isNaN(origN) ? ing.quantity : (origN * factor % 1 === 0 ? (origN * factor).toString() : (origN * factor).toFixed(2));
+    const scaledQty = isNaN(origN) ? ing.quantity
+      : (origN * factor % 1 === 0 ? (origN * factor).toString() : (origN * factor).toFixed(2));
+    return { ...ing, quantity: String(scaledQty) };
+  });
+
+  const lines = scaledIngredients.map((ing, i) => {
     const highlight = i === idx ? ' style="font-weight:800;color:var(--c-primary)"' : '';
-    return `<div${highlight}>${escHtml(String(scaled))} ${escHtml(ing.unit || '')} ${escHtml(ing.name || '')}</div>`;
+    return `<div${highlight}>${escHtml(ing.quantity)} ${escHtml(ing.unit || '')} ${escHtml(ing.name || '')}</div>`;
   }).join('');
+
   const factorLabel = currentLang==='he'?`פקטור ×${factor.toFixed(3)}`:currentLang==='ru'?`Коэффициент ×${factor.toFixed(3)}`:`Factor ×${factor.toFixed(3)}`;
-  resultEl.innerHTML = `<div style="font-size:11px;color:var(--c-text-light);margin-bottom:6px;">${factorLabel}</div>${lines}`;
+
+  const saveLbl    = currentLang==='he'?'💾 שמור על הקיים':currentLang==='ru'?'💾 Сохранить поверх':'💾 Save (replace)';
+  const saveNewLbl = currentLang==='he'?'➕ שמור כחדש':currentLang==='ru'?'➕ Сохранить как новый':'➕ Save as new';
+
+  resultEl.innerHTML = `
+    <div style="font-size:11px;color:var(--c-text-light);margin-bottom:6px;">${factorLabel}</div>
+    ${lines}
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+      <button class="btn-primary" style="flex:1;min-width:120px;font-size:13px;padding:8px 10px;"
+        onclick="saveScaledRecipe('${escHtml(recipeId)}', false)">
+        ${saveLbl}
+      </button>
+      <button class="btn-secondary" style="flex:1;min-width:120px;font-size:13px;padding:8px 10px;"
+        onclick="saveScaledRecipe('${escHtml(recipeId)}', true)">
+        ${saveNewLbl}
+      </button>
+    </div>`;
+
+  // Store scaled ingredients for the save handler
+  window._pendingScaledIngredients = { recipeId, ingredients: scaledIngredients, factor };
+}
+
+async function saveScaledRecipe(recipeId, asNew) {
+  const pending = window._pendingScaledIngredients;
+  if (!pending || pending.recipeId !== recipeId) { showToast('Error: no scaled data', 'error'); return; }
+
+  const recipe = allRecipes.find(r => r.id === recipeId);
+  if (!recipe) return;
+
+  if (asNew) {
+    // Open the recipe form pre-filled with scaled data
+    const copy = { ...recipe, ingredients: pending.ingredients };
+    delete copy.id;
+    const suffix = currentLang==='he'?' (מחושב)':currentLang==='ru'?' (пересчитан)':' (scaled)';
+    copy.name = (recipe.name || '') + suffix;
+    closeModal();
+    setTimeout(() => openRecipeForm(copy), 80);
+  } else {
+    // Overwrite existing recipe ingredients in Firestore
+    showLoading(t('saving') || (currentLang==='he'?'שומר...':currentLang==='ru'?'Сохранение...':'Saving...'));
+    try {
+      await db.collection('users').doc(currentUser.uid)
+        .collection('recipes').doc(recipeId)
+        .update({ ingredients: pending.ingredients });
+      recipe.ingredients = pending.ingredients;
+      window._pendingScaledIngredients = null;
+      hideLoading();
+      showToast(currentLang==='he'?'נשמר!':currentLang==='ru'?'Сохранено!':'Saved!', 'success');
+      renderRecipeDetailModal(recipe); // refresh modal
+    } catch(e) {
+      hideLoading();
+      showToast(t('errorFirebase') + e.message, 'error');
+    }
+  }
 }
 
 // =====================================================================
@@ -5289,7 +5363,7 @@ function deleteTimer(id) {
 }
 
 // ── Quick Header Timer ──
-let _qtSec = 0, _qtTotal = 0, _qtInterval = null, _qtPaused = false;
+let _qtSec = 0, _qtTotal = 0, _qtInterval = null, _qtPaused = false, _qtAlertInterval = null;
 
 // Start timer from the inline header input
 function qtStartFromInput() {
@@ -5354,19 +5428,34 @@ function qtHeaderTogglePause() {
 }
 
 function _qtFireAlert() {
-  playTimerBeep();
+  // Clear any previous alert interval
+  if (_qtAlertInterval) { clearInterval(_qtAlertInterval); _qtAlertInterval = null; }
+
+  const doneLabel = currentLang==='he'?'הטיימר הסתיים!':currentLang==='ru'?'Таймер готов!':'Timer done!';
+  const closeLabel = currentLang==='he'?'✓ סגור':currentLang==='ru'?'✓ Закрыть':'✓ Dismiss';
+
   const html = `
   <div class="qt-running-panel">
-    <div style="font-size:48px;">⏰</div>
-    <div class="qt-big-display" style="font-size:28px;color:var(--c-success);">
-      ${currentLang==='he'?'הטיימר הסתיים!':currentLang==='ru'?'Таймер готов!':'Timer done!'}
-    </div>
-    <button class="qt-start-btn" style="width:100%;background:var(--c-success)" onclick="closeModal()">
-      ${currentLang==='he'?'סגור':currentLang==='ru'?'Закрыть':'Close'}
-    </button>
+    <div id="qt-alert-icon" style="font-size:52px;animation:timer-pulse 0.8s infinite;">⏰</div>
+    <div class="qt-big-display" style="font-size:26px;color:var(--c-success);">${doneLabel}</div>
+    <button class="qt-start-btn" style="width:100%;background:var(--c-success);margin-top:12px;"
+      onclick="qtStop();closeModal();">${closeLabel}</button>
   </div>`;
   openModal(html);
+
+  // First alert immediately
+  playTimerBeep();
   navigator.vibrate && navigator.vibrate([400,100,400,100,400]);
+
+  // Keep repeating every 4 seconds until user dismisses
+  _qtAlertInterval = setInterval(() => {
+    // Stop if modal was closed without pressing the button
+    if (!document.getElementById('qt-alert-icon')) {
+      clearInterval(_qtAlertInterval); _qtAlertInterval = null; return;
+    }
+    playTimerBeep();
+    navigator.vibrate && navigator.vibrate([300,100,300]);
+  }, 4000);
 }
 
 function _showQtRunningModal() {
@@ -5404,6 +5493,7 @@ function qtModalTogglePause() {
 
 function qtStop() {
   if (_qtInterval) { clearInterval(_qtInterval); _qtInterval = null; }
+  if (_qtAlertInterval) { clearInterval(_qtAlertInterval); _qtAlertInterval = null; }
   _qtSec = 0; _qtTotal = 0; _qtPaused = false;
   _qtUpdateHeaderBtn();
 }
