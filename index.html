@@ -146,34 +146,36 @@
 }
 .cst-confirm-btn:active { opacity: 0.85; transform: scale(0.97); }
 .cst-running-lbl { font-size: 14px; color: var(--c-success); font-weight: 600; margin-top: 10px; display: inline-block; }
-/* Cooking floating timers panel */
+/* Cooking timers — horizontal row inside the flex layout (no overlap) */
 #cooking-timers-float {
-  position: absolute; right: 12px; top: 72px;
-  display: flex; flex-direction: column; gap: 8px;
-  z-index: 20; max-width: 170px;
+  /* NOT absolute — stays in normal flex flow so it doesn't cover step text */
+  display: none;
+  flex-direction: row; flex-wrap: wrap; gap: 8px;
+  padding: 6px 16px 2px; flex-shrink: 0;
 }
 .ct-card {
   background: var(--c-surface2); border: 2px solid var(--c-border);
-  border-radius: 14px; padding: 10px 12px;
-  display: flex; flex-direction: column; gap: 4px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.22);
+  border-radius: 20px; padding: 6px 12px;
+  display: flex; flex-direction: row; align-items: center; gap: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
 }
 .ct-card.ct-running { border-color: var(--c-primary); }
-.ct-card.ct-done { border-color: #e53935; animation: ct-pulse 0.6s ease-in-out infinite alternate; }
-@keyframes ct-pulse { from { box-shadow: 0 0 0 0 rgba(229,57,53,0.4); } to { box-shadow: 0 0 0 8px rgba(229,57,53,0); } }
+.ct-card.ct-done { border-color: #e53935; animation: ct-pulse 0.5s ease-in-out infinite alternate; }
+@keyframes ct-pulse { from { box-shadow: 0 0 0 0 rgba(229,57,53,0.3); } to { box-shadow: 0 0 0 6px rgba(229,57,53,0); } }
 .ct-label {
-  font-size: 11px; font-weight: 600; color: var(--c-text-muted);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 146px;
+  font-size: 12px; font-weight: 700; color: var(--c-primary);
+  white-space: nowrap;
 }
 .ct-time {
-  font-size: 28px; font-weight: 800; color: var(--c-text);
-  font-variant-numeric: tabular-nums; letter-spacing: 1px; line-height: 1.1;
+  font-size: 20px; font-weight: 800; color: var(--c-text);
+  font-variant-numeric: tabular-nums; letter-spacing: 0.5px; line-height: 1;
 }
 .ct-card.ct-done .ct-time { color: #e53935; }
 .ct-dismiss {
-  margin-top: 4px; background: transparent; border: 1px solid var(--c-border);
-  color: var(--c-text-muted); font-size: 12px; border-radius: 8px;
-  padding: 4px 0; cursor: pointer; width: 100%;
+  background: transparent; border: 1px solid var(--c-border);
+  color: var(--c-text-muted); font-size: 13px; border-radius: 50%;
+  width: 24px; height: 24px; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; padding: 0;
 }
 .ct-dismiss:active { background: #e53935; color: #fff; border-color: #e53935; }
 .cooking-nav {
@@ -2739,7 +2741,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.28';
+const APP_VERSION = '1.3.29';
 
 // =====================================================================
 // APP STATE
@@ -2754,6 +2756,7 @@ let filteredRecipes = [];
 let currentCategory = 'all';
 let shoppingList = JSON.parse(localStorage.getItem('shoppingList') || '[]');
 let shoppingRecipeIds = JSON.parse(localStorage.getItem('shoppingRecipeIds') || '[]');
+let shoppingExcluded = new Set(JSON.parse(localStorage.getItem('shoppingExcluded') || '[]')); // manually deleted item keys
 let editingRecipeId = null;
 let pendingImages = []; // base64 strings for current form
 let formRating = 0;
@@ -3381,15 +3384,14 @@ function renderCookingTimersFloat() {
   const stepWord = currentLang==='he' ? 'שלב' : currentLang==='ru' ? 'Шаг' : 'Step';
   panel.innerHTML = _cookingTimers.map(tmr => {
     const cls = tmr.done ? 'ct-done' : tmr.running ? 'ct-running' : '';
-    const dismissLbl = currentLang==='he' ? 'סגור' : currentLang==='ru' ? 'Закрыть' : 'Dismiss';
-    // Extract step number from label (e.g. "שלב 2: ..." → "2")
+    // Extract step number: "שלב 2: ..." → "2"
     const numMatch = tmr.label.match(/\d+/);
     const stepNum = numMatch ? numMatch[0] : '';
     const stepHeader = stepNum ? `${stepWord} ${stepNum}` : stepWord;
     return `<div class="ct-card ${cls}">
-      <div class="ct-label" style="font-weight:700;color:var(--c-primary);font-size:12px;">${escHtml(stepHeader)}</div>
+      <div class="ct-label">${escHtml(stepHeader)}</div>
       <div class="ct-time" id="ct-disp-${tmr.id}">${_cstFmt(tmr.remainSec)}</div>
-      <button class="ct-dismiss" onclick="dismissCookingTimer(${tmr.id})">✕ ${escHtml(dismissLbl)}</button>
+      <button class="ct-dismiss" onclick="dismissCookingTimer(${tmr.id})" title="Dismiss">✕</button>
     </div>`;
   }).join('');
 }
@@ -4781,6 +4783,25 @@ function getRecipePrompt() {
 // Valid JSON escape characters after a backslash
 const _JSON_VALID_ESC = new Set(['"', '\\', '/', 'b', 'f', 'n', 'r', 't', 'u']);
 
+// Find the index of the closing '}' that matches the '{' at startIdx,
+// correctly skipping over string literals (so a '}' inside a string is ignored).
+function _findJsonEnd(s, startIdx) {
+  let depth = 0, inStr = false, esc = false;
+  for (let i = startIdx; i < s.length; i++) {
+    const ch = s[i];
+    if (esc) { esc = false; continue; }
+    if (inStr) {
+      if (ch === '\\') esc = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') { inStr = true; continue; }
+    if (ch === '{') depth++;
+    if (ch === '}') { if (--depth === 0) return i; }
+  }
+  return -1; // no balanced closing brace found
+}
+
 // Walks the raw JSON string char-by-char and fixes:
 //   1. Literal control chars (newline/tab/CR) inside string literals
 //   2. Invalid escape sequences like \р or \ (space) → doubled backslash
@@ -4836,11 +4857,18 @@ function _finishParseObj(obj) {
 function parseClaudeResponse(text) {
   // Strip markdown code blocks
   let cleaned = text.replace(/```json?\n?/g, '').replace(/```\n?/g, '').trim();
-  // Find first { ... }
   const start = cleaned.indexOf('{');
-  const end = cleaned.lastIndexOf('}');
-  if (start === -1 || end === -1) throw new Error(t('errorParseJson'));
-  cleaned = cleaned.substring(start, end + 1);
+  if (start === -1) throw new Error(t('errorParseJson'));
+  // Use _findJsonEnd so a '}' inside a string value doesn't confuse extraction
+  const end = _findJsonEnd(cleaned, start);
+  if (end === -1) {
+    // Fallback: try lastIndexOf in case the JSON is already broken beyond tracking
+    const endFb = cleaned.lastIndexOf('}');
+    if (endFb === -1) throw new Error(t('errorParseJson'));
+    cleaned = cleaned.substring(start, endFb + 1);
+  } else {
+    cleaned = cleaned.substring(start, end + 1);
+  }
 
   // Attempt 1 — direct parse (valid Claude output)
   try { return _finishParseObj(JSON.parse(cleaned)); } catch (_) {}
@@ -4967,7 +4995,7 @@ async function analyzeUrl() {
     const response = await callClaude([{
       role: 'user',
       content: getRecipePrompt() + `\n\nSource URL: ${url}\n\nPage content:\n${content}`
-    }]);
+    }], 2500);
     const parsed = parseClaudeResponse(response);
     if (!parsed.sourceUrl) parsed.sourceUrl = url;
     hideLoading();
@@ -5947,9 +5975,11 @@ function rebuildShoppingList() {
   const prevChecked = {};
   shoppingList.forEach(item => { prevChecked[item.key] = item.checked; });
 
-  shoppingList = Object.entries(consolidated).map(([key, item]) => ({
-    key, ...item, checked: prevChecked[key] || false,
-  }));
+  shoppingList = Object.entries(consolidated)
+    .filter(([key]) => !shoppingExcluded.has(key)) // skip manually deleted items
+    .map(([key, item]) => ({
+      key, ...item, checked: prevChecked[key] || false,
+    }));
   localStorage.setItem('shoppingList', JSON.stringify(shoppingList));
 }
 
@@ -5991,9 +6021,28 @@ function renderShoppingView() {
 }
 
 function deleteShoppingItem(i) {
+  const item = shoppingList[i];
+  // Mark as excluded so rebuildShoppingList won't bring it back
+  if (item && item.key) {
+    shoppingExcluded.add(item.key);
+    localStorage.setItem('shoppingExcluded', JSON.stringify([...shoppingExcluded]));
+  }
   shoppingList.splice(i, 1);
   localStorage.setItem('shoppingList', JSON.stringify(shoppingList));
-  renderShoppingView();
+  // Re-render list directly (no full rebuild)
+  const listEl = document.getElementById('shopping-list-ul');
+  if (!listEl) return;
+  if (shoppingList.length === 0) {
+    listEl.innerHTML = `<li style="padding:20px;text-align:center;color:var(--c-text-muted);font-size:14px;">${t('noIngredients')}</li>`;
+    return;
+  }
+  listEl.innerHTML = shoppingList.map((it, idx) => `
+    <li class="shopping-item ${it.checked ? 'checked' : ''}" id="shop-item-${idx}">
+      <input type="checkbox" ${it.checked ? 'checked' : ''} onchange="toggleShoppingItem(${idx})">
+      <span class="shopping-item-text">${escHtml(it.name)}</span>
+      <span class="shopping-item-qty">${escHtml(it.quantity)} ${escHtml(it.unit)}</span>
+      <button class="shop-del-btn" onclick="deleteShoppingItem(${idx})" title="Delete">✕</button>
+    </li>`).join('');
 }
 
 function toggleShoppingItem(i) {
@@ -6012,6 +6061,11 @@ function clearCheckedItems() {
 function removeShoppingRecipe(id) {
   shoppingRecipeIds = shoppingRecipeIds.filter(r => r !== id);
   localStorage.setItem('shoppingRecipeIds', JSON.stringify(shoppingRecipeIds));
+  // If all recipes removed, clear the excluded-items set too
+  if (shoppingRecipeIds.length === 0) {
+    shoppingExcluded.clear();
+    localStorage.setItem('shoppingExcluded', '[]');
+  }
   rebuildShoppingList();
   renderShoppingView();
 }
