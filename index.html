@@ -728,6 +728,8 @@ body.ltr .search-icon { right: auto; left: 14px; }
 .shopping-item-text { flex: 1; font-size: 15px; }
 .shopping-item.checked .shopping-item-text { text-decoration: line-through; }
 .shopping-item-qty { font-size: 13px; color: var(--c-text-muted); white-space: nowrap; }
+.shop-del-btn { background: none; border: none; color: var(--c-text-muted); font-size: 16px; cursor: pointer; padding: 2px 6px; border-radius: 6px; flex-shrink: 0; transition: color 0.15s, background 0.15s; }
+.shop-del-btn:active { color: #fff; background: var(--c-danger, #e53935); }
 .add-recipe-btn {
   width: 100%; padding: 12px; border: 2px dashed var(--c-border); border-radius: var(--radius-sm);
   font-size: 14px; color: var(--c-text-muted); margin-top: 12px;
@@ -820,6 +822,11 @@ body.ltr .search-icon { right: auto; left: 14px; }
   border-radius: 20px 20px 0 0;
 }
 .modal-sheet.modal-full { height: 100vh; max-height: 100vh; border-radius: 0; }
+/* Swipe navigation — override slideUp with horizontal slide */
+.modal-sheet.swipe-from-right { animation: slideFromRight 0.22s ease-out !important; }
+.modal-sheet.swipe-from-left  { animation: slideFromLeft  0.22s ease-out !important; }
+@keyframes slideFromRight { from { transform: translateX(28px); opacity: 0.75; } to { transform: translateX(0); opacity: 1; } }
+@keyframes slideFromLeft  { from { transform: translateX(-28px); opacity: 0.75; } to { transform: translateX(0); opacity: 1; } }
 .modal-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 20px; border-bottom: 1px solid var(--c-border);
@@ -2732,7 +2739,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.27';
+const APP_VERSION = '1.3.28';
 
 // =====================================================================
 // APP STATE
@@ -2759,6 +2766,7 @@ let cookingModeActive = false;
 let _noSleepVideo = null; // canvas-stream fallback for iOS <16.4
 let _detailNavList = [];   // snapshot of filteredRecipes when detail opens
 let _detailNavIdx  = -1;
+let _detailSwipeDir = 0;  // -1 swipe-left (→next), +1 swipe-right (→prev), 0 = default
 let _smartSearchActive = false;
 let _autoNightInterval = null;
 let viewMode = localStorage.getItem('viewMode') || 'grid';
@@ -3159,10 +3167,10 @@ function _initDetailSwipe() {
     const dx = e.changedTouches[0].clientX - sx;
     const dy = e.changedTouches[0].clientY - sy;
     if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-    // RTL-aware: swipe right → previous recipe, swipe left → next recipe
     const isRtl = document.documentElement.dir === 'rtl';
-    if (dx > 0) detailNavGo(isRtl ? 1 : -1);
-    else        detailNavGo(isRtl ? -1 : 1);
+    const dir = dx > 0 ? (isRtl ? 1 : -1) : (isRtl ? -1 : 1);
+    _detailSwipeDir = dir; // set before render so animation class is applied
+    detailNavGo(dir);
   }, { passive: true });
 }
 
@@ -3263,13 +3271,18 @@ function buildCookingStepTimer(stepText, stepIdx) {
   const btnLabel = currentLang==='he' ? `⏱️ ${_cstFmt(detected)}`
     : `⏱️ ${_cstFmt(detected)}`;
   const labelAttr = escHtml(JSON.stringify(stepLabel));
-  // Check if a timer is already running for this step
-  const alreadyRunning = _cookingTimers.some(tmr => tmr.label === stepLabel && !tmr.done);
-  if (alreadyRunning) {
-    const runLbl = currentLang==='he'?'⏱️ פועל':currentLang==='ru'?'⏱️ Работает':'⏱️ Running';
+  // Check timer state for this step
+  const existing = _cookingTimers.find(tmr => tmr.label === stepLabel);
+  if (existing) {
+    if (existing.done) {
+      const doneLbl = currentLang==='he'?'✅ הטיימר הסתיים':currentLang==='ru'?'✅ Таймер завершён':'✅ Timer done';
+      return `<span class="cst-running-lbl">${doneLbl}</span>`;
+    }
+    const runLbl = currentLang==='he'?'⏱️ טיימר פועל':currentLang==='ru'?'⏱️ Таймер работает':'⏱️ Timer running';
     return `<span class="cst-running-lbl">${runLbl}</span>`;
   }
-  return `<div class="cst-widget" id="cst-w-${stepIdx}" data-sec="${detected}" data-label=${labelAttr}>
+  // Note: data-label must be double-quoted so spaces in stepLabel don't break the attribute
+  return `<div class="cst-widget" id="cst-w-${stepIdx}" data-sec="${detected}" data-label="${labelAttr}">
     <button class="cst-start-btn" onclick="_expandCstTimer(${stepIdx})">${btnLabel}</button>
   </div>`;
 }
@@ -3365,11 +3378,16 @@ function renderCookingTimersFloat() {
   if (!panel) return;
   if (_cookingTimers.length === 0) { panel.style.display = 'none'; return; }
   panel.style.display = 'flex';
+  const stepWord = currentLang==='he' ? 'שלב' : currentLang==='ru' ? 'Шаг' : 'Step';
   panel.innerHTML = _cookingTimers.map(tmr => {
     const cls = tmr.done ? 'ct-done' : tmr.running ? 'ct-running' : '';
     const dismissLbl = currentLang==='he' ? 'סגור' : currentLang==='ru' ? 'Закрыть' : 'Dismiss';
+    // Extract step number from label (e.g. "שלב 2: ..." → "2")
+    const numMatch = tmr.label.match(/\d+/);
+    const stepNum = numMatch ? numMatch[0] : '';
+    const stepHeader = stepNum ? `${stepWord} ${stepNum}` : stepWord;
     return `<div class="ct-card ${cls}">
-      <div class="ct-label">${escHtml(tmr.label)}</div>
+      <div class="ct-label" style="font-weight:700;color:var(--c-primary);font-size:12px;">${escHtml(stepHeader)}</div>
       <div class="ct-time" id="ct-disp-${tmr.id}">${_cstFmt(tmr.remainSec)}</div>
       <button class="ct-dismiss" onclick="dismissCookingTimer(${tmr.id})">✕ ${escHtml(dismissLbl)}</button>
     </div>`;
@@ -3880,8 +3898,10 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
   // Store for potential save
   window._sharedRecipeData = recipe;
 
+  const _swipeClass = _detailSwipeDir > 0 ? 'swipe-from-left' : _detailSwipeDir < 0 ? 'swipe-from-right' : '';
+  _detailSwipeDir = 0; // reset immediately
   openModal(`
-    <div class="modal-sheet modal-full" id="detail-sheet">
+    <div class="modal-sheet modal-full ${_swipeClass}" id="detail-sheet">
       <div class="modal-header">
         ${!readOnly && _detailNavList.length > 1 ? `<div class="detail-nav-row">
           <button class="detail-nav-btn" onclick="detailNavGo(-1)" ${_detailNavIdx <= 0 ? 'disabled' : ''}>‹</button>
@@ -4758,22 +4778,29 @@ function getRecipePrompt() {
     `Return ALL text fields (name, ingredient names, step text, notes) in ${langName} language.`);
 }
 
-// Walks the raw JSON string char-by-char and escapes any literal control
-// characters (newline, tab, CR, etc.) that appear inside string literals.
-// Also handles the \ + control-char edge case (invalid escape sequence).
+// Valid JSON escape characters after a backslash
+const _JSON_VALID_ESC = new Set(['"', '\\', '/', 'b', 'f', 'n', 'r', 't', 'u']);
+
+// Walks the raw JSON string char-by-char and fixes:
+//   1. Literal control chars (newline/tab/CR) inside string literals
+//   2. Invalid escape sequences like \р or \ (space) → doubled backslash
 function _repairJsonControlChars(s) {
   let out = '', inStr = false, esc = false;
   for (let i = 0; i < s.length; i++) {
     const ch = s[i], code = s.charCodeAt(i);
     if (esc) {
       esc = false;
-      // Backslash followed by a control char — the \ is invalid here; fix both
       if (code < 32) {
-        out = out.slice(0, -1); // remove the \ we already wrote
+        // Backslash before a control char → remove \ and escape properly
+        out = out.slice(0, -1);
         if      (code === 10) out += '\\n';
         else if (code === 13) out += '\\r';
         else if (code === 9)  out += '\\t';
         else out += '\\u' + code.toString(16).padStart(4, '0');
+      } else if (!_JSON_VALID_ESC.has(ch)) {
+        // Invalid escape like \р → double the backslash so it becomes \\р
+        out = out.slice(0, -1);  // remove the \ already written
+        out += '\\\\' + ch;      // write \\ + ch
       } else {
         out += ch;
       }
@@ -4824,9 +4851,15 @@ function parseClaudeResponse(text) {
   // Attempt 3 — nuclear: replace ALL literal control chars with spaces
   try { return _finishParseObj(JSON.parse(_nuclearJsonRepair(cleaned))); } catch (_) {}
 
-  // Attempt 4 — repair + remove trailing commas (rare Claude quirk)
+  // Attempt 4 — nuclear + trailing commas
   try {
     const s = _nuclearJsonRepair(cleaned).replace(/,(\s*[}\]])/g, '$1');
+    return _finishParseObj(JSON.parse(s));
+  } catch (_) {}
+
+  // Attempt 5 — nuclear + invalid escape fix (handles \р \d etc. inside strings)
+  try {
+    const s = _repairJsonControlChars(_nuclearJsonRepair(cleaned));
     return _finishParseObj(JSON.parse(s));
   } catch (e) {
     throw new Error(t('errorParseJson') + ': ' + e.message);
@@ -5953,7 +5986,14 @@ function renderShoppingView() {
       <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggleShoppingItem(${i})">
       <span class="shopping-item-text">${escHtml(item.name)}</span>
       <span class="shopping-item-qty">${escHtml(item.quantity)} ${escHtml(item.unit)}</span>
+      <button class="shop-del-btn" onclick="deleteShoppingItem(${i})" title="Delete">✕</button>
     </li>`).join('');
+}
+
+function deleteShoppingItem(i) {
+  shoppingList.splice(i, 1);
+  localStorage.setItem('shoppingList', JSON.stringify(shoppingList));
+  renderShoppingView();
 }
 
 function toggleShoppingItem(i) {
