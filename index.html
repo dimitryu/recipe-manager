@@ -122,6 +122,30 @@
   transition: all 0.15s;
 }
 .cst-start-btn:active { opacity: 0.85; transform: scale(0.98); }
+/* Inline timer adjuster (shown when user clicks start) */
+.cst-adj-inline {
+  display: flex; align-items: center; gap: 10px; margin-top: 10px;
+  background: var(--c-surface2); border: 2px solid var(--c-primary);
+  border-radius: 14px; padding: 10px 14px;
+}
+.cst-adj-sm {
+  width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--c-border);
+  background: var(--c-surface); font-size: 20px; font-weight: 700; color: var(--c-text);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; flex-shrink: 0;
+}
+.cst-adj-sm:active { background: var(--c-primary); color: #fff; border-color: var(--c-primary); }
+.cst-adj-time {
+  font-size: 28px; font-weight: 800; color: var(--c-text); font-variant-numeric: tabular-nums;
+  min-width: 80px; text-align: center; letter-spacing: 1px;
+}
+.cst-confirm-btn {
+  padding: 8px 16px; border-radius: 10px; border: none;
+  background: var(--c-primary); color: #fff; font-size: 15px; font-weight: 700;
+  cursor: pointer; white-space: nowrap; transition: all 0.15s;
+}
+.cst-confirm-btn:active { opacity: 0.85; transform: scale(0.97); }
+.cst-running-lbl { font-size: 14px; color: var(--c-success); font-weight: 600; margin-top: 10px; display: inline-block; }
 /* Cooking floating timers panel */
 #cooking-timers-float {
   position: absolute; right: 12px; top: 72px;
@@ -2192,7 +2216,7 @@ const TRANSLATIONS = {
     today: 'היום',
     yesterday: 'אתמול',
     cookedRecorded: '👨‍🍳 בישול נרשם!',
-    cookingMode: '▶ מצב בישול',
+    cookingMode: 'מצב בישול',
     cookingModeStep: 'שלב',
     cookingModeOf: 'מתוך',
     cookingModeExit: 'יציאה',
@@ -2424,7 +2448,7 @@ const TRANSLATIONS = {
     today: 'Сегодня',
     yesterday: 'Вчера',
     cookedRecorded: '👨‍🍳 Записано!',
-    cookingMode: '▶ Готовить',
+    cookingMode: 'Готовить',
     cookingModeStep: 'Шаг',
     cookingModeOf: 'из',
     cookingModeExit: 'Выход',
@@ -2656,7 +2680,7 @@ const TRANSLATIONS = {
     today: 'Today',
     yesterday: 'Yesterday',
     cookedRecorded: '👨‍🍳 Cook recorded!',
-    cookingMode: '▶ Cook Mode',
+    cookingMode: 'Cook Mode',
     cookingModeStep: 'Step',
     cookingModeOf: 'of',
     cookingModeExit: 'Exit',
@@ -2708,7 +2732,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.26';
+const APP_VERSION = '1.3.27';
 
 // =====================================================================
 // APP STATE
@@ -3121,6 +3145,27 @@ function detailNavGo(dir) {
   renderRecipeDetailModal(recipe);
 }
 
+// Swipe-to-navigate in recipe detail
+function _initDetailSwipe() {
+  const sheet = document.getElementById('detail-sheet');
+  if (!sheet || _detailNavList.length <= 1) return;
+  let sx = 0, sy = 0, moved = false;
+  sheet.addEventListener('touchstart', e => {
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY; moved = false;
+  }, { passive: true });
+  sheet.addEventListener('touchmove', e => { moved = true; }, { passive: true });
+  sheet.addEventListener('touchend', e => {
+    if (!moved) return;
+    const dx = e.changedTouches[0].clientX - sx;
+    const dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    // RTL-aware: swipe right → previous recipe, swipe left → next recipe
+    const isRtl = document.documentElement.dir === 'rtl';
+    if (dx > 0) detailNavGo(isRtl ? 1 : -1);
+    else        detailNavGo(isRtl ? -1 : 1);
+  }, { passive: true });
+}
+
 // =====================================================================
 // SMART SEARCH (AI)
 // =====================================================================
@@ -3205,23 +3250,63 @@ function _cstFmt(sec) {
   return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 }
 
-// Returns an inline "Start timer" button for the step card.
-// When clicked it adds a timer to the floating side panel.
+// Returns an inline timer widget for the step card.
+// Only rendered when a time is detected in the step text.
+// On click, expands to a −/time/+ adjuster + Start button.
 function buildCookingStepTimer(stepText, stepIdx) {
   const detected = extractStepTimeSec(stepText);
-  const sec = detected > 0 ? detected : 5 * 60;
+  if (detected <= 0) return ''; // no time in this step — no timer button
   const shortText = stepText.length > 28 ? stepText.substring(0, 28) + '…' : stepText;
   const stepLabel = currentLang==='he' ? `שלב ${stepIdx+1}: ${shortText}`
     : currentLang==='ru' ? `Шаг ${stepIdx+1}: ${shortText}`
     : `Step ${stepIdx+1}: ${shortText}`;
-  const timePart = detected > 0 ? ` (${_cstFmt(detected)})` : '';
-  const btnLabel = currentLang==='he' ? `⏱️ הפעל טיימר${timePart}`
-    : currentLang==='ru' ? `⏱️ Запустить таймер${timePart}`
-    : `⏱️ Start timer${timePart}`;
-  // JSON.stringify produces "..." with double-quotes — must HTML-escape them
-  // so they don't terminate the onclick="" attribute prematurely.
+  const btnLabel = currentLang==='he' ? `⏱️ ${_cstFmt(detected)}`
+    : `⏱️ ${_cstFmt(detected)}`;
   const labelAttr = escHtml(JSON.stringify(stepLabel));
-  return `<button class="cst-start-btn" onclick="unlockAudio();addCookingTimer(${labelAttr},${sec})">${escHtml(btnLabel)}</button>`;
+  // Check if a timer is already running for this step
+  const alreadyRunning = _cookingTimers.some(tmr => tmr.label === stepLabel && !tmr.done);
+  if (alreadyRunning) {
+    const runLbl = currentLang==='he'?'⏱️ פועל':currentLang==='ru'?'⏱️ Работает':'⏱️ Running';
+    return `<span class="cst-running-lbl">${runLbl}</span>`;
+  }
+  return `<div class="cst-widget" id="cst-w-${stepIdx}" data-sec="${detected}" data-label=${labelAttr}>
+    <button class="cst-start-btn" onclick="_expandCstTimer(${stepIdx})">${btnLabel}</button>
+  </div>`;
+}
+
+function _expandCstTimer(stepIdx) {
+  const widget = document.getElementById('cst-w-' + stepIdx);
+  if (!widget) return;
+  unlockAudio();
+  const sec = parseInt(widget.dataset.sec);
+  const startLbl = currentLang==='he'?'▶ הפעל':currentLang==='ru'?'▶ Старт':'▶ Start';
+  widget.innerHTML = `<div class="cst-adj-inline">
+    <button class="cst-adj-sm" onclick="_cstAdjInline(${stepIdx},-60)">−</button>
+    <span class="cst-adj-time" id="cst-adj-t-${stepIdx}">${_cstFmt(sec)}</span>
+    <button class="cst-adj-sm" onclick="_cstAdjInline(${stepIdx},+60)">+</button>
+    <button class="cst-confirm-btn" onclick="_confirmCstTimer(${stepIdx})">${startLbl}</button>
+  </div>`;
+}
+
+function _cstAdjInline(stepIdx, delta) {
+  const widget = document.getElementById('cst-w-' + stepIdx);
+  if (!widget) return;
+  widget.dataset.sec = Math.max(30, (parseInt(widget.dataset.sec) || 60) + delta);
+  const el = document.getElementById('cst-adj-t-' + stepIdx);
+  if (el) el.textContent = _cstFmt(parseInt(widget.dataset.sec));
+}
+
+function _confirmCstTimer(stepIdx) {
+  const widget = document.getElementById('cst-w-' + stepIdx);
+  if (!widget) return;
+  const sec = parseInt(widget.dataset.sec);
+  // label is stored as HTML-encoded JSON — decode it
+  const labelJson = widget.dataset.label;
+  let label;
+  try { label = JSON.parse(labelJson); } catch { label = 'Step ' + (stepIdx + 1); }
+  addCookingTimer(label, sec);
+  const runLbl = currentLang==='he'?'⏱️ פועל':currentLang==='ru'?'⏱️ Работает':'⏱️ Running';
+  widget.innerHTML = `<span class="cst-running-lbl">${runLbl}</span>`;
 }
 
 // ── Cooking floating timers ──
@@ -3785,7 +3870,7 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
           <span class="ab-icon">👨‍🍳</span><span>${t('cookedIt')}</span>
         </button>
         <button class="action-btn" onclick="openCookingMode('${escHtml(recipe.id)}')">
-          <span class="ab-icon">▶</span><span>${t('cookingMode')}</span>
+          <span class="ab-icon">🍳</span><span>${t('cookingMode')}</span>
         </button>
         <button class="action-btn danger" onclick="deleteRecipe('${escHtml(recipe.id)}')">
           <span class="ab-icon">🗑️</span><span>${t('deleteRecipe')}</span>
@@ -3803,6 +3888,8 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
           <span class="detail-nav-counter">${_detailNavIdx + 1}/${_detailNavList.length}</span>
           <button class="detail-nav-btn" onclick="detailNavGo(1)" ${_detailNavIdx >= _detailNavList.length - 1 ? 'disabled' : ''}>›</button>
         </div>` : ''}
+        <!-- swipe hint dots shown only when multiple recipes -->
+        ${!readOnly && _detailNavList.length > 1 ? `<div style="display:none" id="detail-swipe-hint"></div>` : ''}
         <div class="modal-title" style="flex:1;">${escHtml(recipe.name)}</div>
         <button class="modal-close" onclick="closeModal()">✕</button>
       </div>
@@ -3825,6 +3912,8 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
         ${actionsHtml}
       </div>
     </div>`);
+  // Enable swipe navigation between recipes
+  requestAnimationFrame(_initDetailSwipe);
 }
 
 function toggleIngCheck(i) {
@@ -4205,6 +4294,7 @@ function cookingStepNext() {
   if (cookingModeStep < (recipe.steps?.length || 1) - 1) {
     cookingModeStep++;
     renderCookingMode(recipe);
+    renderCookingTimersFloat(); // keep running timers visible
   }
 }
 
@@ -4214,6 +4304,7 @@ function cookingStepPrev() {
   if (cookingModeStep > 0) {
     cookingModeStep--;
     renderCookingMode(recipe);
+    renderCookingTimersFloat(); // keep running timers visible
   }
 }
 
@@ -4649,12 +4740,13 @@ async function callClaude(messages, maxTokens = 1500) {
 }
 
 const RECIPE_PROMPT = `You are a recipe parser. Extract the complete recipe from the provided content.
-Return ONLY valid JSON with this exact structure:
-{"name":"...","ingredients":[{"name":"...","quantity":"...","unit":"..."}],"steps":["..."],"prepTime":15,"cookTime":30,"servings":4,"difficulty":"easy","category":"dinner","notes":"...","sourceUrl":"","nutrition":{"calories":350,"protein":20,"fat":12,"carbs":40}}
+Return ONLY valid JSON (no markdown, no comments) with this exact structure:
+{"name":"...","ingredients":[{"name":"...","quantity":"...","unit":"..."}],"steps":["..."],"prepTime":15,"cookTime":30,"servings":4,"difficulty":"easy","category":"meat","notes":"...","sourceUrl":"","nutrition":{"calories":350,"protein":20,"fat":12,"carbs":40}}
 difficulty: "easy", "medium", or "hard"
-category: breakfast/lunch/dinner/dessert/snack/drink/other
+category: pick the single best fit from: meat, chicken, fish, salads, sides, sandwiches, bread, dessert, snack, drink, other
 prepTime: number (prep time in minutes, 0 if unknown), cookTime: number (cook time in minutes, 0 if unknown)
-Times in minutes (integers). Use null if unknown.
+Times in minutes (integers). Use 0 if unknown.
+IMPORTANT: All string values must be on a single line — do NOT embed literal newlines inside JSON strings. Use \\n if you must represent a line break.
 Include estimated nutrition per serving if it can be reasonably estimated from the ingredients; omit the nutrition field if uncertain.
 LANG_PLACEHOLDER
 If no recipe found, return {"error":"No recipe found"}`;
@@ -4668,12 +4760,25 @@ function getRecipePrompt() {
 
 // Walks the raw JSON string char-by-char and escapes any literal control
 // characters (newline, tab, CR, etc.) that appear inside string literals.
-// Much more robust than regex for malformed Claude output.
+// Also handles the \ + control-char edge case (invalid escape sequence).
 function _repairJsonControlChars(s) {
   let out = '', inStr = false, esc = false;
   for (let i = 0; i < s.length; i++) {
     const ch = s[i], code = s.charCodeAt(i);
-    if (esc) { out += ch; esc = false; continue; }
+    if (esc) {
+      esc = false;
+      // Backslash followed by a control char — the \ is invalid here; fix both
+      if (code < 32) {
+        out = out.slice(0, -1); // remove the \ we already wrote
+        if      (code === 10) out += '\\n';
+        else if (code === 13) out += '\\r';
+        else if (code === 9)  out += '\\t';
+        else out += '\\u' + code.toString(16).padStart(4, '0');
+      } else {
+        out += ch;
+      }
+      continue;
+    }
     if (inStr && ch === '\\') { out += ch; esc = true; continue; }
     if (ch === '"') { inStr = !inStr; out += ch; continue; }
     if (inStr && code < 32) {
@@ -4688,6 +4793,19 @@ function _repairJsonControlChars(s) {
   return out;
 }
 
+// Nuclear fallback: replaces ALL literal control chars everywhere with spaces.
+// Structural whitespace → spaces (JSON.parse ignores whitespace).
+// String values lose newlines but the JSON becomes parseable.
+function _nuclearJsonRepair(s) {
+  return s.replace(/[\x00-\x09\x0b\x0c\x0e-\x1f\x7f]/g, ' ')
+    .replace(/\r\n/g, ' ').replace(/\r/g, ' ').replace(/\n/g, ' ');
+}
+
+function _finishParseObj(obj) {
+  if (obj.error) throw new Error(t('errorNoRecipe'));
+  return obj;
+}
+
 function parseClaudeResponse(text) {
   // Strip markdown code blocks
   let cleaned = text.replace(/```json?\n?/g, '').replace(/```\n?/g, '').trim();
@@ -4696,21 +4814,23 @@ function parseClaudeResponse(text) {
   const end = cleaned.lastIndexOf('}');
   if (start === -1 || end === -1) throw new Error(t('errorParseJson'));
   cleaned = cleaned.substring(start, end + 1);
-  // First attempt — parse as-is (valid JSON from Claude needs no repair)
-  let obj;
+
+  // Attempt 1 — direct parse (valid Claude output)
+  try { return _finishParseObj(JSON.parse(cleaned)); } catch (_) {}
+
+  // Attempt 2 — repair escaped/unescaped control chars inside strings
+  try { return _finishParseObj(JSON.parse(_repairJsonControlChars(cleaned))); } catch (_) {}
+
+  // Attempt 3 — nuclear: replace ALL literal control chars with spaces
+  try { return _finishParseObj(JSON.parse(_nuclearJsonRepair(cleaned))); } catch (_) {}
+
+  // Attempt 4 — repair + remove trailing commas (rare Claude quirk)
   try {
-    obj = JSON.parse(cleaned);
-  } catch (_) {
-    // Second attempt — repair unescaped control chars inside string literals
-    try {
-      obj = JSON.parse(_repairJsonControlChars(cleaned));
-    } catch (e2) {
-      throw new Error(t('errorParseJson') + ': ' + e2.message);
-    }
+    const s = _nuclearJsonRepair(cleaned).replace(/,(\s*[}\]])/g, '$1');
+    return _finishParseObj(JSON.parse(s));
+  } catch (e) {
+    throw new Error(t('errorParseJson') + ': ' + e.message);
   }
-  if (obj.error) throw new Error(t('errorNoRecipe'));
-  // nutrition is already part of obj if Claude returned it
-  return obj;
 }
 
 // =====================================================================
@@ -4806,8 +4926,10 @@ async function analyzeUrl() {
   if (!url) { showToast(t('invalidUrl'), 'error'); return; }
   showLoading(t('fetchingPage'));
   try {
-    const content = await fetchPageContent(url);
-    if (!content || content.length < 80) throw new Error(t('fetchingPage') + ' failed');
+    const rawContent = await fetchPageContent(url);
+    if (!rawContent || rawContent.length < 80) throw new Error(t('fetchingPage') + ' failed');
+    // Strip control characters so Claude doesn't echo them back inside JSON strings
+    const content = rawContent.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, ' ');
     showLoading(t('analyzingUrl'));
     const response = await callClaude([{
       role: 'user',
@@ -5251,6 +5373,7 @@ function openRecipeForm(data = {}) {
           </div>
           <div class="input-group mt-12">
             <label>${t('fieldCategory')}</label>
+            ${data.category && categories.includes(data.category) ? `<div style="font-size:12px;color:var(--c-primary);font-weight:600;margin-bottom:4px;">💡 ${getCategoryEmoji(data.category)} ${getCategoryLabel(data.category)}</div>` : ''}
             <select id="f-category">
               <option value="">--</option>
               ${categories.map(c => `<option value="${c}" ${data.category === c ? 'selected' : ''}>${getCategoryEmoji(c)} ${getCategoryLabel(c)}</option>`).join('')}
@@ -5591,8 +5714,12 @@ ${JSON.stringify({
 // MANAGE CATEGORIES
 // =====================================================================
 function openManageCategoriesModal() {
+  // Always work from a saved list so we can reorder
+  if (!userCategories) saveUserCategories([...DEFAULT_CATEGORIES]);
   const cats = getCategories();
-  const defs = JSON.parse(localStorage.getItem('customCategoryDefs') || '{"cats":{}}');
+
+  const resetLbl   = currentLang==='he'?'↺ אפס לברירת מחדל':currentLang==='ru'?'↺ Сбросить':'↺ Reset';
+  const addCatLbl  = currentLang==='he'?'➕ הוסף קטגוריה':currentLang==='ru'?'➕ Добавить категорию':'➕ Add category';
 
   openModal(`
     <div class="modal-sheet modal-lg">
@@ -5601,23 +5728,25 @@ function openManageCategoriesModal() {
         <button class="modal-close" onclick="closeModal()">✕</button>
       </div>
       <div class="modal-body">
-        <div id="cat-list-wrap" style="margin-bottom:20px;">
-          ${cats.map(c => {
+        <div id="cat-list-wrap" style="margin-bottom:16px;">
+          ${cats.map((c, i) => {
             const label = getCategoryLabel(c);
             const emoji = getCategoryEmoji(c);
-            const isDefault = DEFAULT_CATEGORIES.includes(c);
             return `
-              <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--c-border);">
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--c-border);">
+                <div style="display:flex;flex-direction:column;gap:2px;">
+                  <button class="row-order-btn" onclick="moveCategoryItem('${escHtml(c)}',-1)" ${i===0?'disabled':''} style="padding:0 6px;line-height:1.2;background:var(--c-surface);border:1px solid var(--c-border);border-radius:4px;cursor:pointer;font-size:12px;">▲</button>
+                  <button class="row-order-btn" onclick="moveCategoryItem('${escHtml(c)}',1)" ${i===cats.length-1?'disabled':''} style="padding:0 6px;line-height:1.2;background:var(--c-surface);border:1px solid var(--c-border);border-radius:4px;cursor:pointer;font-size:12px;">▼</button>
+                </div>
                 <span style="font-size:22px;">${emoji}</span>
                 <span style="flex:1;font-size:15px;font-weight:500;">${escHtml(label)}</span>
-                ${isDefault
-                  ? `<span style="font-size:12px;color:var(--c-text-light);">default</span>`
-                  : `<button class="row-del" onclick="deleteCategoryItem('${escHtml(c)}')">✕</button>`}
+                <button class="row-del" onclick="deleteCategoryItem('${escHtml(c)}')">✕</button>
               </div>`;
           }).join('')}
         </div>
+        <button onclick="resetCategoriesToDefault()" style="width:100%;padding:8px;margin-bottom:16px;background:transparent;border:1px solid var(--c-border);border-radius:8px;color:var(--c-text-muted);font-size:13px;cursor:pointer;">${resetLbl}</button>
         <div style="border-top:2px dashed var(--c-border);padding-top:16px;">
-          <p style="font-size:13px;font-weight:700;color:var(--c-text-muted);margin-bottom:10px;">${t('addCategory')}</p>
+          <p style="font-size:13px;font-weight:700;color:var(--c-text-muted);margin-bottom:10px;">${addCatLbl}</p>
           <div style="display:flex;gap:8px;margin-bottom:8px;">
             <input id="new-cat-emoji" type="text" maxlength="4" placeholder="🍴"
               style="width:60px;padding:10px;border:2px solid var(--c-border);border-radius:var(--radius-sm);font-size:20px;text-align:center;">
@@ -5654,11 +5783,31 @@ function addCategoryItem() {
 
 function deleteCategoryItem(key) {
   const cats = getCategories().filter(c => c !== key);
-  saveUserCategories(cats);
-  // Remove from custom defs
+  saveUserCategories(cats.length ? cats : ['other']); // always keep at least one
+  // Remove from custom defs if custom
   const defs = JSON.parse(localStorage.getItem('customCategoryDefs') || '{"cats":{}}');
-  delete defs.cats[key];
-  localStorage.setItem('customCategoryDefs', JSON.stringify(defs));
+  if (!DEFAULT_CATEGORIES.includes(key)) {
+    delete defs.cats[key];
+    localStorage.setItem('customCategoryDefs', JSON.stringify(defs));
+  }
+  closeModal();
+  openManageCategoriesModal();
+}
+
+function moveCategoryItem(key, dir) {
+  const cats = getCategories();
+  const idx = cats.indexOf(key);
+  if (idx === -1) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= cats.length) return;
+  [cats[idx], cats[newIdx]] = [cats[newIdx], cats[idx]];
+  saveUserCategories(cats);
+  closeModal();
+  openManageCategoriesModal();
+}
+
+function resetCategoriesToDefault() {
+  saveUserCategories([...DEFAULT_CATEGORIES]);
   closeModal();
   openManageCategoriesModal();
 }
