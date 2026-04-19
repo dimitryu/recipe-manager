@@ -1250,6 +1250,19 @@ body.ltr .search-icon { right: auto; left: 14px; }
   .detail-hero { height: 150px; }
   .detail-section { page-break-inside: avoid; }
   .ingredient-check-item input[type=checkbox] { display: none; }
+  /* PDF print: show only the print-recipe div */
+  body > *:not(#print-recipe-root) { display: none !important; }
+  #print-recipe-root {
+    display: block !important; padding: 24px; font-family: sans-serif;
+    color: #000; background: #fff;
+  }
+  #print-recipe-root img { max-width: 100%; height: 200px; object-fit: cover; border-radius: 8px; }
+  #print-recipe-root h1 { font-size: 22px; margin: 12px 0 8px; }
+  #print-recipe-root table { border-collapse: collapse; width: 100%; margin-bottom: 12px; }
+  #print-recipe-root td, #print-recipe-root th { border: 1px solid #ddd; padding: 6px 10px; font-size: 13px; text-align: start; }
+  #print-recipe-root th { background: #f5f5f5; font-weight: 700; }
+  #print-recipe-root ol { padding-inline-start: 20px; }
+  #print-recipe-root li { margin-bottom: 8px; font-size: 14px; line-height: 1.5; }
 }
 
 /* ===== RESPONSIVE LARGE ===== */
@@ -1371,6 +1384,73 @@ select option { background: var(--c-surface); color: var(--c-text); }
   backdrop-filter: blur(4px); transition: all 0.2s ease;
 }
 .hero-change-btn:hover { background: rgba(232,93,4,0.8); transform: scale(1.1); }
+
+/* ===== OFFLINE BADGE ===== */
+#offline-badge {
+  display:none; font-size:11px; font-weight:700; padding:3px 9px;
+  background:#e0e0e0; border-radius:10px; color:#555;
+}
+[data-theme="dark"] #offline-badge { background:#3a3a3a; color:#ccc; }
+
+/* ===== AI SEARCH BANNER ===== */
+#ai-search-banner {
+  display:none; align-items:center; justify-content:space-between;
+  gap:8px; background:var(--c-surface2); border:1px solid var(--c-border);
+  border-radius:10px; padding:7px 12px; margin:0 16px 6px;
+  font-size:13px; color:var(--c-text-muted);
+}
+#ai-search-banner.visible { display:flex; }
+#ai-search-banner strong { color:var(--c-text); }
+.ai-search-btn {
+  margin-inline-start:6px; padding:5px 10px; border-radius:8px;
+  background:var(--c-primary); color:#fff; border:none; font-size:12px;
+  font-weight:700; cursor:pointer; flex-shrink:0;
+}
+.search-ai-icon {
+  position:absolute; left:14px; top:50%; transform:translateY(-50%);
+  font-size:14px; cursor:pointer; color:var(--c-primary);
+  background:none; border:none; padding:0;
+}
+body.ltr .search-ai-icon { left:auto; right:38px; }
+
+/* ===== STEP TIMER BUTTON ===== */
+.step-time-match { white-space:nowrap; }
+.step-timer-btn {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:26px; height:26px; border-radius:50%;
+  background:var(--c-primary); color:#fff; border:none;
+  font-size:13px; cursor:pointer; vertical-align:middle;
+  margin-inline-start:4px; flex-shrink:0;
+}
+
+/* ===== DETAIL NAV (← →) ===== */
+.detail-nav-row {
+  display:flex; align-items:center; gap:6px; margin-inline-end:8px;
+}
+.detail-nav-btn {
+  font-size:22px; background:none; border:none;
+  color:var(--c-text-muted); padding:2px 6px; cursor:pointer;
+  border-radius:6px; line-height:1;
+}
+.detail-nav-btn:disabled { opacity:0.3; cursor:default; }
+.detail-nav-counter { font-size:11px; color:var(--c-text-muted); white-space:nowrap; }
+
+/* ===== AUTO NIGHT OVERLAY ===== */
+#night-overlay {
+  position:fixed; inset:0; pointer-events:none;
+  background:rgba(0,0,0,0.28); z-index:9998; transition:opacity 0.8s;
+}
+
+/* ===== SWIPE TO DELETE ===== */
+.recipe-card { position:relative; overflow:hidden; touch-action:pan-y; will-change:transform; }
+.swipe-delete-bg {
+  position:absolute; top:0; right:0; bottom:0; width:80px;
+  background:var(--c-danger,#e53935); display:flex; align-items:center;
+  justify-content:center; color:#fff; font-size:22px;
+  transform:translateX(100%); pointer-events:none;
+}
+.recipe-card.swiping { transition:none; }
+.recipe-card.snap-back { transition:transform 0.2s ease; }
 </style>
 </head>
 <body>
@@ -1482,6 +1562,7 @@ service cloud.firestore {
         <div class="header-version" id="header-version"></div>
       </div>
     </div>
+    <div id="offline-badge">📡 Offline</div>
     <div class="header-right">
       <!-- Quick timer — idle state -->
       <div class="header-timer-wrap" id="header-timer-wrap">
@@ -1509,8 +1590,14 @@ service cloud.firestore {
     <div id="view-recipes" class="view active">
       <div class="search-bar-wrap">
         <div class="search-bar">
-          <input type="search" id="search-input" data-i18n-placeholder="searchPlaceholder" placeholder="Search recipes..." oninput="filterRecipes()">
+          <input type="search" id="search-input" data-i18n-placeholder="searchPlaceholder" placeholder="Search recipes..."
+            oninput="filterRecipes()" onkeydown="if(event.key==='Enter')smartSearch()">
+          <button class="search-ai-icon" onclick="smartSearch()" title="AI Search">🤖</button>
           <span class="search-icon">🔍</span>
+        </div>
+        <div id="ai-search-banner">
+          <span><strong>🤖</strong> <span id="ai-search-label"></span></span>
+          <button class="ai-search-btn" onclick="clearSmartSearch()">✕ Clear</button>
         </div>
       </div>
       <div class="category-filters" id="category-filters"></div>
@@ -1697,6 +1784,20 @@ service cloud.firestore {
           </div>
         </div>
 
+        <!-- Fridge Suggestion Tool -->
+        <div class="tool-card" id="tool-fridge">
+          <div class="tool-card-title">
+            <span class="tool-card-title-left"><span class="tool-drag-handle" title="גרור">⠿</span>🧊 <span data-i18n="toolFridgeTitle">מה יש במקרר?</span></span>
+            <button class="tool-collapse-btn" onclick="toggleToolCard('tool-fridge')">▲</button>
+          </div>
+          <div class="tool-card-body">
+            <div style="font-size:12px;color:var(--c-text-muted);margin-bottom:8px;" data-i18n="toolFridgeDesc">הכנס מרכיבים זמינים וקבל הצעות מתכון מהאוסף שלך</div>
+            <textarea id="fridge-input" rows="3" style="width:100%;box-sizing:border-box;border:1.5px solid var(--c-border);border-radius:10px;padding:9px 12px;font-size:14px;resize:vertical;background:var(--c-surface);color:var(--c-text);" data-i18n-placeholder="toolFridgePh" placeholder="עוף, פסטה, שמנת..."></textarea>
+            <button class="btn-primary" style="margin-top:8px;width:100%;" onclick="runFridgeSuggestion()">🤖 <span data-i18n="toolFridgeBtn">הצע מתכון</span></button>
+            <div id="fridge-result" style="margin-top:10px;"></div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -1716,6 +1817,13 @@ service cloud.firestore {
               <span class="settings-item-label" data-i18n="darkMode">מצב חשוך</span>
             </div>
             <div class="settings-toggle" id="dark-mode-toggle"></div>
+          </div>
+          <div class="settings-item" onclick="toggleAutoNight()" style="cursor:pointer;">
+            <div class="settings-item-left">
+              <span class="settings-item-icon">🌃</span>
+              <span class="settings-item-label" data-i18n="autoNight">עמעום אוטומטי (21:00–07:00)</span>
+            </div>
+            <div class="settings-toggle" id="auto-night-toggle"></div>
           </div>
         </div>
 
@@ -1899,6 +2007,15 @@ const TRANSLATIONS = {
     sortModeOn: '✋ סדר מתכונים',
     sortModeSave: '✓ שמור סדר',
     sortModeTip: 'גרור מתכונים לסידור רצוי',
+    autoNight: 'עמעום אוטומטי (21:00–07:00)',
+    toolFridgeTitle: 'מה יש במקרר?',
+    toolFridgeDesc: 'הכנס מרכיבים זמינים וקבל הצעות מתכון',
+    toolFridgePh: 'עוף, פסטה, שמנת...',
+    toolFridgeBtn: 'הצע מתכון',
+    aiSearchLabel: 'תוצאות AI עבור:',
+    duplicateFound: 'נמצא מתכון דומה',
+    duplicateSaveAnyway: 'שמור בכל זאת',
+    smartSearchHint: 'חיפוש חכם — Enter לחיפוש AI',
     tabText: '✍️ טקסט',
     tabManual: '📝 ידני',
     uploadHint: 'גרור תמונה לכאן או <strong>לחץ לבחירה</strong>',
@@ -2122,6 +2239,15 @@ const TRANSLATIONS = {
     sortModeOn: '✋ Сортировка',
     sortModeSave: '✓ Сохранить',
     sortModeTip: 'Перетащите рецепты в нужный порядок',
+    autoNight: 'Авто-затемнение (21:00–07:00)',
+    toolFridgeTitle: 'Что в холодильнике?',
+    toolFridgeDesc: 'Введите доступные ингредиенты и получите предложения рецептов',
+    toolFridgePh: 'курица, паста, сметана...',
+    toolFridgeBtn: 'Предложить рецепт',
+    aiSearchLabel: 'Результаты AI для:',
+    duplicateFound: 'Найден похожий рецепт',
+    duplicateSaveAnyway: 'Сохранить всё равно',
+    smartSearchHint: 'Умный поиск — Enter для AI поиска',
     tabText: '✍️ Текст',
     tabManual: '📝 Вручную',
     uploadHint: 'Перетащите фото сюда или <strong>нажмите для выбора</strong>',
@@ -2345,6 +2471,15 @@ const TRANSLATIONS = {
     sortModeOn: '✋ Reorder',
     sortModeSave: '✓ Save Order',
     sortModeTip: 'Drag recipes to set your order',
+    autoNight: 'Auto-dim (21:00–07:00)',
+    toolFridgeTitle: 'What\'s in my fridge?',
+    toolFridgeDesc: 'Enter available ingredients and get recipe suggestions from your collection',
+    toolFridgePh: 'chicken, pasta, cream...',
+    toolFridgeBtn: 'Suggest recipe',
+    aiSearchLabel: 'AI results for:',
+    duplicateFound: 'Similar recipe found',
+    duplicateSaveAnyway: 'Save anyway',
+    smartSearchHint: 'Smart search — press Enter for AI search',
     tabText: '✍️ Text',
     tabManual: '📝 Manual',
     uploadHint: 'Drag image here or <strong>click to choose</strong>',
@@ -2535,7 +2670,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.22';
+const APP_VERSION = '1.3.23';
 
 // =====================================================================
 // APP STATE
@@ -2560,6 +2695,10 @@ let cookingModeWakeLock = null;
 let cookingModeStep = 0;
 let cookingModeActive = false;
 let _noSleepVideo = null; // canvas-stream fallback for iOS <16.4
+let _detailNavList = [];   // snapshot of filteredRecipes when detail opens
+let _detailNavIdx  = -1;
+let _smartSearchActive = false;
+let _autoNightInterval = null;
 let viewMode = localStorage.getItem('viewMode') || 'grid';
 let sortMode = localStorage.getItem('sortMode') || 'date';
 
@@ -2716,6 +2855,11 @@ function initFirebase() {
       firebase.initializeApp(config);
     }
     db = firebase.firestore();
+    // Enable offline persistence (IndexedDB) — data available without internet
+    db.enablePersistence({ synchronizeTabs: true }).catch(err => {
+      if (err.code !== 'failed-precondition' && err.code !== 'unimplemented')
+        console.warn('Firestore persistence:', err);
+    });
     auth = firebase.auth();
     return true;
   } catch (e) {
@@ -2774,6 +2918,11 @@ function setupAuthListener() {
       renderSettingsProfile();
       subscribeRecipes();
       checkShareParam();
+      // Init auto-night if previously enabled
+      if (localStorage.getItem('autoNight') === '1') {
+        checkAutoNight();
+        _autoNightInterval = setInterval(checkAutoNight, 60000);
+      }
     } else {
       currentUser = null;
       if (recipesListener) { recipesListener(); recipesListener = null; }
@@ -2826,6 +2975,7 @@ function renderSettingsProfile() {
   const ck = document.getElementById('settings-claude-key');
   if (ck) ck.value = localStorage.getItem('claudeKey') || '';
   updateDarkModeUI();
+  _updateAutoNightUI();
 }
 
 function saveClaudeKey() {
@@ -2920,6 +3070,319 @@ function renderCategoryFilters() {
   }).join('');
 }
 
+// =====================================================================
+// RECIPE NAV (← →)
+// =====================================================================
+function detailNavGo(dir) {
+  const newIdx = _detailNavIdx + dir;
+  if (newIdx < 0 || newIdx >= _detailNavList.length) return;
+  _detailNavIdx = newIdx;
+  const recipe = _detailNavList[newIdx];
+  currentOpenRecipeId = recipe.id;
+  detailServingMult = 1;
+  renderRecipeDetailModal(recipe);
+}
+
+// =====================================================================
+// SMART SEARCH (AI)
+// =====================================================================
+async function smartSearch() {
+  const q = (document.getElementById('search-input')?.value || '').trim();
+  if (!q) return;
+  const key = localStorage.getItem('claudeApiKey');
+  if (!key) { showToast('Claude API key required', 'error'); return; }
+  showLoading('🤖 AI Search...');
+  try {
+    const payload = allRecipes.map(r => ({
+      id: r.id, name: r.name,
+      ingredients: (r.ingredients || []).map(i => i.name).filter(Boolean).join(', ')
+    }));
+    const prompt = `You are a recipe search assistant. Given this list of recipes (JSON), return the IDs of recipes that best match the query: "${q}".
+Return ONLY a valid JSON array of IDs in order of relevance, e.g. ["id1","id2"]. If none match, return [].
+Recipes: ${JSON.stringify(payload)}`;
+    const resp = await callClaude([{ role: 'user', content: prompt }], 400);
+    const match = resp.match(/\[[\s\S]*?\]/);
+    const ids = match ? JSON.parse(match[0]) : [];
+    const results = ids.map(id => allRecipes.find(r => r.id === id)).filter(Boolean);
+    hideLoading();
+    _smartSearchActive = true;
+    filteredRecipes = results;
+    renderRecipeGrid();
+    const banner = document.getElementById('ai-search-banner');
+    const label  = document.getElementById('ai-search-label');
+    if (banner) banner.classList.add('visible');
+    if (label)  label.textContent = `"${q}" (${results.length})`;
+  } catch(e) {
+    hideLoading();
+    showToast(e.message, 'error');
+  }
+}
+
+function clearSmartSearch() {
+  _smartSearchActive = false;
+  const banner = document.getElementById('ai-search-banner');
+  if (banner) banner.classList.remove('visible');
+  const si = document.getElementById('search-input');
+  if (si) si.value = '';
+  filterRecipes();
+}
+
+// Guard in filterRecipes is handled inline
+const _origFilterRecipes = filterRecipes;
+// Patch filterRecipes to bail when AI results are active
+const _filterRecipesPatched = function() {
+  if (_smartSearchActive) return; // don't overwrite AI results
+  _origFilterRecipes();
+};
+
+// =====================================================================
+// COOKING MODE — INLINE TIMER INJECTION
+// =====================================================================
+function injectTimerButtons(text) {
+  const escaped = escHtml(text);
+  // Match time patterns in Hebrew, Russian, English
+  return escaped.replace(
+    /(\d+(?:[.,]\d+)?)\s*(minutes?|mins?|hours?|hrs?|seconds?|secs?|דקות?|דקה|שעות?|שעה|שניות?|שנייה|минут[аы]?|час[аов]*|секунд[аы]?)/gi,
+    (match, num, unit) => {
+      const n = parseFloat(num.replace(',', '.'));
+      const u = unit.toLowerCase();
+      let secs = 0;
+      if (/hour|שעה|שעות|час/.test(u))   secs = Math.round(n * 3600);
+      else if (/sec|שנ|секунд/.test(u))   secs = Math.round(n);
+      else                                secs = Math.round(n * 60); // minutes default
+      if (secs <= 0) return match;
+      return `<span class="step-time-match">${match} <button class="step-timer-btn" onclick="event.stopPropagation();qtStart(${secs})" title="${secs}s">⏱️</button></span>`;
+    }
+  );
+}
+
+// =====================================================================
+// DUPLICATE DETECTION
+// =====================================================================
+function _normalizeStr(s) {
+  return (s || '').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '').replace(/\s+/g, ' ').trim();
+}
+function _levenshtein(a, b) {
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const dp = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = i;
+    for (let j = 1; j <= b.length; j++) {
+      const val = a[i-1] === b[j-1] ? dp[j-1] : Math.min(dp[j-1], dp[j], prev) + 1;
+      dp[j-1] = prev; prev = val;
+    }
+    dp[b.length] = prev;
+  }
+  return dp[b.length];
+}
+function _findDuplicateRecipe(name) {
+  const normNew = _normalizeStr(name);
+  if (!normNew) return null;
+  return allRecipes.find(r => {
+    if (r.id === editingRecipeId) return false; // skip self when editing
+    const normEx = _normalizeStr(r.name);
+    if (!normEx) return false;
+    const maxLen = Math.max(normNew.length, normEx.length);
+    if (maxLen > 120) return normEx.includes(normNew) || normNew.includes(normEx);
+    return (_levenshtein(normNew, normEx) / maxLen) < 0.32
+      || normEx.includes(normNew) || normNew.includes(normEx);
+  }) || null;
+}
+
+// =====================================================================
+// PDF EXPORT
+// =====================================================================
+function printRecipe(id) {
+  const recipe = allRecipes.find(r => r.id === id) || window._sharedRecipeData;
+  if (!recipe) { window.print(); return; }
+  // Remove any existing print root
+  document.getElementById('print-recipe-root')?.remove();
+  const dir = currentLang === 'he' ? 'rtl' : 'ltr';
+  const imgHtml = recipe.images?.[0] ? `<img src="${recipe.images[0]}" alt="">` : '';
+  const ingRows = (recipe.ingredients || []).map(i =>
+    `<tr><td>${escHtml(String(i.quantity || ''))} ${escHtml(i.unit || '')}</td><td>${escHtml(i.name || '')}</td></tr>`
+  ).join('');
+  const stepItems = (recipe.steps || []).map((s, i) => `<li>${escHtml(s)}</li>`).join('');
+  const meta = [
+    recipe.prepTime ? `⏱ ${currentLang==='he'?'הכנה':currentLang==='ru'?'Подготовка':'Prep'}: ${recipe.prepTime} ${t('min')}` : '',
+    recipe.cookTime ? `🔥 ${currentLang==='he'?'בישול':currentLang==='ru'?'Приготовление':'Cook'}: ${recipe.cookTime} ${t('min')}` : '',
+    recipe.servings ? `🍽️ ${recipe.servings} ${currentLang==='he'?'מנות':currentLang==='ru'?'порций':'servings'}` : ''
+  ].filter(Boolean).join(' &nbsp;|&nbsp; ');
+  const root = document.createElement('div');
+  root.id = 'print-recipe-root';
+  root.dir = dir;
+  root.innerHTML = `
+    ${imgHtml}
+    <h1>${escHtml(recipe.name)}</h1>
+    ${meta ? `<p style="color:#666;font-size:13px;">${meta}</p>` : ''}
+    ${ingRows ? `<h3>${currentLang==='he'?'מצרכים':currentLang==='ru'?'Ингредиенты':'Ingredients'}</h3>
+      <table><thead><tr><th>${currentLang==='he'?'כמות':currentLang==='ru'?'Кол-во':'Qty'}</th><th>${currentLang==='he'?'מרכיב':currentLang==='ru'?'Ингредиент':'Ingredient'}</th></tr></thead>
+      <tbody>${ingRows}</tbody></table>` : ''}
+    ${stepItems ? `<h3>${currentLang==='he'?'הוראות הכנה':currentLang==='ru'?'Инструкции':'Instructions'}</h3><ol>${stepItems}</ol>` : ''}
+    ${recipe.notes ? `<h3>${currentLang==='he'?'הערות':currentLang==='ru'?'Заметки':'Notes'}</h3><p>${escHtml(recipe.notes)}</p>` : ''}`;
+  document.body.appendChild(root);
+  window.print();
+  const cleanup = () => { root.remove(); window.onafterprint = null; };
+  window.onafterprint = cleanup;
+  setTimeout(cleanup, 3000); // fallback for iOS
+}
+
+// =====================================================================
+// AUTO NIGHT MODE
+// =====================================================================
+function toggleAutoNight() {
+  const on = localStorage.getItem('autoNight') !== '1';
+  localStorage.setItem('autoNight', on ? '1' : '0');
+  _updateAutoNightUI();
+  if (on) {
+    checkAutoNight();
+    _autoNightInterval = setInterval(checkAutoNight, 60000);
+  } else {
+    clearInterval(_autoNightInterval); _autoNightInterval = null;
+    document.getElementById('night-overlay')?.remove();
+  }
+}
+
+function checkAutoNight() {
+  const h = new Date().getHours();
+  const isNight = h >= 21 || h < 7;
+  const existing = document.getElementById('night-overlay');
+  if (isNight && !existing) {
+    const el = document.createElement('div');
+    el.id = 'night-overlay';
+    document.body.prepend(el);
+  } else if (!isNight && existing) {
+    existing.remove();
+  }
+}
+
+function _updateAutoNightUI() {
+  const on = localStorage.getItem('autoNight') === '1';
+  document.getElementById('auto-night-toggle')?.classList.toggle('on', on);
+}
+
+// =====================================================================
+// FRIDGE SUGGESTION
+// =====================================================================
+async function runFridgeSuggestion() {
+  const raw = (document.getElementById('fridge-input')?.value || '').trim();
+  if (!raw) { showToast(t('toolFridgePh'), 'error'); return; }
+  const key = localStorage.getItem('claudeApiKey');
+  if (!key) { showToast('Claude API key required', 'error'); return; }
+  const resultEl = document.getElementById('fridge-result');
+  if (resultEl) resultEl.innerHTML = '';
+  showLoading('🤖 ' + (currentLang==='he'?'מחפש מתכונים...':currentLang==='ru'?'Ищем рецепты...':'Searching recipes...'));
+  try {
+    const payload = allRecipes.slice(0, 150).map(r => ({
+      id: r.id, name: r.name,
+      ingredients: (r.ingredients || []).map(i => i.name).filter(Boolean).join(', ')
+    }));
+    const prompt = `User has these ingredients: "${raw}".
+Available recipes (JSON): ${JSON.stringify(payload)}
+
+Task:
+1. Find recipe IDs from the list that can be made (fully or mostly) with these ingredients. Return as "matches": [id,...].
+2. If no good matches, suggest a new original recipe using these ingredients. Return as "suggestion": {"name":"...","ingredients":[{"name":"...","quantity":"...","unit":"..."}],"steps":["..."]}.
+3. If there are matches, set "suggestion": null.
+
+Return ONLY valid JSON: {"matches":[...],"suggestion":null}`;
+    const resp = await callClaude([{ role: 'user', content: prompt }], 1200);
+    const jsonMatch = resp.match(/\{[\s\S]*\}/);
+    const data = jsonMatch ? JSON.parse(jsonMatch[0]) : { matches: [], suggestion: null };
+    hideLoading();
+    const matches = (data.matches || []).map(id => allRecipes.find(r => r.id === id)).filter(Boolean);
+    const suggestion = data.suggestion;
+    if (!matches.length && !suggestion) {
+      if (resultEl) resultEl.innerHTML = `<p style="color:var(--c-text-muted);font-size:13px;text-align:center;padding:8px 0;">😕 ${currentLang==='he'?'לא נמצאו מתכונים מתאימים':currentLang==='ru'?'Подходящих рецептов не найдено':'No matching recipes found'}</p>`;
+      return;
+    }
+    let html = '';
+    if (matches.length) {
+      html += `<div style="font-weight:700;font-size:13px;margin-bottom:6px;">📚 ${currentLang==='he'?'מתכונים מהאוסף שלך':currentLang==='ru'?'Рецепты из вашей коллекции':'From your collection'}:</div>`;
+      html += matches.map(r => `<div style="padding:8px 0;border-bottom:1px solid var(--c-border);cursor:pointer;font-size:14px;"
+        onclick="showView('recipes');setTimeout(()=>openRecipeDetail('${escHtml(r.id)}'),200);">
+        🍽️ <strong>${escHtml(r.name)}</strong></div>`).join('');
+    }
+    if (suggestion) {
+      html += `<div style="margin-top:10px;padding:10px;background:var(--c-surface2);border-radius:10px;">
+        <div style="font-weight:700;font-size:13px;margin-bottom:4px;">✨ ${currentLang==='he'?'הצעת מתכון חדש':currentLang==='ru'?'Предложение нового рецепта':'New recipe suggestion'}:</div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:8px;">${escHtml(suggestion.name || '')}</div>
+        <button class="btn-primary" style="width:100%;" onclick='_saveFridgeSuggestion(${JSON.stringify(JSON.stringify(suggestion))})'>
+          ➕ ${currentLang==='he'?'הוסף לאוסף':currentLang==='ru'?'Добавить в коллекцию':'Add to collection'}</button></div>`;
+    }
+    if (resultEl) resultEl.innerHTML = html;
+  } catch(e) { hideLoading(); showToast(e.message, 'error'); }
+}
+
+function _saveFridgeSuggestion(jsonStr) {
+  try {
+    const s = JSON.parse(jsonStr);
+    openRecipeForm(s);
+  } catch {}
+}
+
+// =====================================================================
+// SWIPE TO DELETE
+// =====================================================================
+function initSwipeToDelete() {
+  const grid = document.getElementById('recipe-grid');
+  if (!grid || grid._swipeInited) return;
+  grid._swipeInited = true;
+
+  let card = null, startX = 0, startY = 0, dx = 0, locked = false;
+
+  grid.addEventListener('touchstart', e => {
+    if (_sortModeActive) return;
+    card = e.target.closest('.recipe-card');
+    if (!card) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    dx = 0; locked = false;
+    card.classList.remove('snap-back');
+  }, { passive: true });
+
+  grid.addEventListener('touchmove', e => {
+    if (!card || _sortModeActive) return;
+    dx = e.touches[0].clientX - startX;
+    const dy = Math.abs(e.touches[0].clientY - startY);
+    if (!locked && dy > Math.abs(dx)) { card = null; return; } // vertical scroll wins
+    if (dx > 4) { card = null; return; } // right swipe: ignore
+    if (dx < -8) { locked = true; e.preventDefault(); }
+    if (!locked) return;
+    const clamped = Math.max(-120, dx);
+    card.style.transform = `translateX(${clamped}px)`;
+    card.classList.add('swiping');
+    const bg = card.querySelector('.swipe-delete-bg');
+    if (bg) bg.style.transform = `translateX(${Math.min(0, 100 + (clamped / 120) * 100)}%)`;
+  }, { passive: false });
+
+  const endSwipe = () => {
+    if (!card) return;
+    if (dx < -90) {
+      // Confirmed delete
+      const id = card.dataset.id;
+      card.classList.remove('swiping');
+      card.classList.add('snap-back');
+      card.style.transform = '';
+      const bg = card.querySelector('.swipe-delete-bg');
+      if (bg) bg.style.transform = '';
+      if (id) deleteRecipe(id);
+    } else {
+      // Snap back
+      card.classList.remove('swiping');
+      card.classList.add('snap-back');
+      card.style.transform = '';
+      const bg = card.querySelector('.swipe-delete-bg');
+      if (bg) bg.style.transform = '';
+    }
+    card = null; dx = 0; locked = false;
+  };
+
+  grid.addEventListener('touchend', endSwipe, { passive: true });
+  grid.addEventListener('touchcancel', endSwipe, { passive: true });
+}
+
 function getCategoryLabel(c) {
   // Check user-defined custom categories first
   const custom = (JSON.parse(localStorage.getItem('customCategoryDefs') || '{}')).cats || {};
@@ -2940,6 +3403,7 @@ function selectCategory(cat) {
 }
 
 function filterRecipes() {
+  if (_smartSearchActive) return; // AI results are active — don't overwrite
   const q = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
   let filtered = allRecipes.filter(r => {
     const matchCat = currentCategory === 'all' ||
@@ -2960,6 +3424,7 @@ function renderRecipeGrid() {
   if (!grid) return;
   // Apply list/grid class
   grid.classList.toggle('list-view', viewMode === 'list');
+  // (swipe to delete inited after innerHTML is set, below)
   if (filteredRecipes.length === 0) {
     grid.innerHTML = `
       <div class="empty-state" style="grid-column:1/-1;">
@@ -2987,6 +3452,7 @@ function renderRecipeGrid() {
     const catLabel = r.category ? getCategoryLabel(r.category) : '';
     return `
       <div class="recipe-card" data-id="${escHtml(r.id)}" onclick="if(!_sortModeActive)openRecipeDetail('${escHtml(r.id)}')">
+        <div class="swipe-delete-bg">🗑️</div>
         <div style="position:relative;">
           ${imgHtml}
           <button class="fav-btn ${r.favorite ? 'active' : ''}" onclick="event.stopPropagation();toggleFavorite('${escHtml(r.id)}')" title="${r.favorite ? t('removeFromFavorites') : t('addToFavorites')}">${r.favorite ? '❤️' : '🤍'}</button>
@@ -3003,6 +3469,8 @@ function renderRecipeGrid() {
         </div>
       </div>`;
   }).join('');
+  // Init swipe-to-delete after new DOM is ready
+  requestAnimationFrame(() => { grid._swipeInited = false; initSwipeToDelete(); });
 }
 
 // =====================================================================
@@ -3011,6 +3479,13 @@ function renderRecipeGrid() {
 function openRecipeDetail(id, readOnly = false, sharedUid = null) {
   const recipe = allRecipes.find(r => r.id === id);
   if (!recipe && !sharedUid) return;
+  // Capture navigation context (skip for shared/read-only)
+  if (!readOnly && !sharedUid) {
+    _detailNavList = [...filteredRecipes];
+    _detailNavIdx  = _detailNavList.findIndex(r => r.id === id);
+  } else {
+    _detailNavList = []; _detailNavIdx = -1;
+  }
   if (sharedUid && !recipe) {
     // Load from Firestore
     showLoading(t('loadingRecipe'));
@@ -3162,7 +3637,7 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
         <button class="action-btn" onclick="shareRecipe('${escHtml(recipe.id)}')">
           <span class="ab-icon">🔗</span><span>${t('share')}</span>
         </button>
-        <button class="action-btn" onclick="window.print()">
+        <button class="action-btn" onclick="printRecipe('${escHtml(recipe.id)}')">
           <span class="ab-icon">🖨️</span><span>${t('print')}</span>
         </button>
         <button class="action-btn" onclick="addRecipeToShopping('${escHtml(recipe.id)}')">
@@ -3188,7 +3663,12 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
   openModal(`
     <div class="modal-sheet modal-full" id="detail-sheet">
       <div class="modal-header">
-        <div class="modal-title">${escHtml(recipe.name)}</div>
+        ${!readOnly && _detailNavList.length > 1 ? `<div class="detail-nav-row">
+          <button class="detail-nav-btn" onclick="detailNavGo(-1)" ${_detailNavIdx <= 0 ? 'disabled' : ''}>‹</button>
+          <span class="detail-nav-counter">${_detailNavIdx + 1}/${_detailNavList.length}</span>
+          <button class="detail-nav-btn" onclick="detailNavGo(1)" ${_detailNavIdx >= _detailNavList.length - 1 ? 'disabled' : ''}>›</button>
+        </div>` : ''}
+        <div class="modal-title" style="flex:1;">${escHtml(recipe.name)}</div>
         <button class="modal-close" onclick="closeModal()">✕</button>
       </div>
       <div style="overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;">
@@ -3445,6 +3925,15 @@ function _stopNoSleep() {
 }
 
 // Re-acquire wake lock when tab becomes visible again (e.g. user returns from another app)
+// ── Offline badge ────────────────────────────────────────────────────
+function _updateOfflineBadge() {
+  const badge = document.getElementById('offline-badge');
+  if (badge) badge.style.display = navigator.onLine ? 'none' : 'inline-block';
+}
+window.addEventListener('online',  _updateOfflineBadge);
+window.addEventListener('offline', _updateOfflineBadge);
+setTimeout(_updateOfflineBadge, 500); // run after DOM is ready
+
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     // Re-acquire wake lock when returning from background
@@ -3535,7 +4024,7 @@ function renderCookingMode(recipe) {
       ${steps.map((_, i) => `<div class="cooking-dot ${i === cookingModeStep ? 'active' : i < cookingModeStep ? 'done' : ''}"></div>`).join('')}
     </div>
     <div class="cooking-step-area">
-      <div class="cooking-step-text">${escHtml(step)}</div>
+      <div class="cooking-step-text">${injectTimerButtons(step)}</div>
     </div>
     <div class="cooking-ing-panel" id="cooking-ing-panel">
       <button class="cooking-ing-toggle" onclick="toggleCookingIngredients()">
@@ -4806,6 +5295,23 @@ async function submitRecipeForm() {
   };
   if (pendingNutrition) data.nutrition = pendingNutrition;
 
+  // Duplicate detection (skip when editing)
+  if (!editingRecipeId) {
+    const dup = _findDuplicateRecipe(name);
+    if (dup) {
+      showConfirm(
+        `${t('duplicateFound')}: "${escHtml(dup.name)}"`,
+        async () => { await _doSaveRecipeForm(data); },
+        true
+      );
+      return;
+    }
+  }
+
+  await _doSaveRecipeForm(data);
+}
+
+async function _doSaveRecipeForm(data) {
   showLoading(t('savingRecipe'));
   try {
     await saveRecipe(data);
@@ -6142,7 +6648,7 @@ function updateSeasonGuide() {
     <div class="conv-result-item highlight" style="grid-column:1/-1;"><span class="conv-result-label" style="font-size:13px;">${escHtml(extra)}</span></div>`;
 }
 
-const TOOL_IDS = ['tool-converter','tool-oven','tool-timers','tool-subs','tool-eggs','tool-pan','tool-cooktimes','tool-season'];
+const TOOL_IDS = ['tool-converter','tool-oven','tool-timers','tool-subs','tool-eggs','tool-pan','tool-cooktimes','tool-season','tool-fridge'];
 
 function initToolsView() {
   renderConvUnits();
