@@ -114,37 +114,44 @@
   font-size: 22px; line-height: 1.6; text-align: center; color: var(--c-text);
   max-width: 600px;
 }
-/* Cooking step timer card */
-.cooking-step-timer {
-  width: 100%; max-width: 340px; background: var(--c-surface2);
-  border: 2px solid var(--c-border); border-radius: 18px; padding: 16px 18px;
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
-}
-.cst-label {
-  font-size: 12px; font-weight: 700; color: var(--c-text-muted); letter-spacing: 0.5px; text-transform: uppercase;
-}
-.cst-adj-row {
-  display: flex; align-items: center; gap: 10px;
-}
-.cst-adj-btn {
-  width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--c-border);
-  background: var(--c-surface); font-size: 22px; font-weight: 700;
-  color: var(--c-text); cursor: pointer; display: flex; align-items: center; justify-content: center;
-  transition: all 0.15s; flex-shrink: 0;
-}
-.cst-adj-btn:active { background: var(--c-primary); color: #fff; border-color: var(--c-primary); }
-.cst-time-display {
-  font-size: 38px; font-weight: 800; color: var(--c-text); font-variant-numeric: tabular-nums;
-  min-width: 100px; text-align: center; letter-spacing: 1px;
-}
+/* Cooking step timer — inline start button */
 .cst-start-btn {
-  width: 100%; padding: 16px; border-radius: 14px; border: none;
-  background: var(--c-primary); color: #fff; font-size: 18px; font-weight: 800;
-  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
-  transition: all 0.15s; letter-spacing: 0.3px;
+  margin-top: 10px; padding: 12px 20px; border-radius: 12px; border: none;
+  background: var(--c-primary); color: #fff; font-size: 16px; font-weight: 700;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+  transition: all 0.15s;
 }
 .cst-start-btn:active { opacity: 0.85; transform: scale(0.98); }
-.cst-start-btn.running { background: var(--c-success); }
+/* Cooking floating timers panel */
+#cooking-timers-float {
+  position: absolute; right: 12px; top: 72px;
+  display: flex; flex-direction: column; gap: 8px;
+  z-index: 20; max-width: 170px;
+}
+.ct-card {
+  background: var(--c-surface2); border: 2px solid var(--c-border);
+  border-radius: 14px; padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.22);
+}
+.ct-card.ct-running { border-color: var(--c-primary); }
+.ct-card.ct-done { border-color: #e53935; animation: ct-pulse 0.6s ease-in-out infinite alternate; }
+@keyframes ct-pulse { from { box-shadow: 0 0 0 0 rgba(229,57,53,0.4); } to { box-shadow: 0 0 0 8px rgba(229,57,53,0); } }
+.ct-label {
+  font-size: 11px; font-weight: 600; color: var(--c-text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 146px;
+}
+.ct-time {
+  font-size: 28px; font-weight: 800; color: var(--c-text);
+  font-variant-numeric: tabular-nums; letter-spacing: 1px; line-height: 1.1;
+}
+.ct-card.ct-done .ct-time { color: #e53935; }
+.ct-dismiss {
+  margin-top: 4px; background: transparent; border: 1px solid var(--c-border);
+  color: var(--c-text-muted); font-size: 12px; border-radius: 8px;
+  padding: 4px 0; cursor: pointer; width: 100%;
+}
+.ct-dismiss:active { background: #e53935; color: #fff; border-color: #e53935; }
 .cooking-nav {
   display: flex; gap: 12px; padding: 16px 20px;
   flex-shrink: 0; padding-bottom: max(16px, env(safe-area-inset-bottom));
@@ -293,7 +300,7 @@
 .recipe-grid.list-view .recipe-card {
   display: flex; flex-direction: row; height: 80px; align-items: stretch;
 }
-.recipe-grid.list-view .recipe-card > div:first-child { width: 80px; flex-shrink: 0; }
+.recipe-grid.list-view .recipe-card .card-img-wrap { width: 80px; height: 80px; flex-shrink: 0; overflow: hidden; }
 .recipe-grid.list-view .recipe-card .card-image { width: 100%; height: 100%; object-fit: cover; }
 .recipe-grid.list-view .recipe-card .card-emoji-thumb {
   width: 80px; height: 80px; font-size: 28px; flex-shrink: 0;
@@ -2701,7 +2708,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '1.3.24';
+const APP_VERSION = '1.3.25';
 
 // =====================================================================
 // APP STATE
@@ -3192,65 +3199,93 @@ function injectTimerButtons(text) {
   return escHtml(text);
 }
 
-let _cstSec = 0; // current cooking-step-timer seconds
-
-function buildCookingStepTimer(stepText) {
-  const detected = extractStepTimeSec(stepText);
-  _cstSec = detected > 0 ? detected : 5 * 60; // default 5 min
-  return _renderCstHtml();
-}
-
+// ── Cooking-step timer helper ──
 function _cstFmt(sec) {
   const m = Math.floor(sec / 60), s = sec % 60;
   return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 }
 
-function _renderCstHtml() {
-  const isRunning = !!_qtInterval && !_qtPaused;
-  const lbl = currentLang==='he'?'טיימר לשלב זה':currentLang==='ru'?'Таймер для шага':'Step timer';
-  const startLbl = isRunning
-    ? (currentLang==='he'?'⏱️ רץ...':currentLang==='ru'?'⏱️ Идёт...':'⏱️ Running...')
-    : (currentLang==='he'?'▶ הפעל טיימר':currentLang==='ru'?'▶ Запустить таймер':'▶ Start timer');
-  return `<div class="cooking-step-timer">
-    <div class="cst-label">⏱️ ${escHtml(lbl)}</div>
-    <div class="cst-adj-row">
-      <button class="cst-adj-btn" onclick="cstAdjust(-60)">−</button>
-      <div class="cst-time-display" id="cst-display">${_cstFmt(_cstSec)}</div>
-      <button class="cst-adj-btn" onclick="cstAdjust(+60)">+</button>
-    </div>
-    <button class="cst-start-btn ${isRunning?'running':''}" id="cst-start-btn"
-      onclick="cstStartStop()">
-      ${startLbl}
-    </button>
-  </div>`;
+// Returns an inline "Start timer" button for the step card.
+// When clicked it adds a timer to the floating side panel.
+function buildCookingStepTimer(stepText, stepIdx) {
+  const detected = extractStepTimeSec(stepText);
+  const sec = detected > 0 ? detected : 5 * 60;
+  const shortText = stepText.length > 28 ? stepText.substring(0, 28) + '…' : stepText;
+  const stepLabel = currentLang==='he' ? `שלב ${stepIdx+1}: ${shortText}`
+    : currentLang==='ru' ? `Шаг ${stepIdx+1}: ${shortText}`
+    : `Step ${stepIdx+1}: ${shortText}`;
+  const timePart = detected > 0 ? ` (${_cstFmt(detected)})` : '';
+  const btnLabel = currentLang==='he' ? `⏱️ הפעל טיימר${timePart}`
+    : currentLang==='ru' ? `⏱️ Запустить таймер${timePart}`
+    : `⏱️ Start timer${timePart}`;
+  return `<button class="cst-start-btn" onclick="unlockAudio();addCookingTimer(${JSON.stringify(stepLabel)},${sec})">${escHtml(btnLabel)}</button>`;
 }
 
-function cstAdjust(deltaSec) {
-  _cstSec = Math.max(60, _cstSec + deltaSec);
-  const d = document.getElementById('cst-display');
-  if (d) d.textContent = _cstFmt(_cstSec);
+// ── Cooking floating timers ──
+let _cookingTimers = [];
+let _ctIdSeq = 0;
+
+function addCookingTimer(label, sec) {
+  // Prevent duplicate active timers for same step label
+  const existing = _cookingTimers.find(t => t.label === label && !t.done);
+  if (existing) { showToast(currentLang==='he'?'טיימר כבר פועל':currentLang==='ru'?'Таймер уже запущен':'Timer already running', 'info'); return; }
+  const id = ++_ctIdSeq;
+  _cookingTimers.push({ id, label, totalSec: sec, remainSec: sec, running: false, done: false, interval: null, alertInterval: null, endTime: 0 });
+  _startCookingTimer(id);
 }
 
-function cstStartStop() {
-  if (_qtInterval && !_qtPaused) {
-    // Already running — stop
-    qtStop();
-    const btn = document.getElementById('cst-start-btn');
-    if (btn) {
-      btn.classList.remove('running');
-      const lbl = currentLang==='he'?'▶ הפעל טיימר':currentLang==='ru'?'▶ Запустить таймер':'▶ Start timer';
-      btn.textContent = lbl;
-    }
-  } else {
-    // Start
-    qtStart(_cstSec);
-    const btn = document.getElementById('cst-start-btn');
-    if (btn) {
-      btn.classList.add('running');
-      const lbl = currentLang==='he'?'⏱️ רץ...':currentLang==='ru'?'⏱️ Идёт...':'⏱️ Running...';
-      btn.textContent = lbl;
-    }
+function _startCookingTimer(id) {
+  const tmr = _cookingTimers.find(t => t.id === id);
+  if (!tmr || tmr.running || tmr.done) return;
+  tmr.running = true;
+  tmr.endTime = Date.now() + tmr.remainSec * 1000;
+  tmr.interval = setInterval(() => _tickCookingTimer(id), 500);
+  renderCookingTimersFloat();
+}
+
+function _tickCookingTimer(id) {
+  const tmr = _cookingTimers.find(t => t.id === id);
+  if (!tmr || !tmr.running) return;
+  tmr.remainSec = Math.max(0, Math.round((tmr.endTime - Date.now()) / 1000));
+  const disp = document.getElementById(`ct-disp-${id}`);
+  if (disp) disp.textContent = _cstFmt(tmr.remainSec);
+  if (tmr.remainSec <= 0) {
+    clearInterval(tmr.interval); tmr.interval = null;
+    tmr.running = false; tmr.done = true;
+    _startCookingTimerAlert(id);
+    renderCookingTimersFloat();
   }
+}
+
+function _startCookingTimerAlert(id) {
+  playTimerBeep();
+  const tmr = _cookingTimers.find(t => t.id === id);
+  if (tmr) tmr.alertInterval = setInterval(() => playTimerBeep(), 3000);
+}
+
+function dismissCookingTimer(id) {
+  const tmr = _cookingTimers.find(t => t.id === id);
+  if (!tmr) return;
+  if (tmr.interval) clearInterval(tmr.interval);
+  if (tmr.alertInterval) clearInterval(tmr.alertInterval);
+  _cookingTimers = _cookingTimers.filter(t => t.id !== id);
+  renderCookingTimersFloat();
+}
+
+function renderCookingTimersFloat() {
+  const panel = document.getElementById('cooking-timers-float');
+  if (!panel) return;
+  if (_cookingTimers.length === 0) { panel.style.display = 'none'; return; }
+  panel.style.display = 'flex';
+  panel.innerHTML = _cookingTimers.map(tmr => {
+    const cls = tmr.done ? 'ct-done' : tmr.running ? 'ct-running' : '';
+    const dismissLbl = currentLang==='he' ? 'סגור' : currentLang==='ru' ? 'Закрыть' : 'Dismiss';
+    return `<div class="ct-card ${cls}">
+      <div class="ct-label">${escHtml(tmr.label)}</div>
+      <div class="ct-time" id="ct-disp-${tmr.id}">${_cstFmt(tmr.remainSec)}</div>
+      <button class="ct-dismiss" onclick="dismissCookingTimer(${tmr.id})">✕ ${escHtml(dismissLbl)}</button>
+    </div>`;
+  }).join('');
 }
 
 // =====================================================================
@@ -3550,7 +3585,7 @@ function renderRecipeGrid() {
     return `
       <div class="recipe-card" data-id="${escHtml(r.id)}" onclick="if(!_sortModeActive)openRecipeDetail('${escHtml(r.id)}')">
         <div class="swipe-delete-bg">🗑️</div>
-        <div style="position:relative;">
+        <div class="card-img-wrap" style="position:relative;">
           ${imgHtml}
           <button class="fav-btn ${r.favorite ? 'active' : ''}" onclick="event.stopPropagation();toggleFavorite('${escHtml(r.id)}')" title="${r.favorite ? t('removeFromFavorites') : t('addToFavorites')}">${r.favorite ? '❤️' : '🤍'}</button>
         </div>
@@ -4037,6 +4072,8 @@ document.addEventListener('visibilitychange', () => {
     if (cookingModeActive && 'wakeLock' in navigator) _acquireWakeLock();
     // Check all running timers — fire immediately if they expired while app was backgrounded
     _syncTimersOnWake();
+    // Refresh cooking float panel display
+    renderCookingTimersFloat();
   }
 });
 
@@ -4065,6 +4102,18 @@ function _syncTimersOnWake() {
       clearInterval(tmr.interval); tmr.interval = null;
       startTimerAlert(tmr.id); // fire immediately
       renderTimers();
+    }
+  });
+
+  // ── Cooking floating timers ──
+  _cookingTimers.forEach(tmr => {
+    if (!tmr.running || tmr.done || !tmr.endTime) return;
+    tmr.remainSec = Math.max(0, Math.round((tmr.endTime - now) / 1000));
+    if (tmr.remainSec <= 0) {
+      tmr.remainSec = 0; tmr.running = false; tmr.done = true;
+      clearInterval(tmr.interval); tmr.interval = null;
+      _startCookingTimerAlert(tmr.id);
+      renderCookingTimersFloat();
     }
   });
 }
@@ -4120,9 +4169,10 @@ function renderCookingMode(recipe) {
     <div class="cooking-progress">
       ${steps.map((_, i) => `<div class="cooking-dot ${i === cookingModeStep ? 'active' : i < cookingModeStep ? 'done' : ''}"></div>`).join('')}
     </div>
+    <div id="cooking-timers-float" style="display:none;"></div>
     <div class="cooking-step-area">
       <div class="cooking-step-text">${escHtml(step)}</div>
-      ${buildCookingStepTimer(step)}
+      ${buildCookingStepTimer(step, cookingModeStep)}
     </div>
     <div class="cooking-ing-panel" id="cooking-ing-panel">
       <button class="cooking-ing-toggle" onclick="toggleCookingIngredients()">
@@ -4166,6 +4216,9 @@ function cookingStepPrev() {
 
 async function exitCookingMode() {
   cookingModeActive = false;
+  // Clean up cooking timers
+  _cookingTimers.forEach(tmr => { clearInterval(tmr.interval); clearInterval(tmr.alertInterval); });
+  _cookingTimers = [];
   document.getElementById('cooking-overlay')?.remove();
   try { await cookingModeWakeLock?.release(); cookingModeWakeLock = null; } catch {}
   _stopNoSleep();
@@ -4618,6 +4671,16 @@ function parseClaudeResponse(text) {
   const end = cleaned.lastIndexOf('}');
   if (start === -1 || end === -1) throw new Error(t('errorParseJson'));
   cleaned = cleaned.substring(start, end + 1);
+  // Sanitize unescaped control characters inside JSON string literals.
+  // Claude sometimes emits literal newlines/tabs inside strings which breaks JSON.parse().
+  cleaned = cleaned.replace(/"((?:[^"\\]|\\.)*)"/gs, (match, inner) => {
+    return '"' + inner
+      .replace(/\r\n/g, '\\n')
+      .replace(/\r/g, '\\r')
+      .replace(/\n/g, '\\n')
+      .replace(/\t/g, '\\t')
+      + '"';
+  });
   const obj = JSON.parse(cleaned);
   if (obj.error) throw new Error(t('errorNoRecipe'));
   // nutrition is already part of obj if Claude returned it
