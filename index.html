@@ -1572,11 +1572,13 @@ body.ltr .search-ai-icon { left:auto; right:38px; }
       <code>rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    // Owner can read/write their own data
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null &amp;&amp; request.auth.uid == userId;
     }
+    // Any signed-in user can READ any recipe (for share links)
     match /users/{userId}/recipes/{recipeId} {
-      allow read: if true;
+      allow read: if request.auth != null;
     }
   }
 }</code>
@@ -1926,6 +1928,13 @@ service cloud.firestore {
             <input type="password" id="settings-claude-key" class="settings-input" placeholder="sk-ant-...">
             <button class="btn-save mt-8" onclick="saveClaudeKey()" data-i18n="save">Save</button>
           </div>
+          <div class="settings-item" onclick="showFirestoreRulesHelp()" style="border-top:1px solid var(--c-border);border-bottom:none;">
+            <div class="settings-item-left">
+              <span class="settings-item-icon">🔒</span>
+              <span class="settings-item-label" data-i18n="firestoreRulesSettingsBtn">Firestore Rules</span>
+            </div>
+            <span class="settings-item-arrow">›</span>
+          </div>
         </div>
 
         <div class="settings-card">
@@ -2149,6 +2158,13 @@ const TRANSLATIONS = {
     errorParseJson: 'לא ניתן לנתח את תגובת Claude',
     errorNoRecipe: 'לא נמצא מתכון בתוכן',
     errorFirebase: 'שגיאת Firebase: ',
+    errorFirebasePermission: 'שגיאת הרשאות Firestore',
+    firestoreRulesHeader: 'כללי Firestore לשיתוף מתכונים',
+    firestoreRulesHelp: 'כדי לאפשר פתיחת מתכונים משותפים, יש לעדכן את כללי האבטחה של Firestore.',
+    firestoreRulesSteps: 'פתח את Firebase Console ועדכן את הכללים:',
+    firestoreRulesCopy: 'העתק כללים',
+    firestoreRulesOpen: 'פתח Firebase Console',
+    firestoreRulesSettingsBtn: '🔒 כללי Firestore',
     recipeAdded: 'המתכון נוסף!',
     recipeUpdated: 'המתכון עודכן!',
     recipeDeleted: 'המתכון נמחק',
@@ -2381,6 +2397,13 @@ const TRANSLATIONS = {
     errorParseJson: 'Не удалось разобрать ответ Claude',
     errorNoRecipe: 'Рецепт не найден в содержимом',
     errorFirebase: 'Ошибка Firebase: ',
+    errorFirebasePermission: 'Ошибка прав доступа Firestore',
+    firestoreRulesHeader: 'Правила Firestore для шаринга рецептов',
+    firestoreRulesHelp: 'Для открытия чужих рецептов по ссылке нужно обновить правила безопасности Firestore.',
+    firestoreRulesSteps: 'Откройте Firebase Console и обновите правила:',
+    firestoreRulesCopy: 'Копировать правила',
+    firestoreRulesOpen: 'Открыть Firebase Console',
+    firestoreRulesSettingsBtn: '🔒 Правила Firestore',
     recipeAdded: 'Рецепт добавлен!',
     recipeUpdated: 'Рецепт обновлён!',
     recipeDeleted: 'Рецепт удалён',
@@ -2613,6 +2636,13 @@ const TRANSLATIONS = {
     errorParseJson: 'Could not parse Claude response',
     errorNoRecipe: 'No recipe found in the content',
     errorFirebase: 'Firebase error: ',
+    errorFirebasePermission: 'Firestore permission error',
+    firestoreRulesHeader: 'Firestore Rules for Recipe Sharing',
+    firestoreRulesHelp: 'To open shared recipes, you need to update your Firestore security rules.',
+    firestoreRulesSteps: 'Open Firebase Console and update the rules:',
+    firestoreRulesCopy: 'Copy rules',
+    firestoreRulesOpen: 'Open Firebase Console',
+    firestoreRulesSettingsBtn: '🔒 Firestore Rules',
     recipeAdded: 'Recipe added!',
     recipeUpdated: 'Recipe updated!',
     recipeDeleted: 'Recipe deleted',
@@ -2740,7 +2770,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '2.0';
+const APP_VERSION = '2.0.1';
 
 // =====================================================================
 // APP STATE
@@ -3734,7 +3764,15 @@ function openRecipeDetail(id, readOnly = false, sharedUid = null) {
         if (!doc.exists) { showToast(t('errorNoRecipe'), 'error'); return; }
         renderRecipeDetailModal({ id: doc.id, ...doc.data() }, true, sharedUid);
       })
-      .catch(e => { hideLoading(); showToast(t('errorFirebase') + e.message, 'error'); });
+      .catch(e => {
+        hideLoading();
+        // permission-denied = Firestore rules block cross-user reads → show rules help
+        if (e.code === 'permission-denied' || (e.message && e.message.toLowerCase().includes('permission'))) {
+          showFirestoreRulesHelp();
+        } else {
+          showToast(t('errorFirebase') + e.message, 'error');
+        }
+      });
     return;
   }
   renderRecipeDetailModal(recipe, readOnly, sharedUid);
@@ -5706,6 +5744,61 @@ function shareRecipe(id) {
   } else {
     navigator.clipboard.writeText(url).then(() => showToast(t('linkCopied'), 'success'));
   }
+}
+
+// =====================================================================
+// FIRESTORE RULES HELP
+// =====================================================================
+const _FIRESTORE_SHARE_RULES = `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Any signed-in user can read/write their own data
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    // Any signed-in user can READ any recipe (required for share links)
+    match /users/{userId}/recipes/{recipeId} {
+      allow read: if request.auth != null;
+    }
+  }
+}`;
+
+function showFirestoreRulesHelp() {
+  let consoleUrl = 'https://console.firebase.google.com';
+  try {
+    const cfg = JSON.parse(localStorage.getItem('firebaseConfig') || '{}');
+    if (cfg.projectId) {
+      consoleUrl = `https://console.firebase.google.com/project/${cfg.projectId}/firestore/rules`;
+    }
+  } catch(_) {}
+
+  window._copyFirestoreRules = function() {
+    navigator.clipboard.writeText(_FIRESTORE_SHARE_RULES)
+      .then(() => showToast('✅ ' + (currentLang==='he' ? 'הועתק!' : currentLang==='ru' ? 'Скопировано!' : 'Copied!'), 'success'))
+      .catch(() => showToast('❌', 'error'));
+  };
+
+  openModal(`
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-title">🔒 ${t('firestoreRulesHeader')}</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:14px;line-height:1.6;margin:0 0 14px;">${t('firestoreRulesHelp')}</p>
+        <p style="font-size:13px;font-weight:600;margin:0 0 8px;color:var(--c-text-muted);">${t('firestoreRulesSteps')}</p>
+        <pre style="background:var(--c-surface2);padding:12px;border-radius:10px;font-size:10.5px;line-height:1.6;overflow-x:auto;white-space:pre-wrap;word-break:break-all;margin:0 0 16px;border:1px solid var(--c-border);">${escHtml(_FIRESTORE_SHARE_RULES)}</pre>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <button class="btn-primary" onclick="_copyFirestoreRules()">
+            📋 ${t('firestoreRulesCopy')}
+          </button>
+          <a href="${escHtml(consoleUrl)}" target="_blank" rel="noopener"
+             style="display:block;text-align:center;padding:12px;border-radius:var(--radius-sm);background:var(--c-surface2);color:var(--c-primary);font-weight:600;text-decoration:none;font-size:14px;border:1.5px solid var(--c-primary);">
+            🔗 ${t('firestoreRulesOpen')} ↗
+          </a>
+        </div>
+      </div>
+    </div>`);
 }
 
 // =====================================================================
