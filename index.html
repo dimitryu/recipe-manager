@@ -1906,6 +1906,7 @@ body.ltr .search-ai-icon { left:auto; right:38px; }
             <label style="font-size:13px;font-weight:600;color:var(--c-text-muted);" data-i18n="claudeKeyLabel">Claude API Key</label>
             <input type="password" id="settings-claude-key" class="settings-input" placeholder="sk-ant-...">
             <button class="btn-save mt-8" onclick="saveClaudeKey()" data-i18n="save">Save</button>
+            <div id="claude-key-status" style="display:none;margin-top:8px;font-size:13px;color:var(--c-success,#2e7d32);font-weight:600;">✅ <span data-i18n="keySaved">Key saved</span></div>
           </div>
         </div>
 
@@ -2026,6 +2027,7 @@ const TRANSLATIONS = {
     signOut: 'התנתק',
     resetSetup: 'איפוס הגדרות',
     save: 'שמור',
+    keySaved: 'המפתח נשמר',
     allCategories: 'הכל',
     breakfast: 'בוקר', lunch: 'צהריים', dinner: 'ערב',
     dessert: 'קינוח', snack: 'חטיף', drink: 'שתייה', other: 'אחר',
@@ -2260,6 +2262,7 @@ const TRANSLATIONS = {
     signOut: 'Выйти',
     resetSetup: 'Сбросить настройки',
     save: 'Сохранить',
+    keySaved: 'Ключ сохранён',
     allCategories: 'Все',
     breakfast: 'Завтрак', lunch: 'Обед', dinner: 'Ужин',
     dessert: 'Десерт', snack: 'Перекус', drink: 'Напиток', other: 'Другое',
@@ -2494,6 +2497,7 @@ const TRANSLATIONS = {
     signOut: 'Sign out',
     resetSetup: 'Reset setup',
     save: 'Save',
+    keySaved: 'Key saved',
     allCategories: 'All',
     breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner',
     dessert: 'Dessert', snack: 'Snack', drink: 'Drink', other: 'Other',
@@ -2727,7 +2731,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '2.0.5';
+const APP_VERSION = '2.0.6';
 
 // =====================================================================
 // BUILT-IN FIREBASE CONFIG (shared project — no per-user setup needed)
@@ -3033,7 +3037,16 @@ function renderSettingsProfile() {
 
 function saveClaudeKey() {
   const val = document.getElementById('settings-claude-key').value.trim();
-  if (val) { localStorage.setItem('claudeKey', val); showToast(t('save') + '!', 'success'); }
+  const statusEl = document.getElementById('claude-key-status');
+  if (val) {
+    localStorage.setItem('claudeKey', val);
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      // Hide after 4 seconds
+      clearTimeout(statusEl._hideTimer);
+      statusEl._hideTimer = setTimeout(() => { statusEl.style.display = 'none'; }, 4000);
+    }
+  }
 }
 
 // =====================================================================
