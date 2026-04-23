@@ -2735,7 +2735,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '2.0.3';
+const APP_VERSION = '2.0.4';
 
 // =====================================================================
 // APP STATE
@@ -3967,12 +3967,53 @@ function toggleIngCheck(i) {
 // =====================================================================
 // SERVING MULTIPLIER
 // =====================================================================
+// Parse a quantity string that may be a fraction ("1/4"), mixed number
+// ("1 1/2"), unicode fraction ("¾"), or plain number.
+function parseQty(qty) {
+  if (qty === null || qty === undefined || qty === '') return NaN;
+  const s = String(qty).trim();
+  if (!s) return NaN;
+  // Unicode fraction map
+  const uf = {'½':0.5,'¼':0.25,'¾':0.75,'⅓':1/3,'⅔':2/3,
+              '⅕':0.2,'⅖':0.4,'⅗':0.6,'⅘':0.8,
+              '⅙':1/6,'⅚':5/6,'⅛':0.125,'⅜':0.375,'⅝':0.625,'⅞':0.875};
+  // Pure unicode fraction: "½"
+  if (uf[s] !== undefined) return uf[s];
+  // Mixed number with unicode: "1½", "2 ¾"
+  const mixUni = s.match(/^(\d+)\s*([½¼¾⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞])$/);
+  if (mixUni) return parseInt(mixUni[1]) + (uf[mixUni[2]] || 0);
+  // Mixed number: "1 1/4"
+  const mixed = s.match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+  if (mixed) return parseInt(mixed[1]) + parseInt(mixed[2]) / parseInt(mixed[3]);
+  // Simple fraction: "1/4"
+  const frac = s.match(/^(\d+)\s*\/\s*(\d+)$/);
+  if (frac) return parseInt(frac[1]) / parseInt(frac[2]);
+  return parseFloat(s);
+}
+
+// Format a decimal result back as a nice fraction or number
+function _fmtQtyResult(n) {
+  if (isNaN(n)) return '';
+  if (n % 1 === 0) return String(n);
+  // Common fractions
+  const fracs = [[1,4,'¼'],[1,3,'⅓'],[3,8,'⅜'],[1,2,'½'],[5,8,'⅝'],[2,3,'⅔'],[3,4,'¾']];
+  const frac = n % 1;
+  const whole = Math.floor(n);
+  for (const [num, den, sym] of fracs) {
+    if (Math.abs(frac - num/den) < 0.01) {
+      return whole > 0 ? `${whole}${sym}` : sym;
+    }
+  }
+  // Fallback: up to 2 decimal places, strip trailing zeros
+  return n.toFixed(2).replace(/\.?0+$/, '');
+}
+
 function multiplyQty(qty) {
-  if (!qty) return '';
-  const n = parseFloat(qty);
-  if (isNaN(n)) return qty;
-  const result = n * detailServingMult;
-  return result % 1 === 0 ? result.toString() : result.toFixed(1);
+  if (!qty && qty !== 0) return '';
+  if (detailServingMult === 1) return String(qty); // preserve original exactly
+  const n = parseQty(qty);
+  if (isNaN(n)) return String(qty);
+  return _fmtQtyResult(n * detailServingMult);
 }
 
 function setServingMult(factor) {
@@ -4032,16 +4073,15 @@ function calcIngScaler(recipeId) {
     resultEl.innerHTML = `<span style="color:var(--c-danger)">${currentLang==='he'?'הכנס כמות תקינה':currentLang==='ru'?'Введите корректное количество':'Enter a valid quantity'}</span>`;
     return;
   }
-  const origQty = parseFloat(recipe.ingredients[idx]?.quantity);
+  const origQty = parseQty(recipe.ingredients[idx]?.quantity);
   if (isNaN(origQty) || origQty <= 0) {
     resultEl.innerHTML = `<span style="color:var(--c-danger)">${currentLang==='he'?'לא ניתן לחשב — כמות מקורית לא מספרית':currentLang==='ru'?'Невозможно вычислить — исходное кол. не число':'Cannot calculate — original qty is not numeric'}</span>`;
     return;
   }
   const factor = newQty / origQty;
   const scaledIngredients = recipe.ingredients.map((ing) => {
-    const origN = parseFloat(ing.quantity);
-    const scaledQty = isNaN(origN) ? ing.quantity
-      : (origN * factor % 1 === 0 ? (origN * factor).toString() : (origN * factor).toFixed(2));
+    const origN = parseQty(ing.quantity);
+    const scaledQty = isNaN(origN) ? ing.quantity : _fmtQtyResult(origN * factor);
     return { ...ing, quantity: String(scaledQty) };
   });
 
@@ -5990,11 +6030,11 @@ function rebuildShoppingList() {
       if (!ing.name) return;
       const key = (ing.name + '|' + ing.unit).toLowerCase();
       if (consolidated[key]) {
-        // Try to add quantities if numeric
-        const existQty = parseFloat(consolidated[key].quantity);
-        const newQty = parseFloat(ing.quantity);
+        // Try to add quantities — parseQty handles fractions like "1/4"
+        const existQty = parseQty(consolidated[key].quantity);
+        const newQty = parseQty(ing.quantity);
         if (!isNaN(existQty) && !isNaN(newQty)) {
-          consolidated[key].quantity = String(existQty + newQty);
+          consolidated[key].quantity = _fmtQtyResult(existQty + newQty);
         } else if (ing.quantity && consolidated[key].quantity !== ing.quantity) {
           consolidated[key].quantity += '+' + ing.quantity;
         }
