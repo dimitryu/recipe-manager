@@ -2731,7 +2731,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '2.0.6';
+const APP_VERSION = '2.0.7';
 
 // =====================================================================
 // BUILT-IN FIREBASE CONFIG (shared project — no per-user setup needed)
@@ -3028,9 +3028,11 @@ function renderSettingsProfile() {
       <p>${escHtml(currentUser.email || '')}</p>
     </div>
   `;
-  // Set saved claude key
+  // Set saved claude key + show saved indicator if key exists
   const ck = document.getElementById('settings-claude-key');
   if (ck) ck.value = localStorage.getItem('claudeKey') || '';
+  const keyStatus = document.getElementById('claude-key-status');
+  if (keyStatus) keyStatus.style.display = localStorage.getItem('claudeKey') ? 'block' : 'none';
   updateDarkModeUI();
   _updateAutoNightUI();
 }
@@ -3040,12 +3042,7 @@ function saveClaudeKey() {
   const statusEl = document.getElementById('claude-key-status');
   if (val) {
     localStorage.setItem('claudeKey', val);
-    if (statusEl) {
-      statusEl.style.display = 'block';
-      // Hide after 4 seconds
-      clearTimeout(statusEl._hideTimer);
-      statusEl._hideTimer = setTimeout(() => { statusEl.style.display = 'none'; }, 4000);
-    }
+    if (statusEl) statusEl.style.display = 'block';
   }
 }
 
