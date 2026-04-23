@@ -1554,8 +1554,8 @@ body.ltr .search-ai-icon { left:auto; right:38px; }
   <div id="modal-content"></div>
 </div>
 
-<!-- ===== SETUP SCREEN ===== -->
-<div id="setup-screen" class="screen active">
+<!-- ===== SETUP SCREEN (language + optional Claude key) ===== -->
+<div id="setup-screen" class="screen">
   <div class="setup-card">
     <div class="setup-logo">🍳</div>
     <div class="setup-title" data-i18n="appName">מתכוניה</div>
@@ -1567,24 +1567,13 @@ body.ltr .search-ai-icon { left:auto; right:38px; }
       <button class="lang-btn active" data-lang="en" onclick="setupLang('en')">English</button>
     </div>
 
-    <div class="setup-note">
-      <span data-i18n="setupFirestoreNote">In Firebase Console → Firestore Database → Rules, make sure authenticated users can read recipes (required for share links).</span>
-    </div>
-
-    <div class="setup-section">
-      <label data-i18n="firebaseConfigLabel">Firebase Config JSON (from Firebase Console → Project Settings → Your apps)</label>
-      <textarea id="setup-firebase-config" placeholder='{"apiKey":"...","authDomain":"...","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}'></textarea>
-      <div style="font-size:11px;color:var(--c-text-muted);margin-top:6px;line-height:1.6;" data-i18n="setupConfigHint">
-        ⚠️ Paste the raw JSON object only — no extra text, no links, no formatting.
-      </div>
-    </div>
-
     <div class="setup-section">
       <label data-i18n="claudeKeyLabel">Claude API Key (from console.anthropic.com)</label>
       <input type="password" id="setup-claude-key" placeholder="sk-ant-...">
+      <div style="font-size:11px;color:var(--c-text-muted);margin-top:5px;" data-i18n="claudeKeyOptional">Optional — required for AI recipe analysis</div>
     </div>
 
-    <button class="btn-primary" onclick="saveSetup()" data-i18n="saveSetup">Save & Continue</button>
+    <button class="btn-primary" onclick="saveSetup()" data-i18n="saveSetup">Continue</button>
   </div>
 </div>
 
@@ -2018,7 +2007,8 @@ const TRANSLATIONS = {
     setupFirestoreNote: 'הגדר את כללי האבטחה של Firestore ב-Firebase Console → Firestore → Rules:',
     firebaseConfigLabel: 'Firebase Config JSON (מ-Firebase Console → הגדרות פרויקט → האפליקציות שלך)',
     claudeKeyLabel: 'מפתח API של Claude (מ-console.anthropic.com)',
-    saveSetup: 'שמור והמשך',
+    claudeKeyOptional: 'אופציונלי — נדרש לניתוח מתכונים עם AI',
+    saveSetup: 'המשך',
     setupConfigHint: '⚠️ הדבק את ה-JSON בלבד — ללא טקסט נוסף, ללא קישורים, ללא עיצוב.',
     authSubtitle: 'התחבר כדי לנהל את המתכונים שלך',
     signInGoogle: 'התחבר עם Google',
@@ -2251,7 +2241,8 @@ const TRANSLATIONS = {
     setupFirestoreNote: 'Установите правила безопасности Firestore в Firebase Console → Firestore → Rules:',
     firebaseConfigLabel: 'Firebase Config JSON (из Firebase Console → Настройки проекта → Ваши приложения)',
     claudeKeyLabel: 'Ключ API Claude (из console.anthropic.com)',
-    saveSetup: 'Сохранить и продолжить',
+    claudeKeyOptional: 'Необязательно — нужен для AI-анализа рецептов',
+    saveSetup: 'Продолжить',
     setupConfigHint: '⚠️ Вставьте только JSON — без лишнего текста, ссылок и форматирования.',
     authSubtitle: 'Войдите для управления рецептами',
     signInGoogle: 'Войти через Google',
@@ -2484,7 +2475,8 @@ const TRANSLATIONS = {
     setupFirestoreNote: 'Set these Firestore Security Rules in Firebase Console → Firestore → Rules:',
     firebaseConfigLabel: 'Firebase Config JSON (from Firebase Console → Project Settings → Your apps)',
     claudeKeyLabel: 'Claude API Key (from console.anthropic.com)',
-    saveSetup: 'Save & Continue',
+    claudeKeyOptional: 'Optional — required for AI recipe analysis',
+    saveSetup: 'Continue',
     setupConfigHint: '⚠️ Paste the raw JSON only — no extra text, no links, no formatting.',
     authSubtitle: 'Sign in to manage your recipes',
     signInGoogle: 'Sign in with Google',
@@ -2735,7 +2727,19 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '2.0.4';
+const APP_VERSION = '2.0.5';
+
+// =====================================================================
+// BUILT-IN FIREBASE CONFIG (shared project — no per-user setup needed)
+// =====================================================================
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBEzZLgWxTzVSadg31R97wK8rZNRrjb3oQ",
+  authDomain: "recipe-4ef84.firebaseapp.com",
+  projectId: "recipe-4ef84",
+  storageBucket: "recipe-4ef84.firebasestorage.app",
+  messagingSenderId: "140355437476",
+  appId: "1:140355437476:web:7b04294455b8b0c305b731"
+};
 
 // =====================================================================
 // APP STATE
@@ -2910,19 +2914,14 @@ function compressImage(file, maxWidth = 800, maxHeight = 600, quality = 0.65) {
 }
 
 // =====================================================================
-// FIREBASE INIT
+// FIREBASE INIT (uses built-in FIREBASE_CONFIG — no user input needed)
 // =====================================================================
 function initFirebase() {
-  const raw = localStorage.getItem('firebaseConfig');
-  if (!raw) return false;
-  let config;
-  try { config = JSON.parse(raw); } catch { return false; }
   try {
     if (!firebase.apps.length) {
-      firebase.initializeApp(config);
+      firebase.initializeApp(FIREBASE_CONFIG);
     }
     db = firebase.firestore();
-    // Enable offline persistence (IndexedDB) — data available without internet
     db.enablePersistence({ synchronizeTabs: true }).catch(err => {
       if (err.code !== 'failed-precondition' && err.code !== 'unimplemented')
         console.warn('Firestore persistence:', err);
@@ -2938,63 +2937,23 @@ function initFirebase() {
 // =====================================================================
 // SETUP
 // =====================================================================
-// Clean a single Firebase config field value — strip markdown links, URL prefixes, brackets, quotes
-function _cleanFirebaseField(val) {
-  if (typeof val !== 'string') return val;
-  // Strip markdown link: [text](url) or [text](url) → extract just the domain/value
-  val = val.replace(/^\[([^\]]+)\]\([^)]*\)$/, '$1');
-  // Strip URL prefixes
-  val = val.replace(/^https?:\/\//i, '');
-  // Strip trailing slashes
-  val = val.replace(/\/+$/, '');
-  // Strip surrounding quotes or brackets
-  val = val.replace(/^['"\[\]]+|['"\[\]]+$/g, '');
-  return val.trim();
-}
-
 function saveSetup() {
-  const configRaw = document.getElementById('setup-firebase-config').value.trim();
-  const claudeKey = document.getElementById('setup-claude-key').value.trim();
-  if (!configRaw) { showToast('Please enter Firebase config', 'error'); return; }
-  let config;
-  try { config = JSON.parse(configRaw); } catch {
-    showToast(t('configError'), 'error'); return;
-  }
-  if (!config.apiKey || !config.projectId) {
-    showToast(t('configError'), 'error'); return;
-  }
-  // Sanitize string fields that are sometimes copied with markdown / URL formatting
-  const strFields = ['authDomain','projectId','storageBucket','messagingSenderId','appId','measurementId'];
-  let changed = false;
-  for (const f of strFields) {
-    if (typeof config[f] === 'string') {
-      const cleaned = _cleanFirebaseField(config[f]);
-      if (cleaned !== config[f]) { config[f] = cleaned; changed = true; }
-    }
-  }
-  // Validate authDomain looks like a real hostname (no spaces, no brackets)
-  if (config.authDomain && (/[\s\[\]()]/.test(config.authDomain) || config.authDomain.includes('://'))) {
-    showToast(t('configError') + ' (authDomain invalid)', 'error'); return;
-  }
-  localStorage.setItem('firebaseConfig', JSON.stringify(config));
+  // Firebase is built-in — only save optional Claude API key from setup screen
+  const claudeKey = (document.getElementById('setup-claude-key')?.value || '').trim();
   if (claudeKey) localStorage.setItem('claudeKey', claudeKey);
-  if (initFirebase()) {
-    setupAuthListener();
-    showScreen('auth-screen');
-    setLang(currentLang);
-  } else {
-    showToast(t('configError'), 'error');
-  }
+  setupAuthListener();
+  showScreen('auth-screen');
+  setLang(currentLang);
 }
 
 function resetSetup() {
   showConfirm(t('confirmReset'), () => {
     if (auth) auth.signOut().catch(() => {});
-    localStorage.removeItem('firebaseConfig');
     localStorage.removeItem('claudeKey');
     if (recipesListener) { recipesListener(); recipesListener = null; }
     allRecipes = [];
-    showScreen('setup-screen');
+    // Firebase is always available — go back to sign-in screen
+    showScreen('auth-screen');
   });
 }
 
@@ -6302,17 +6261,14 @@ function init() {
   // Apply lang
   setLang(currentLang);
 
-  // Try to init Firebase
-  const hasConfig = !!localStorage.getItem('firebaseConfig');
-  if (hasConfig) {
-    if (initFirebase()) {
-      setupAuthListener();
-      showScreen('auth-screen');
-    } else {
-      showScreen('setup-screen');
-    }
+  // Firebase config is built-in — init always, go straight to auth
+  if (initFirebase()) {
+    setupAuthListener();
+    showScreen('auth-screen');
   } else {
-    showScreen('setup-screen');
+    // Rare: Firebase SDK failed to load — show minimal error
+    showScreen('auth-screen');
+    setTimeout(() => showToast(t('configError'), 'error'), 500);
   }
 
   // Register service worker — reload page when new SW takes control (cache update)
