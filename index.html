@@ -1574,6 +1574,9 @@ body.ltr .search-ai-icon { left:auto; right:38px; }
     <div class="setup-section">
       <label data-i18n="firebaseConfigLabel">Firebase Config JSON (from Firebase Console → Project Settings → Your apps)</label>
       <textarea id="setup-firebase-config" placeholder='{"apiKey":"...","authDomain":"...","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}'></textarea>
+      <div style="font-size:11px;color:var(--c-text-muted);margin-top:6px;line-height:1.6;" data-i18n="setupConfigHint">
+        ⚠️ Paste the raw JSON object only — no extra text, no links, no formatting.
+      </div>
     </div>
 
     <div class="setup-section">
@@ -2016,6 +2019,7 @@ const TRANSLATIONS = {
     firebaseConfigLabel: 'Firebase Config JSON (מ-Firebase Console → הגדרות פרויקט → האפליקציות שלך)',
     claudeKeyLabel: 'מפתח API של Claude (מ-console.anthropic.com)',
     saveSetup: 'שמור והמשך',
+    setupConfigHint: '⚠️ הדבק את ה-JSON בלבד — ללא טקסט נוסף, ללא קישורים, ללא עיצוב.',
     authSubtitle: 'התחבר כדי לנהל את המתכונים שלך',
     signInGoogle: 'התחבר עם Google',
     searchPlaceholder: 'חיפוש מתכונים...',
@@ -2248,6 +2252,7 @@ const TRANSLATIONS = {
     firebaseConfigLabel: 'Firebase Config JSON (из Firebase Console → Настройки проекта → Ваши приложения)',
     claudeKeyLabel: 'Ключ API Claude (из console.anthropic.com)',
     saveSetup: 'Сохранить и продолжить',
+    setupConfigHint: '⚠️ Вставьте только JSON — без лишнего текста, ссылок и форматирования.',
     authSubtitle: 'Войдите для управления рецептами',
     signInGoogle: 'Войти через Google',
     searchPlaceholder: 'Поиск рецептов...',
@@ -2480,6 +2485,7 @@ const TRANSLATIONS = {
     firebaseConfigLabel: 'Firebase Config JSON (from Firebase Console → Project Settings → Your apps)',
     claudeKeyLabel: 'Claude API Key (from console.anthropic.com)',
     saveSetup: 'Save & Continue',
+    setupConfigHint: '⚠️ Paste the raw JSON only — no extra text, no links, no formatting.',
     authSubtitle: 'Sign in to manage your recipes',
     signInGoogle: 'Sign in with Google',
     searchPlaceholder: 'Search recipes...',
@@ -2729,7 +2735,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '2.0.2';
+const APP_VERSION = '2.0.3';
 
 // =====================================================================
 // APP STATE
@@ -2932,6 +2938,20 @@ function initFirebase() {
 // =====================================================================
 // SETUP
 // =====================================================================
+// Clean a single Firebase config field value — strip markdown links, URL prefixes, brackets, quotes
+function _cleanFirebaseField(val) {
+  if (typeof val !== 'string') return val;
+  // Strip markdown link: [text](url) or [text](url) → extract just the domain/value
+  val = val.replace(/^\[([^\]]+)\]\([^)]*\)$/, '$1');
+  // Strip URL prefixes
+  val = val.replace(/^https?:\/\//i, '');
+  // Strip trailing slashes
+  val = val.replace(/\/+$/, '');
+  // Strip surrounding quotes or brackets
+  val = val.replace(/^['"\[\]]+|['"\[\]]+$/g, '');
+  return val.trim();
+}
+
 function saveSetup() {
   const configRaw = document.getElementById('setup-firebase-config').value.trim();
   const claudeKey = document.getElementById('setup-claude-key').value.trim();
@@ -2943,7 +2963,20 @@ function saveSetup() {
   if (!config.apiKey || !config.projectId) {
     showToast(t('configError'), 'error'); return;
   }
-  localStorage.setItem('firebaseConfig', configRaw);
+  // Sanitize string fields that are sometimes copied with markdown / URL formatting
+  const strFields = ['authDomain','projectId','storageBucket','messagingSenderId','appId','measurementId'];
+  let changed = false;
+  for (const f of strFields) {
+    if (typeof config[f] === 'string') {
+      const cleaned = _cleanFirebaseField(config[f]);
+      if (cleaned !== config[f]) { config[f] = cleaned; changed = true; }
+    }
+  }
+  // Validate authDomain looks like a real hostname (no spaces, no brackets)
+  if (config.authDomain && (/[\s\[\]()]/.test(config.authDomain) || config.authDomain.includes('://'))) {
+    showToast(t('configError') + ' (authDomain invalid)', 'error'); return;
+  }
+  localStorage.setItem('firebaseConfig', JSON.stringify(config));
   if (claudeKey) localStorage.setItem('claudeKey', claudeKey);
   if (initFirebase()) {
     setupAuthListener();
