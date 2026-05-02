@@ -5406,30 +5406,56 @@ async function analyzeVideo(url) {
         } catch {}
       }
 
+      // Helper: extract a JSON field value from a block string
+      function extractJsonField(block, field) {
+        // Try direct JSON parse of a trimmed sub-object if possible
+        try {
+          const obj = JSON.parse(block);
+          if (obj[field] && String(obj[field]).length > 2) return String(obj[field]);
+        } catch {}
+        // Regex fallback — handles unicode-escaped and escaped chars
+        const m = block.match(new RegExp('"' + field + '"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"'));
+        return m ? decodeUniEsc(m[1]) : '';
+      }
+
       // ── Extract from raw HTML (priority order) ──
       if (rawHtml) {
-        // 1. shareMeta.desc — PRIMARY source, most reliable
+        // 1. shareMeta.desc — PRIMARY
         const sm = extractShareMetaDesc(rawHtml);
         if (sm && sm.desc && sm.desc.length > 5) {
           tiktokDesc  = sm.desc;
           tiktokTitle = sm.title || '';
         }
 
-        // 2. og:description
+        // 2. share_info.title — SECONDARY (TikTok API internal JSON)
+        if (!tiktokDesc) {
+          // Matches "share_info":{..."title":"<text>"...}  (block up to 3000 chars)
+          const siBlock = rawHtml.match(/"share_info"\s*:\s*(\{[^}]{0,3000}\})/);
+          if (siBlock) {
+            const siTitle = extractJsonField(siBlock[1], 'title');
+            const siDesc  = extractJsonField(siBlock[1], 'desc');
+            if (siDesc  && siDesc.length  > 5) tiktokDesc  = siDesc;
+            if (siTitle && siTitle.length > 2) tiktokTitle = tiktokTitle || siTitle;
+            // If no desc but title looks like a recipe caption, use title as desc
+            if (!tiktokDesc && siTitle && siTitle.length > 10) tiktokDesc = siTitle;
+          }
+        }
+
+        // 3. og:description
         if (!tiktokDesc) {
           const m = rawHtml.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']{5,3000})["']/i)
             || rawHtml.match(/<meta[^>]+content=["']([^"']{5,3000})["'][^>]+property=["']og:description["']/i);
           if (m) tiktokDesc = decodeUniEsc(m[1]);
         }
 
-        // 3. og:title (as last-resort title)
+        // 4. og:title
         if (!tiktokTitle) {
           const m = rawHtml.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']{2,300})["']/i)
             || rawHtml.match(/<meta[^>]+content=["']([^"']{2,300})["'][^>]+property=["']og:title["']/i);
           if (m) tiktokTitle = decodeUniEsc(m[1]);
         }
 
-        // 4. meta name=description
+        // 5. meta name=description
         if (!tiktokDesc) {
           const m = rawHtml.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']{5,3000})["']/i)
             || rawHtml.match(/<meta[^>]+content=["']([^"']{5,3000})["'][^>]+name=["']description["']/i);
@@ -5442,7 +5468,28 @@ async function analyzeVideo(url) {
         tiktokDesc = jinaText.substring(0, 4000);
       }
 
+      // ── Last resort: send the entire raw response to Claude and ask it to find the recipe ──
       if (!tiktokDesc && !tiktokTitle) {
+        const fullText = (rawHtml || jinaText || '').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+        if (fullText.length > 100) {
+          // Ask Claude to find the recipe anywhere in the page dump
+          showLoading('🤖 ' + t('analyzingVideo'));
+          const scanResponse = await callClaude([{
+            role: 'user',
+            content: (currentLang === 'he'
+              ? 'מצא בתוכן הבא מתכון אם קיים, ונתח אותו לפורמט JSON. אם אין מתכון ברור, השתמש בכל מידע רלוונטי שמצאת.'
+              : currentLang === 'ru'
+              ? 'Найди рецепт в следующем контенте и разбери его в JSON формат.'
+              : 'Find any recipe in the following page content and parse it.')
+              + '\n\n' + getRecipePromptVerbatim()
+              + '\n\nTikTok page content:\n' + fullText.substring(0, 6000)
+          }], 2500);
+          const scanParsed = parseClaudeResponse(scanResponse);
+          if (!scanParsed.sourceUrl) scanParsed.sourceUrl = url;
+          hideLoading();
+          openRecipeForm(scanParsed);
+          return;  // early exit — already handled
+        }
         throw new Error(currentLang === 'he'
           ? 'לא ניתן לחלץ תוכן מה-TikTok. נסה להדביק את הטקסט ישירות בלשונית "טקסט".'
           : currentLang === 'ru'
