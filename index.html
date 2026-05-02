@@ -5333,71 +5333,113 @@ async function analyzeVideo(url) {
       return;
 
     } else if (/tiktok\.com|vt\.tiktok\.com|vm\.tiktok\.com/i.test(url)) {
-      // ── TikTok (including short URLs: vt.tiktok.com, vm.tiktok.com) ──
+      // ── TikTok (incl. short URLs: vt.tiktok.com, vm.tiktok.com) ──
       showLoading('📄 ' + t('analyzingVideo'));
 
       let tiktokDesc = '';
       let tiktokTitle = '';
       let rawHtml = '';
 
-      // Strategy 1: Jina Reader — follows redirects, returns readable text + meta
+      // Helper: decode JSON unicode escapes  \uXXXX  inside a JS string
+      function decodeUniEsc(s) {
+        return s.replace(/\\u([0-9a-fA-F]{4})/g, (_, c) => String.fromCharCode(parseInt(c, 16)))
+                .replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\r/g, '');
+      }
+
+      // Helper: extract shareMeta.desc from raw HTML/JS source
+      // TikTok embeds:  "shareMeta":{"title":"...","desc":"<recipe text>"}
+      function extractShareMetaDesc(html) {
+        // Match "shareMeta" JSON block — handle any amount of whitespace / properties
+        const smBlock = html.match(/"shareMeta"\s*:\s*(\{[^}]{0,2000}\})/);
+        if (smBlock) {
+          // Try JSON.parse first
+          try {
+            const obj = JSON.parse(smBlock[1]);
+            if (obj.desc && obj.desc.length > 5) return { desc: obj.desc, title: obj.title || '' };
+          } catch {}
+          // Fallback: regex inside the block
+          const descM = smBlock[1].match(/"desc"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+          const titM  = smBlock[1].match(/"title"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+          if (descM) return {
+            desc:  decodeUniEsc(descM[1]),
+            title: titM ? decodeUniEsc(titM[1]) : ''
+          };
+        }
+        return null;
+      }
+
+      // ── Fetch 1: allorigins — raw HTML preserves embedded JSON ──
       try {
         const ctrl = new AbortController();
-        const tid = setTimeout(() => ctrl.abort(), 14000);
-        const r = await fetch(`https://r.jina.ai/${url}`, {
-          signal: ctrl.signal,
-          headers: { 'Accept': 'text/plain', 'X-Return-Format': 'text', 'X-With-Generated-Alt': 'true' }
-        });
+        const tid = setTimeout(() => ctrl.abort(), 13000);
+        const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
         clearTimeout(tid);
         if (r.ok) {
-          const text = await r.text();
-          if (text && text.length > 80) rawHtml = text.substring(0, 8000);
+          const d = await r.json();
+          if (d.contents && d.contents.length > 80) rawHtml = d.contents.substring(0, 80000);
         }
       } catch {}
 
-      // Strategy 2: allorigins (raw HTML with meta tags)
-      if (!rawHtml || rawHtml.length < 80) {
+      // ── Fetch 2: corsproxy fallback ──
+      if (!rawHtml) {
         try {
           const ctrl = new AbortController();
           const tid = setTimeout(() => ctrl.abort(), 12000);
-          const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
+          const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, { signal: ctrl.signal });
           clearTimeout(tid);
-          if (r.ok) {
-            const d = await r.json();
-            if (d.contents && d.contents.length > 80) rawHtml = d.contents.substring(0, 12000);
-          }
+          if (r.ok) { const t2 = await r.text(); if (t2.length > 80) rawHtml = t2.substring(0, 80000); }
         } catch {}
       }
 
+      // ── Fetch 3: Jina Reader (clean text, no raw JSON, last resort) ──
+      let jinaText = '';
+      if (!rawHtml) {
+        try {
+          const ctrl = new AbortController();
+          const tid = setTimeout(() => ctrl.abort(), 14000);
+          const r = await fetch(`https://r.jina.ai/${url}`, {
+            signal: ctrl.signal,
+            headers: { 'Accept': 'text/plain', 'X-Return-Format': 'text' }
+          });
+          clearTimeout(tid);
+          if (r.ok) { const t3 = await r.text(); if (t3.length > 80) jinaText = t3.substring(0, 8000); }
+        } catch {}
+      }
+
+      // ── Extract from raw HTML (priority order) ──
       if (rawHtml) {
-        // og:description — TikTok puts the caption/recipe text here
-        const ogDescMatch = rawHtml.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']{10,2000})["']/i)
-          || rawHtml.match(/<meta[^>]+content=["']([^"']{10,2000})["'][^>]+property=["']og:description["']/i);
-        if (ogDescMatch) tiktokDesc = ogDescMatch[1].replace(/\\u([0-9a-fA-F]{4})/g, (m,c) => String.fromCharCode(parseInt(c,16)));
+        // 1. shareMeta.desc — PRIMARY source, most reliable
+        const sm = extractShareMetaDesc(rawHtml);
+        if (sm && sm.desc && sm.desc.length > 5) {
+          tiktokDesc  = sm.desc;
+          tiktokTitle = sm.title || '';
+        }
 
-        // og:title
-        const ogTitleMatch = rawHtml.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']{2,300})["']/i)
-          || rawHtml.match(/<meta[^>]+content=["']([^"']{2,300})["'][^>]+property=["']og:title["']/i);
-        if (ogTitleMatch) tiktokTitle = ogTitleMatch[1];
-
-        // shareMeta.desc JSON embedded in page scripts
+        // 2. og:description
         if (!tiktokDesc) {
-          const shareMetaMatch = rawHtml.match(/"shareMeta"\s*:\s*\{[^}]*"desc"\s*:\s*"((?:[^"\\\\]|\\\\.)*)"/ );
-          if (shareMetaMatch) tiktokDesc = shareMetaMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+          const m = rawHtml.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']{5,3000})["']/i)
+            || rawHtml.match(/<meta[^>]+content=["']([^"']{5,3000})["'][^>]+property=["']og:description["']/i);
+          if (m) tiktokDesc = decodeUniEsc(m[1]);
         }
 
-        // meta name=description fallback
+        // 3. og:title (as last-resort title)
+        if (!tiktokTitle) {
+          const m = rawHtml.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']{2,300})["']/i)
+            || rawHtml.match(/<meta[^>]+content=["']([^"']{2,300})["'][^>]+property=["']og:title["']/i);
+          if (m) tiktokTitle = decodeUniEsc(m[1]);
+        }
+
+        // 4. meta name=description
         if (!tiktokDesc) {
-          const metaDescMatch = rawHtml.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']{10,2000})["']/i)
-            || rawHtml.match(/<meta[^>]+content=["']([^"']{10,2000})["'][^>]+name=["']description["']/i);
-          if (metaDescMatch) tiktokDesc = metaDescMatch[1];
+          const m = rawHtml.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']{5,3000})["']/i)
+            || rawHtml.match(/<meta[^>]+content=["']([^"']{5,3000})["'][^>]+name=["']description["']/i);
+          if (m) tiktokDesc = decodeUniEsc(m[1]);
         }
+      }
 
-        // Last resort: strip all tags and use whatever text is there (Jina output)
-        if (!tiktokDesc && rawHtml.length > 200) {
-          const cleaned = rawHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-          if (cleaned.length > 100) tiktokDesc = cleaned.substring(0, 4000);
-        }
+      // ── Jina fallback ──
+      if (!tiktokDesc && jinaText.length > 100) {
+        tiktokDesc = jinaText.substring(0, 4000);
       }
 
       if (!tiktokDesc && !tiktokTitle) {
@@ -5420,7 +5462,6 @@ async function analyzeVideo(url) {
       if (!ttParsed.sourceUrl) ttParsed.sourceUrl = url;
       hideLoading();
       openRecipeForm(ttParsed);
-
     } else {
       // Generic URL — fetch page text
       const content = await ytProxy(url, 10000);
