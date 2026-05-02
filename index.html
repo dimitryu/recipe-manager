@@ -5368,20 +5368,57 @@ async function analyzeVideo(url) {
         return null;
       }
 
-      // ── Fetch 1: allorigins — raw HTML preserves embedded JSON ──
+      // ── Fetch 1: TikTok official oEmbed API (CORS-enabled, most reliable) ──
+      // Returns JSON: { title: "<full caption with recipe>", author_name, ... }
       try {
         const ctrl = new AbortController();
-        const tid = setTimeout(() => ctrl.abort(), 13000);
-        const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
+        const tid = setTimeout(() => ctrl.abort(), 10000);
+        const oeUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`;
+        const r = await fetch(oeUrl, { signal: ctrl.signal });
         clearTimeout(tid);
         if (r.ok) {
-          const d = await r.json();
-          if (d.contents && d.contents.length > 80) rawHtml = d.contents.substring(0, 80000);
+          const oe = await r.json();
+          // oe.title contains the full video caption (including recipe text)
+          if (oe.title && oe.title.length > 5) {
+            tiktokDesc  = oe.title;
+            tiktokTitle = oe.author_name ? `@${oe.author_name}` : '';
+          }
         }
       } catch {}
 
-      // ── Fetch 2: corsproxy fallback ──
-      if (!rawHtml) {
+      // ── Fetch 2: noembed.com (oEmbed aggregator, fallback for oEmbed) ──
+      if (!tiktokDesc) {
+        try {
+          const ctrl = new AbortController();
+          const tid = setTimeout(() => ctrl.abort(), 10000);
+          const r = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
+          clearTimeout(tid);
+          if (r.ok) {
+            const oe = await r.json();
+            if (oe.title && oe.title.length > 5) {
+              tiktokDesc  = oe.title;
+              tiktokTitle = tiktokTitle || (oe.author_name ? `@${oe.author_name}` : '');
+            }
+          }
+        } catch {}
+      }
+
+      // ── Fetch 3: allorigins — raw HTML (may contain shareMeta JSON) ──
+      if (!tiktokDesc) {
+        try {
+          const ctrl = new AbortController();
+          const tid = setTimeout(() => ctrl.abort(), 13000);
+          const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
+          clearTimeout(tid);
+          if (r.ok) {
+            const d = await r.json();
+            if (d.contents && d.contents.length > 80) rawHtml = d.contents.substring(0, 80000);
+          }
+        } catch {}
+      }
+
+      // ── Fetch 4: corsproxy fallback ──
+      if (!tiktokDesc && !rawHtml) {
         try {
           const ctrl = new AbortController();
           const tid = setTimeout(() => ctrl.abort(), 12000);
@@ -5391,9 +5428,9 @@ async function analyzeVideo(url) {
         } catch {}
       }
 
-      // ── Fetch 3: Jina Reader (clean text, no raw JSON, last resort) ──
+      // ── Fetch 5: Jina Reader ──
       let jinaText = '';
-      if (!rawHtml) {
+      if (!tiktokDesc && !rawHtml) {
         try {
           const ctrl = new AbortController();
           const tid = setTimeout(() => ctrl.abort(), 14000);
@@ -5418,8 +5455,8 @@ async function analyzeVideo(url) {
         return m ? decodeUniEsc(m[1]) : '';
       }
 
-      // ── Extract from raw HTML (priority order) ──
-      if (rawHtml) {
+      // ── Extract from raw HTML (only if oEmbed didn't already give us text) ──
+      if (rawHtml && !tiktokDesc) {
         // 1. shareMeta.desc — PRIMARY
         const sm = extractShareMetaDesc(rawHtml);
         if (sm && sm.desc && sm.desc.length > 5) {
