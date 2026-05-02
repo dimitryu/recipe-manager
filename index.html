@@ -2731,7 +2731,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '2.0.7';
+const APP_VERSION = '2.1.0';
 
 // =====================================================================
 // BUILT-IN FIREBASE CONFIG (shared project — no per-user setup needed)
@@ -5368,25 +5368,45 @@ async function analyzeVideo(url) {
         return null;
       }
 
+      // ── Helper: extract text from oEmbed response ──
+      // TikTok oEmbed returns: { title: "caption text", html: "<blockquote><section><a>@user</a><p>FULL CAPTION</p>...</section></blockquote>" }
+      // The <p> inside html often has the complete caption; title may be truncated.
+      function extractOembedText(oe) {
+        let caption = '';
+        // Extract <p>...</p> from the html embed field — this has the full untruncated caption
+        if (oe.html) {
+          const pMatch = oe.html.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
+          if (pMatch) {
+            // Strip inner <a> tags (hashtag links) but keep their text
+            caption = pMatch[1].replace(/<a[^>]*>([^<]*)<\/a>/gi, '$1')
+                               .replace(/<[^>]+>/g, ' ')
+                               .replace(/&amp;/g, '&').replace(/&#39;/g, "'")
+                               .replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+                               .replace(/\s+/g, ' ').trim();
+          }
+        }
+        // Use whichever is longer: <p> content or title field
+        const titleText = (oe.title || '').trim();
+        return caption.length >= titleText.length ? caption : titleText;
+      }
+
       // ── Fetch 1: TikTok official oEmbed API (CORS-enabled, most reliable) ──
-      // Returns JSON: { title: "<full caption with recipe>", author_name, ... }
       try {
         const ctrl = new AbortController();
         const tid = setTimeout(() => ctrl.abort(), 10000);
-        const oeUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`;
-        const r = await fetch(oeUrl, { signal: ctrl.signal });
+        const r = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
         clearTimeout(tid);
         if (r.ok) {
           const oe = await r.json();
-          // oe.title contains the full video caption (including recipe text)
-          if (oe.title && oe.title.length > 5) {
-            tiktokDesc  = oe.title;
+          const cap = extractOembedText(oe);
+          if (cap && cap.length > 5) {
+            tiktokDesc  = cap;
             tiktokTitle = oe.author_name ? `@${oe.author_name}` : '';
           }
         }
       } catch {}
 
-      // ── Fetch 2: noembed.com (oEmbed aggregator, fallback for oEmbed) ──
+      // ── Fetch 2: noembed.com (oEmbed aggregator fallback) ──
       if (!tiktokDesc) {
         try {
           const ctrl = new AbortController();
@@ -5395,8 +5415,9 @@ async function analyzeVideo(url) {
           clearTimeout(tid);
           if (r.ok) {
             const oe = await r.json();
-            if (oe.title && oe.title.length > 5) {
-              tiktokDesc  = oe.title;
+            const cap = extractOembedText(oe);
+            if (cap && cap.length > 5) {
+              tiktokDesc  = cap;
               tiktokTitle = tiktokTitle || (oe.author_name ? `@${oe.author_name}` : '');
             }
           }
@@ -5534,13 +5555,15 @@ async function analyzeVideo(url) {
           : 'Could not extract TikTok content. Try pasting the recipe text in the "Text" tab.');
       }
 
+      // Build content for Claude — label clearly as TikTok caption so Claude knows to parse it
       let ttContent = `TikTok Video\nURL: ${url}\n`;
-      if (tiktokTitle) ttContent += `Title: ${tiktokTitle}\n`;
-      if (tiktokDesc)  ttContent += `\nCaption/Description:\n${tiktokDesc}\n`;
+      if (tiktokTitle) ttContent += `Author: ${tiktokTitle}\n`;
+      ttContent += `\nThe following is the TikTok video caption which contains the recipe. ` +
+        `Extract the recipe from it — ingredients, quantities, and preparation steps:\n\n${tiktokDesc || tiktokTitle}\n`;
 
       showLoading('🤖 ' + t('analyzingVideo'));
       const ttResponse = await callClaude([{
-        role: 'user', content: getRecipePromptVerbatim() + '\n\n' + ttContent
+        role: 'user', content: getRecipePrompt() + '\n\n' + ttContent
       }], 2500);
       const ttParsed = parseClaudeResponse(ttResponse);
       if (!ttParsed.sourceUrl) ttParsed.sourceUrl = url;
