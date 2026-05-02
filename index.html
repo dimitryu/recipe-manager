@@ -3794,6 +3794,7 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
       <span style="font-size:13px;color:var(--c-text-muted);">${t('servings')}:</span>
       <button class="mult-btn ${activeHalf ? 'active' : ''}" onclick="setServingMult(0.5)">×½</button>
       <button class="mult-btn ${detailServingMult === 1 ? 'active' : ''}" onclick="setServingMult(1)">×1</button>
+      <button class="mult-btn ${detailServingMult === 1.5 ? 'active' : ''}" onclick="setServingMult(1.5)">×1½</button>
       <button class="mult-btn ${detailServingMult === 2 ? 'active' : ''}" onclick="setServingMult(2)">×2</button>
       <button class="mult-btn ${detailServingMult === 3 ? 'active' : ''}" onclick="setServingMult(3)">×3</button>
     </div>`;
@@ -5331,8 +5332,97 @@ async function analyzeVideo(url) {
       document.getElementById('facebook-text')?.focus();
       return;
 
+    } else if (/tiktok\.com|vt\.tiktok\.com|vm\.tiktok\.com/i.test(url)) {
+      // ── TikTok (including short URLs: vt.tiktok.com, vm.tiktok.com) ──
+      showLoading('📄 ' + t('analyzingVideo'));
+
+      let tiktokDesc = '';
+      let tiktokTitle = '';
+      let rawHtml = '';
+
+      // Strategy 1: Jina Reader — follows redirects, returns readable text + meta
+      try {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 14000);
+        const r = await fetch(`https://r.jina.ai/${url}`, {
+          signal: ctrl.signal,
+          headers: { 'Accept': 'text/plain', 'X-Return-Format': 'text', 'X-With-Generated-Alt': 'true' }
+        });
+        clearTimeout(tid);
+        if (r.ok) {
+          const text = await r.text();
+          if (text && text.length > 80) rawHtml = text.substring(0, 8000);
+        }
+      } catch {}
+
+      // Strategy 2: allorigins (raw HTML with meta tags)
+      if (!rawHtml || rawHtml.length < 80) {
+        try {
+          const ctrl = new AbortController();
+          const tid = setTimeout(() => ctrl.abort(), 12000);
+          const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
+          clearTimeout(tid);
+          if (r.ok) {
+            const d = await r.json();
+            if (d.contents && d.contents.length > 80) rawHtml = d.contents.substring(0, 12000);
+          }
+        } catch {}
+      }
+
+      if (rawHtml) {
+        // og:description — TikTok puts the caption/recipe text here
+        const ogDescMatch = rawHtml.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']{10,2000})["']/i)
+          || rawHtml.match(/<meta[^>]+content=["']([^"']{10,2000})["'][^>]+property=["']og:description["']/i);
+        if (ogDescMatch) tiktokDesc = ogDescMatch[1].replace(/\\u([0-9a-fA-F]{4})/g, (m,c) => String.fromCharCode(parseInt(c,16)));
+
+        // og:title
+        const ogTitleMatch = rawHtml.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']{2,300})["']/i)
+          || rawHtml.match(/<meta[^>]+content=["']([^"']{2,300})["'][^>]+property=["']og:title["']/i);
+        if (ogTitleMatch) tiktokTitle = ogTitleMatch[1];
+
+        // shareMeta.desc JSON embedded in page scripts
+        if (!tiktokDesc) {
+          const shareMetaMatch = rawHtml.match(/"shareMeta"\s*:\s*\{[^}]*"desc"\s*:\s*"((?:[^"\\\\]|\\\\.)*)"/ );
+          if (shareMetaMatch) tiktokDesc = shareMetaMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+        }
+
+        // meta name=description fallback
+        if (!tiktokDesc) {
+          const metaDescMatch = rawHtml.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']{10,2000})["']/i)
+            || rawHtml.match(/<meta[^>]+content=["']([^"']{10,2000})["'][^>]+name=["']description["']/i);
+          if (metaDescMatch) tiktokDesc = metaDescMatch[1];
+        }
+
+        // Last resort: strip all tags and use whatever text is there (Jina output)
+        if (!tiktokDesc && rawHtml.length > 200) {
+          const cleaned = rawHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+          if (cleaned.length > 100) tiktokDesc = cleaned.substring(0, 4000);
+        }
+      }
+
+      if (!tiktokDesc && !tiktokTitle) {
+        throw new Error(currentLang === 'he'
+          ? 'לא ניתן לחלץ תוכן מה-TikTok. נסה להדביק את הטקסט ישירות בלשונית "טקסט".'
+          : currentLang === 'ru'
+          ? 'Не удалось извлечь контент TikTok. Вставьте текст рецепта вручную.'
+          : 'Could not extract TikTok content. Try pasting the recipe text in the "Text" tab.');
+      }
+
+      let ttContent = `TikTok Video\nURL: ${url}\n`;
+      if (tiktokTitle) ttContent += `Title: ${tiktokTitle}\n`;
+      if (tiktokDesc)  ttContent += `\nCaption/Description:\n${tiktokDesc}\n`;
+
+      showLoading('🤖 ' + t('analyzingVideo'));
+      const ttResponse = await callClaude([{
+        role: 'user', content: getRecipePromptVerbatim() + '\n\n' + ttContent
+      }], 2500);
+      const ttParsed = parseClaudeResponse(ttResponse);
+      if (!ttParsed.sourceUrl) ttParsed.sourceUrl = url;
+      hideLoading();
+      openRecipeForm(ttParsed);
+
     } else {
-      // Generic URL (TikTok, etc.) — fetch page text
+      // Generic URL — fetch page text
       const content = await ytProxy(url, 10000);
       const stripped = (content || '')
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
