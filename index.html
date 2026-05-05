@@ -212,9 +212,12 @@
 .cooking-ing-panel.open .cooking-ing-body { display: block; }
 .cooking-ing-item {
   font-size: 14px; padding: 5px 0; border-bottom: 1px solid var(--c-border);
-  color: var(--c-text); display: flex; gap: 6px;
+  color: var(--c-text); display: flex; gap: 6px; cursor: pointer;
+  transition: opacity 0.15s;
 }
 .cooking-ing-item:last-child { border-bottom: none; }
+.cooking-ing-item.checked { opacity: 0.45; }
+.cooking-ing-item.checked span { text-decoration: line-through; }
 /* Ingredient scaler */
 .ing-scaler-wrap {
   padding: 10px 16px 0; margin-bottom: -4px;
@@ -2731,7 +2734,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '2.1.0';
+const APP_VERSION = '2.1.1';
 
 // =====================================================================
 // BUILT-IN FIREBASE CONFIG (shared project — no per-user setup needed)
@@ -2768,6 +2771,8 @@ let currentOpenRecipeId = null;
 let cookingModeWakeLock = null;
 let cookingModeStep = 0;
 let cookingModeActive = false;
+// Persists checked ingredient indices across detail view ↔ cooking mode
+let checkedIngredients = new Set();
 let _noSleepVideo = null; // canvas-stream fallback for iOS <16.4
 let _detailNavList = [];   // snapshot of filteredRecipes when detail opens
 let _detailNavIdx  = -1;
@@ -3732,6 +3737,8 @@ function openRecipeDetail(id, readOnly = false, sharedUid = null) {
 }
 
 function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
+  // Clear checked state when switching to a different recipe
+  if (currentOpenRecipeId !== recipe.id) checkedIngredients.clear();
   currentOpenRecipeId = recipe.id;
   detailServingMult = 1;
   const heroInner = (recipe.images && recipe.images.length > 0)
@@ -3826,11 +3833,13 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
     </div>` : '';
 
   const ingredientsHtml = (recipe.ingredients && recipe.ingredients.length > 0)
-    ? recipe.ingredients.map((ing, i) => `
-        <label class="ingredient-check-item" id="ing-item-${i}">
-          <input type="checkbox" onchange="toggleIngCheck(${i})">
+    ? recipe.ingredients.map((ing, i) => {
+        const ck = checkedIngredients.has(i);
+        return `<label class="ingredient-check-item${ck ? ' checked' : ''}" id="ing-item-${i}">
+          <input type="checkbox" onchange="toggleIngCheck(${i})"${ck ? ' checked' : ''}>
           <span>${escHtml(multiplyQty(ing.quantity))} ${escHtml(ing.unit || '')} ${escHtml(ing.name || '')}</span>
-        </label>`).join('')
+        </label>`;
+      }).join('')
     : `<p style="color:var(--c-text-muted);font-size:14px;">${t('noIngredients')}</p>`;
 
   const stepsHtml = (recipe.steps && recipe.steps.length > 0)
@@ -3931,7 +3940,11 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
 
 function toggleIngCheck(i) {
   const item = document.getElementById('ing-item-' + i);
-  if (item) item.classList.toggle('checked', item.querySelector('input').checked);
+  if (!item) return;
+  const cb = item.querySelector('input');
+  item.classList.toggle('checked', cb.checked);
+  if (cb.checked) checkedIngredients.add(i);
+  else checkedIngredients.delete(i);
 }
 
 // =====================================================================
@@ -4005,11 +4018,13 @@ function renderDetailIngredients(recipe) {
     container.innerHTML = `<p style="color:var(--c-text-muted);font-size:14px;">${t('noIngredients')}</p>`;
     return;
   }
-  container.innerHTML = recipe.ingredients.map((ing, i) => `
-    <label class="ingredient-check-item" id="ing-item-${i}">
-      <input type="checkbox" onchange="toggleIngCheck(${i})">
+  container.innerHTML = recipe.ingredients.map((ing, i) => {
+    const ck = checkedIngredients.has(i);
+    return `<label class="ingredient-check-item${ck ? ' checked' : ''}" id="ing-item-${i}">
+      <input type="checkbox" onchange="toggleIngCheck(${i})"${ck ? ' checked' : ''}>
       <span>${escHtml(multiplyQty(ing.quantity))} ${escHtml(ing.unit || '')} ${escHtml(ing.name || '')}</span>
-    </label>`).join('');
+    </label>`;
+  }).join('');
 }
 
 // =====================================================================
@@ -4295,10 +4310,14 @@ function renderCookingMode(recipe) {
   // Build ingredients panel
   const ings = recipe.ingredients || [];
   const ingListHtml = ings.length
-    ? ings.map(ing => `<div class="cooking-ing-item">
-        <span style="color:var(--c-primary);font-weight:600;">${escHtml(String(ing.quantity || ''))} ${escHtml(ing.unit || '')}</span>
-        <span>${escHtml(ing.name || '')}</span>
-      </div>`).join('')
+    ? ings.map((ing, i) => {
+        const ck = checkedIngredients.has(i);
+        return `<div class="cooking-ing-item${ck ? ' checked' : ''}" onclick="toggleCookingIngCheck(${i})" id="cook-ing-${i}">
+          <span style="color:var(--c-primary);font-weight:600;min-width:0;">${escHtml(String(ing.quantity || ''))} ${escHtml(ing.unit || '')}</span>
+          <span>${escHtml(ing.name || '')}</span>
+          <span style="margin-inline-start:auto;font-size:16px;">${ck ? '✓' : ''}</span>
+        </div>`;
+      }).join('')
     : `<div style="color:var(--c-text-muted);font-size:13px;padding:6px 0;">${t('noIngredients')}</div>`;
 
   const ingPanelLabel = currentLang === 'he' ? `🧂 מצרכים (${ings.length})`
@@ -4339,6 +4358,28 @@ function renderCookingMode(recipe) {
 function toggleCookingIngredients() {
   const panel = document.getElementById('cooking-ing-panel');
   if (panel) panel.classList.toggle('open');
+}
+
+function toggleCookingIngCheck(i) {
+  // Toggle in the global Set
+  if (checkedIngredients.has(i)) checkedIngredients.delete(i);
+  else checkedIngredients.add(i);
+  // Update cooking mode item
+  const el = document.getElementById('cook-ing-' + i);
+  if (el) {
+    const ck = checkedIngredients.has(i);
+    el.classList.toggle('checked', ck);
+    const tick = el.querySelector('span:last-child');
+    if (tick) tick.textContent = ck ? '✓' : '';
+  }
+  // Also sync the detail view item if visible (user might go back)
+  const detailEl = document.getElementById('ing-item-' + i);
+  if (detailEl) {
+    const ck = checkedIngredients.has(i);
+    detailEl.classList.toggle('checked', ck);
+    const cb = detailEl.querySelector('input');
+    if (cb) cb.checked = ck;
+  }
 }
 
 function cookingStepNext() {
