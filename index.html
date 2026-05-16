@@ -212,12 +212,9 @@
 .cooking-ing-panel.open .cooking-ing-body { display: block; }
 .cooking-ing-item {
   font-size: 14px; padding: 5px 0; border-bottom: 1px solid var(--c-border);
-  color: var(--c-text); display: flex; gap: 6px; cursor: pointer;
-  transition: opacity 0.15s;
+  color: var(--c-text); display: flex; gap: 6px;
 }
 .cooking-ing-item:last-child { border-bottom: none; }
-.cooking-ing-item.checked { opacity: 0.45; }
-.cooking-ing-item.checked span { text-decoration: line-through; }
 /* Ingredient scaler */
 .ing-scaler-wrap {
   padding: 10px 16px 0; margin-bottom: -4px;
@@ -826,7 +823,10 @@ body.ltr .search-icon { right: auto; left: 14px; }
   max-height: 92vh;
   border-radius: 20px 20px 0 0;
 }
-.modal-sheet.modal-full { height: 100vh; max-height: 100vh; border-radius: 0; }
+.modal-sheet.modal-full { height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh; border-radius: 0; }
+.modal-sheet.modal-full .modal-header {
+  padding-top: max(16px, env(safe-area-inset-top, 0px));
+}
 /* Swipe navigation — override slideUp with horizontal slide */
 .modal-sheet.swipe-from-right { animation: slideFromRight 0.22s ease-out !important; }
 .modal-sheet.swipe-from-left  { animation: slideFromLeft  0.22s ease-out !important; }
@@ -850,6 +850,28 @@ body.ltr .search-icon { right: auto; left: 14px; }
 .modal-footer {
   padding: 16px 20px; border-top: 1px solid var(--c-border);
   display: flex; gap: 10px; flex-shrink: 0;
+}
+/* iOS back bar — shown only on iOS when safe-area > 20px (has notch/home indicator) */
+.ios-back-bar {
+  display: none;
+  position: sticky; bottom: 0; left: 0; right: 0; z-index: 10;
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-border);
+  padding: 10px 20px;
+  padding-bottom: max(14px, env(safe-area-inset-bottom, 14px));
+  flex-shrink: 0;
+}
+.ios-back-bar button {
+  width: 100%; padding: 13px;
+  background: var(--c-surface2); color: var(--c-text);
+  border-radius: var(--radius); font-size: 16px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.ios-back-bar button:active { opacity: 0.7; }
+@supports (padding-top: env(safe-area-inset-top)) {
+  @media (max-width: 767px) {
+    .ios-back-bar { display: flex; flex-direction: column; }
+  }
 }
 
 /* ===== ADD RECIPE MODAL TABS ===== */
@@ -2734,7 +2756,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '2.1.1';
+const APP_VERSION = '2.1.2';
 
 // =====================================================================
 // BUILT-IN FIREBASE CONFIG (shared project — no per-user setup needed)
@@ -2771,8 +2793,6 @@ let currentOpenRecipeId = null;
 let cookingModeWakeLock = null;
 let cookingModeStep = 0;
 let cookingModeActive = false;
-// Persists checked ingredient indices across detail view ↔ cooking mode
-let checkedIngredients = new Set();
 let _noSleepVideo = null; // canvas-stream fallback for iOS <16.4
 let _detailNavList = [];   // snapshot of filteredRecipes when detail opens
 let _detailNavIdx  = -1;
@@ -3737,8 +3757,6 @@ function openRecipeDetail(id, readOnly = false, sharedUid = null) {
 }
 
 function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
-  // Clear checked state when switching to a different recipe
-  if (currentOpenRecipeId !== recipe.id) checkedIngredients.clear();
   currentOpenRecipeId = recipe.id;
   detailServingMult = 1;
   const heroInner = (recipe.images && recipe.images.length > 0)
@@ -3801,7 +3819,6 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
       <span style="font-size:13px;color:var(--c-text-muted);">${t('servings')}:</span>
       <button class="mult-btn ${activeHalf ? 'active' : ''}" onclick="setServingMult(0.5)">×½</button>
       <button class="mult-btn ${detailServingMult === 1 ? 'active' : ''}" onclick="setServingMult(1)">×1</button>
-      <button class="mult-btn ${detailServingMult === 1.5 ? 'active' : ''}" onclick="setServingMult(1.5)">×1½</button>
       <button class="mult-btn ${detailServingMult === 2 ? 'active' : ''}" onclick="setServingMult(2)">×2</button>
       <button class="mult-btn ${detailServingMult === 3 ? 'active' : ''}" onclick="setServingMult(3)">×3</button>
     </div>`;
@@ -3833,13 +3850,11 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
     </div>` : '';
 
   const ingredientsHtml = (recipe.ingredients && recipe.ingredients.length > 0)
-    ? recipe.ingredients.map((ing, i) => {
-        const ck = checkedIngredients.has(i);
-        return `<label class="ingredient-check-item${ck ? ' checked' : ''}" id="ing-item-${i}">
-          <input type="checkbox" onchange="toggleIngCheck(${i})"${ck ? ' checked' : ''}>
+    ? recipe.ingredients.map((ing, i) => `
+        <label class="ingredient-check-item" id="ing-item-${i}">
+          <input type="checkbox" onchange="toggleIngCheck(${i})">
           <span>${escHtml(multiplyQty(ing.quantity))} ${escHtml(ing.unit || '')} ${escHtml(ing.name || '')}</span>
-        </label>`;
-      }).join('')
+        </label>`).join('')
     : `<p style="color:var(--c-text-muted);font-size:14px;">${t('noIngredients')}</p>`;
 
   const stepsHtml = (recipe.steps && recipe.steps.length > 0)
@@ -3910,10 +3925,9 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
           <span class="detail-nav-counter">${_detailNavIdx + 1}/${_detailNavList.length}</span>
           <button class="detail-nav-btn" onclick="detailNavGo(1)" ${_detailNavIdx >= _detailNavList.length - 1 ? 'disabled' : ''}>›</button>
         </div>` : ''}
-        <!-- swipe hint dots shown only when multiple recipes -->
         ${!readOnly && _detailNavList.length > 1 ? `<div style="display:none" id="detail-swipe-hint"></div>` : ''}
         <div class="modal-title" style="flex:1;">${escHtml(recipe.name)}</div>
-        <button class="modal-close" onclick="closeModal()">✕</button>
+        <button class="modal-close" onclick="closeModal()" style="width:40px;height:40px;font-size:20px;min-width:40px;">✕</button>
       </div>
       <div style="overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;">
         ${heroHtml}
@@ -3933,6 +3947,11 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
         ${sourceHtml}
         ${actionsHtml}
       </div>
+      <div class="ios-back-bar">
+        <button onclick="closeModal()">
+          ← ${currentLang==='he' ? 'חזרה למתכונים' : currentLang==='ru' ? 'К рецептам' : 'Back to Recipes'}
+        </button>
+      </div>
     </div>`);
   // Enable swipe navigation between recipes
   requestAnimationFrame(_initDetailSwipe);
@@ -3940,11 +3959,7 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
 
 function toggleIngCheck(i) {
   const item = document.getElementById('ing-item-' + i);
-  if (!item) return;
-  const cb = item.querySelector('input');
-  item.classList.toggle('checked', cb.checked);
-  if (cb.checked) checkedIngredients.add(i);
-  else checkedIngredients.delete(i);
+  if (item) item.classList.toggle('checked', item.querySelector('input').checked);
 }
 
 // =====================================================================
@@ -4018,13 +4033,11 @@ function renderDetailIngredients(recipe) {
     container.innerHTML = `<p style="color:var(--c-text-muted);font-size:14px;">${t('noIngredients')}</p>`;
     return;
   }
-  container.innerHTML = recipe.ingredients.map((ing, i) => {
-    const ck = checkedIngredients.has(i);
-    return `<label class="ingredient-check-item${ck ? ' checked' : ''}" id="ing-item-${i}">
-      <input type="checkbox" onchange="toggleIngCheck(${i})"${ck ? ' checked' : ''}>
+  container.innerHTML = recipe.ingredients.map((ing, i) => `
+    <label class="ingredient-check-item" id="ing-item-${i}">
+      <input type="checkbox" onchange="toggleIngCheck(${i})">
       <span>${escHtml(multiplyQty(ing.quantity))} ${escHtml(ing.unit || '')} ${escHtml(ing.name || '')}</span>
-    </label>`;
-  }).join('');
+    </label>`).join('');
 }
 
 // =====================================================================
@@ -4310,14 +4323,10 @@ function renderCookingMode(recipe) {
   // Build ingredients panel
   const ings = recipe.ingredients || [];
   const ingListHtml = ings.length
-    ? ings.map((ing, i) => {
-        const ck = checkedIngredients.has(i);
-        return `<div class="cooking-ing-item${ck ? ' checked' : ''}" onclick="toggleCookingIngCheck(${i})" id="cook-ing-${i}">
-          <span style="color:var(--c-primary);font-weight:600;min-width:0;">${escHtml(String(ing.quantity || ''))} ${escHtml(ing.unit || '')}</span>
-          <span>${escHtml(ing.name || '')}</span>
-          <span style="margin-inline-start:auto;font-size:16px;">${ck ? '✓' : ''}</span>
-        </div>`;
-      }).join('')
+    ? ings.map(ing => `<div class="cooking-ing-item">
+        <span style="color:var(--c-primary);font-weight:600;">${escHtml(String(ing.quantity || ''))} ${escHtml(ing.unit || '')}</span>
+        <span>${escHtml(ing.name || '')}</span>
+      </div>`).join('')
     : `<div style="color:var(--c-text-muted);font-size:13px;padding:6px 0;">${t('noIngredients')}</div>`;
 
   const ingPanelLabel = currentLang === 'he' ? `🧂 מצרכים (${ings.length})`
@@ -4358,28 +4367,6 @@ function renderCookingMode(recipe) {
 function toggleCookingIngredients() {
   const panel = document.getElementById('cooking-ing-panel');
   if (panel) panel.classList.toggle('open');
-}
-
-function toggleCookingIngCheck(i) {
-  // Toggle in the global Set
-  if (checkedIngredients.has(i)) checkedIngredients.delete(i);
-  else checkedIngredients.add(i);
-  // Update cooking mode item
-  const el = document.getElementById('cook-ing-' + i);
-  if (el) {
-    const ck = checkedIngredients.has(i);
-    el.classList.toggle('checked', ck);
-    const tick = el.querySelector('span:last-child');
-    if (tick) tick.textContent = ck ? '✓' : '';
-  }
-  // Also sync the detail view item if visible (user might go back)
-  const detailEl = document.getElementById('ing-item-' + i);
-  if (detailEl) {
-    const ck = checkedIngredients.has(i);
-    detailEl.classList.toggle('checked', ck);
-    const cb = detailEl.querySelector('input');
-    if (cb) cb.checked = ck;
-  }
 }
 
 function cookingStepNext() {
@@ -5373,245 +5360,8 @@ async function analyzeVideo(url) {
       document.getElementById('facebook-text')?.focus();
       return;
 
-    } else if (/tiktok\.com|vt\.tiktok\.com|vm\.tiktok\.com/i.test(url)) {
-      // ── TikTok (incl. short URLs: vt.tiktok.com, vm.tiktok.com) ──
-      showLoading('📄 ' + t('analyzingVideo'));
-
-      let tiktokDesc = '';
-      let tiktokTitle = '';
-      let rawHtml = '';
-
-      // Helper: decode JSON unicode escapes  \uXXXX  inside a JS string
-      function decodeUniEsc(s) {
-        return s.replace(/\\u([0-9a-fA-F]{4})/g, (_, c) => String.fromCharCode(parseInt(c, 16)))
-                .replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\r/g, '');
-      }
-
-      // Helper: extract shareMeta.desc from raw HTML/JS source
-      // TikTok embeds:  "shareMeta":{"title":"...","desc":"<recipe text>"}
-      function extractShareMetaDesc(html) {
-        // Match "shareMeta" JSON block — handle any amount of whitespace / properties
-        const smBlock = html.match(/"shareMeta"\s*:\s*(\{[^}]{0,2000}\})/);
-        if (smBlock) {
-          // Try JSON.parse first
-          try {
-            const obj = JSON.parse(smBlock[1]);
-            if (obj.desc && obj.desc.length > 5) return { desc: obj.desc, title: obj.title || '' };
-          } catch {}
-          // Fallback: regex inside the block
-          const descM = smBlock[1].match(/"desc"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-          const titM  = smBlock[1].match(/"title"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-          if (descM) return {
-            desc:  decodeUniEsc(descM[1]),
-            title: titM ? decodeUniEsc(titM[1]) : ''
-          };
-        }
-        return null;
-      }
-
-      // ── Helper: extract text from oEmbed response ──
-      // TikTok oEmbed returns: { title: "caption text", html: "<blockquote><section><a>@user</a><p>FULL CAPTION</p>...</section></blockquote>" }
-      // The <p> inside html often has the complete caption; title may be truncated.
-      function extractOembedText(oe) {
-        let caption = '';
-        // Extract <p>...</p> from the html embed field — this has the full untruncated caption
-        if (oe.html) {
-          const pMatch = oe.html.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
-          if (pMatch) {
-            // Strip inner <a> tags (hashtag links) but keep their text
-            caption = pMatch[1].replace(/<a[^>]*>([^<]*)<\/a>/gi, '$1')
-                               .replace(/<[^>]+>/g, ' ')
-                               .replace(/&amp;/g, '&').replace(/&#39;/g, "'")
-                               .replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-                               .replace(/\s+/g, ' ').trim();
-          }
-        }
-        // Use whichever is longer: <p> content or title field
-        const titleText = (oe.title || '').trim();
-        return caption.length >= titleText.length ? caption : titleText;
-      }
-
-      // ── Fetch 1: TikTok official oEmbed API (CORS-enabled, most reliable) ──
-      try {
-        const ctrl = new AbortController();
-        const tid = setTimeout(() => ctrl.abort(), 10000);
-        const r = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
-        clearTimeout(tid);
-        if (r.ok) {
-          const oe = await r.json();
-          const cap = extractOembedText(oe);
-          if (cap && cap.length > 5) {
-            tiktokDesc  = cap;
-            tiktokTitle = oe.author_name ? `@${oe.author_name}` : '';
-          }
-        }
-      } catch {}
-
-      // ── Fetch 2: noembed.com (oEmbed aggregator fallback) ──
-      if (!tiktokDesc) {
-        try {
-          const ctrl = new AbortController();
-          const tid = setTimeout(() => ctrl.abort(), 10000);
-          const r = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
-          clearTimeout(tid);
-          if (r.ok) {
-            const oe = await r.json();
-            const cap = extractOembedText(oe);
-            if (cap && cap.length > 5) {
-              tiktokDesc  = cap;
-              tiktokTitle = tiktokTitle || (oe.author_name ? `@${oe.author_name}` : '');
-            }
-          }
-        } catch {}
-      }
-
-      // ── Fetch 3: allorigins — raw HTML (may contain shareMeta JSON) ──
-      if (!tiktokDesc) {
-        try {
-          const ctrl = new AbortController();
-          const tid = setTimeout(() => ctrl.abort(), 13000);
-          const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
-          clearTimeout(tid);
-          if (r.ok) {
-            const d = await r.json();
-            if (d.contents && d.contents.length > 80) rawHtml = d.contents.substring(0, 80000);
-          }
-        } catch {}
-      }
-
-      // ── Fetch 4: corsproxy fallback ──
-      if (!tiktokDesc && !rawHtml) {
-        try {
-          const ctrl = new AbortController();
-          const tid = setTimeout(() => ctrl.abort(), 12000);
-          const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, { signal: ctrl.signal });
-          clearTimeout(tid);
-          if (r.ok) { const t2 = await r.text(); if (t2.length > 80) rawHtml = t2.substring(0, 80000); }
-        } catch {}
-      }
-
-      // ── Fetch 5: Jina Reader ──
-      let jinaText = '';
-      if (!tiktokDesc && !rawHtml) {
-        try {
-          const ctrl = new AbortController();
-          const tid = setTimeout(() => ctrl.abort(), 14000);
-          const r = await fetch(`https://r.jina.ai/${url}`, {
-            signal: ctrl.signal,
-            headers: { 'Accept': 'text/plain', 'X-Return-Format': 'text' }
-          });
-          clearTimeout(tid);
-          if (r.ok) { const t3 = await r.text(); if (t3.length > 80) jinaText = t3.substring(0, 8000); }
-        } catch {}
-      }
-
-      // Helper: extract a JSON field value from a block string
-      function extractJsonField(block, field) {
-        // Try direct JSON parse of a trimmed sub-object if possible
-        try {
-          const obj = JSON.parse(block);
-          if (obj[field] && String(obj[field]).length > 2) return String(obj[field]);
-        } catch {}
-        // Regex fallback — handles unicode-escaped and escaped chars
-        const m = block.match(new RegExp('"' + field + '"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"'));
-        return m ? decodeUniEsc(m[1]) : '';
-      }
-
-      // ── Extract from raw HTML (only if oEmbed didn't already give us text) ──
-      if (rawHtml && !tiktokDesc) {
-        // 1. shareMeta.desc — PRIMARY
-        const sm = extractShareMetaDesc(rawHtml);
-        if (sm && sm.desc && sm.desc.length > 5) {
-          tiktokDesc  = sm.desc;
-          tiktokTitle = sm.title || '';
-        }
-
-        // 2. share_info.title — SECONDARY (TikTok API internal JSON)
-        if (!tiktokDesc) {
-          // Matches "share_info":{..."title":"<text>"...}  (block up to 3000 chars)
-          const siBlock = rawHtml.match(/"share_info"\s*:\s*(\{[^}]{0,3000}\})/);
-          if (siBlock) {
-            const siTitle = extractJsonField(siBlock[1], 'title');
-            const siDesc  = extractJsonField(siBlock[1], 'desc');
-            if (siDesc  && siDesc.length  > 5) tiktokDesc  = siDesc;
-            if (siTitle && siTitle.length > 2) tiktokTitle = tiktokTitle || siTitle;
-            // If no desc but title looks like a recipe caption, use title as desc
-            if (!tiktokDesc && siTitle && siTitle.length > 10) tiktokDesc = siTitle;
-          }
-        }
-
-        // 3. og:description
-        if (!tiktokDesc) {
-          const m = rawHtml.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']{5,3000})["']/i)
-            || rawHtml.match(/<meta[^>]+content=["']([^"']{5,3000})["'][^>]+property=["']og:description["']/i);
-          if (m) tiktokDesc = decodeUniEsc(m[1]);
-        }
-
-        // 4. og:title
-        if (!tiktokTitle) {
-          const m = rawHtml.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']{2,300})["']/i)
-            || rawHtml.match(/<meta[^>]+content=["']([^"']{2,300})["'][^>]+property=["']og:title["']/i);
-          if (m) tiktokTitle = decodeUniEsc(m[1]);
-        }
-
-        // 5. meta name=description
-        if (!tiktokDesc) {
-          const m = rawHtml.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']{5,3000})["']/i)
-            || rawHtml.match(/<meta[^>]+content=["']([^"']{5,3000})["'][^>]+name=["']description["']/i);
-          if (m) tiktokDesc = decodeUniEsc(m[1]);
-        }
-      }
-
-      // ── Jina fallback ──
-      if (!tiktokDesc && jinaText.length > 100) {
-        tiktokDesc = jinaText.substring(0, 4000);
-      }
-
-      // ── Last resort: send the entire raw response to Claude and ask it to find the recipe ──
-      if (!tiktokDesc && !tiktokTitle) {
-        const fullText = (rawHtml || jinaText || '').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-        if (fullText.length > 100) {
-          // Ask Claude to find the recipe anywhere in the page dump
-          showLoading('🤖 ' + t('analyzingVideo'));
-          const scanResponse = await callClaude([{
-            role: 'user',
-            content: (currentLang === 'he'
-              ? 'מצא בתוכן הבא מתכון אם קיים, ונתח אותו לפורמט JSON. אם אין מתכון ברור, השתמש בכל מידע רלוונטי שמצאת.'
-              : currentLang === 'ru'
-              ? 'Найди рецепт в следующем контенте и разбери его в JSON формат.'
-              : 'Find any recipe in the following page content and parse it.')
-              + '\n\n' + getRecipePromptVerbatim()
-              + '\n\nTikTok page content:\n' + fullText.substring(0, 6000)
-          }], 2500);
-          const scanParsed = parseClaudeResponse(scanResponse);
-          if (!scanParsed.sourceUrl) scanParsed.sourceUrl = url;
-          hideLoading();
-          openRecipeForm(scanParsed);
-          return;  // early exit — already handled
-        }
-        throw new Error(currentLang === 'he'
-          ? 'לא ניתן לחלץ תוכן מה-TikTok. נסה להדביק את הטקסט ישירות בלשונית "טקסט".'
-          : currentLang === 'ru'
-          ? 'Не удалось извлечь контент TikTok. Вставьте текст рецепта вручную.'
-          : 'Could not extract TikTok content. Try pasting the recipe text in the "Text" tab.');
-      }
-
-      // Build content for Claude — label clearly as TikTok caption so Claude knows to parse it
-      let ttContent = `TikTok Video\nURL: ${url}\n`;
-      if (tiktokTitle) ttContent += `Author: ${tiktokTitle}\n`;
-      ttContent += `\nThe following is the TikTok video caption which contains the recipe. ` +
-        `Extract the recipe from it — ingredients, quantities, and preparation steps:\n\n${tiktokDesc || tiktokTitle}\n`;
-
-      showLoading('🤖 ' + t('analyzingVideo'));
-      const ttResponse = await callClaude([{
-        role: 'user', content: getRecipePrompt() + '\n\n' + ttContent
-      }], 2500);
-      const ttParsed = parseClaudeResponse(ttResponse);
-      if (!ttParsed.sourceUrl) ttParsed.sourceUrl = url;
-      hideLoading();
-      openRecipeForm(ttParsed);
     } else {
-      // Generic URL — fetch page text
+      // Generic URL (TikTok, etc.) — fetch page text
       const content = await ytProxy(url, 10000);
       const stripped = (content || '')
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
