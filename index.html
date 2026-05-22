@@ -63,9 +63,10 @@
   padding: 6px 16px; display: flex; gap: 12px; flex-wrap: wrap;
 }
 /* Serving multiplier */
-.serving-mult-row { display:flex; align-items:center; gap:8px; padding:8px 16px; flex-wrap:wrap; }
+.serving-mult-row { display:flex; align-items:center; gap:6px; padding:8px 16px; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+.serving-mult-row::-webkit-scrollbar { display:none; }
 .mult-btn {
-  padding:5px 12px; border-radius:20px; font-size:13px; font-weight:700;
+  padding:5px 11px; border-radius:20px; font-size:13px; font-weight:700; white-space:nowrap; flex-shrink:0;
   border: 2px solid var(--c-border); background: var(--c-surface2); color:var(--c-text-muted);
   transition: all 0.15s; cursor:pointer;
 }
@@ -3819,6 +3820,7 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
       <span style="font-size:13px;color:var(--c-text-muted);">${t('servings')}:</span>
       <button class="mult-btn ${activeHalf ? 'active' : ''}" onclick="setServingMult(0.5)">×½</button>
       <button class="mult-btn ${detailServingMult === 1 ? 'active' : ''}" onclick="setServingMult(1)">×1</button>
+      <button class="mult-btn ${detailServingMult === 1.5 ? 'active' : ''}" onclick="setServingMult(1.5)">×1½</button>
       <button class="mult-btn ${detailServingMult === 2 ? 'active' : ''}" onclick="setServingMult(2)">×2</button>
       <button class="mult-btn ${detailServingMult === 3 ? 'active' : ''}" onclick="setServingMult(3)">×3</button>
     </div>`;
@@ -4018,8 +4020,10 @@ function setServingMult(factor) {
   detailServingMult = factor;
   document.querySelectorAll('.mult-btn').forEach(b => {
     const txt = b.textContent.trim();
-    const isHalf = txt === '×½';
-    const btnFactor = isHalf ? 0.5 : parseFloat(txt.replace('×',''));
+    let btnFactor;
+    if (txt === '×½')  btnFactor = 0.5;
+    else if (txt === '×1½') btnFactor = 1.5;
+    else btnFactor = parseFloat(txt.replace('×',''));
     b.classList.toggle('active', btnFactor === factor);
   });
   const recipe = allRecipes.find(r => r.id === currentOpenRecipeId);
