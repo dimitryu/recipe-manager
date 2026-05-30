@@ -211,12 +211,20 @@
 }
 .cooking-ing-panel.open .cooking-ing-body { display: block; }
 .cooking-ing-item {
-  font-size: 14px; padding: 5px 0; border-bottom: 1px solid var(--c-border);
-  color: var(--c-text); display: flex; gap: 6px; cursor: pointer;
+  font-size: 14px; padding: 8px 4px; border-bottom: 1px solid var(--c-border);
+  color: var(--c-text); display: flex; gap: 6px; align-items: center;
+  width: 100%; text-align: start; background: none; border-radius: 0;
+  /* Android: remove tap delay + ensure touch fires */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0,0,0,0.06);
+  cursor: pointer;
   transition: opacity 0.15s;
+  /* reset button styles */
+  border-left: none; border-right: none; border-top: none;
 }
 .cooking-ing-item:last-child { border-bottom: none; }
-.cooking-ing-item.checked { opacity: 0.4; }
+.cooking-ing-item:active { opacity: 0.6; }
+.cooking-ing-item.checked { opacity: 0.42; }
 .cooking-ing-item.checked .ci-name,
 .cooking-ing-item.checked .ci-qty { text-decoration: line-through; }
 /* Ingredient scaler */
@@ -2735,7 +2743,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '2.1.2';
+const APP_VERSION = '2.1.3';
 
 // =====================================================================
 // BUILT-IN FIREBASE CONFIG (shared project — no per-user setup needed)
@@ -2772,7 +2780,7 @@ let currentOpenRecipeId = null;
 let cookingModeWakeLock = null;
 let cookingModeStep = 0;
 let cookingModeActive = false;
-let checkedIngredients = new Set(); // persists across detail ↔ cooking mode
+let checkedIngredients = new Set();
 let _noSleepVideo = null; // canvas-stream fallback for iOS <16.4
 let _detailNavList = [];   // snapshot of filteredRecipes when detail opens
 let _detailNavIdx  = -1;
@@ -4002,7 +4010,7 @@ function setServingMult(factor) {
   document.querySelectorAll('.mult-btn').forEach(b => {
     const txt = b.textContent.trim();
     let btnFactor;
-    if (txt === '×½')  btnFactor = 0.5;
+    if (txt === '×½') btnFactor = 0.5;
     else if (txt === '×1½') btnFactor = 1.5;
     else btnFactor = parseFloat(txt.replace('×',''));
     b.classList.toggle('active', btnFactor === factor);
@@ -4312,11 +4320,12 @@ function renderCookingMode(recipe) {
   const ingListHtml = ings.length
     ? ings.map((ing, i) => {
         const ck = checkedIngredients.has(i);
-        return `<div class="cooking-ing-item${ck?' checked':''}" id="cook-ing-${i}" onclick="toggleCookingIngCheck(${i})">
-          <span class="ci-qty" style="color:var(--c-primary);font-weight:600;min-width:0;">${escHtml(String(ing.quantity || ''))} ${escHtml(ing.unit || '')}</span>
-          <span class="ci-name" style="flex:1;">${escHtml(ing.name || '')}</span>
-          <span style="font-size:15px;min-width:18px;text-align:center;">${ck?'✓':''}</span>
-        </div>`;
+        return `<button type="button" class="cooking-ing-item${ck?' checked':''}" id="cook-ing-${i}"
+            onclick="toggleCookingIngCheck(${i})">
+          <span class="ci-qty" style="color:var(--c-primary);font-weight:600;flex-shrink:0;">${escHtml(String(ing.quantity || ''))} ${escHtml(ing.unit || '')}</span>
+          <span class="ci-name" style="flex:1;text-align:start;">${escHtml(ing.name || '')}</span>
+          <span class="ci-tick" style="font-size:16px;min-width:20px;text-align:center;flex-shrink:0;">${ck?'✓':''}</span>
+        </button>`;
       }).join('')
     : `<div style="color:var(--c-text-muted);font-size:13px;padding:6px 0;">${t('noIngredients')}</div>`;
 
@@ -4364,14 +4373,14 @@ function toggleCookingIngCheck(i) {
   if (checkedIngredients.has(i)) checkedIngredients.delete(i);
   else checkedIngredients.add(i);
   const ck = checkedIngredients.has(i);
-  // Update cooking mode item
+  // Update cooking mode button
   const el = document.getElementById('cook-ing-' + i);
   if (el) {
     el.classList.toggle('checked', ck);
-    const tick = el.querySelector('span:last-child');
+    const tick = el.querySelector('.ci-tick');
     if (tick) tick.textContent = ck ? '✓' : '';
   }
-  // Sync detail view item if open
+  // Sync detail view checkbox if open
   const det = document.getElementById('ing-item-' + i);
   if (det) {
     det.classList.toggle('checked', ck);
