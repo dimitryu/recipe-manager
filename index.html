@@ -63,10 +63,9 @@
   padding: 6px 16px; display: flex; gap: 12px; flex-wrap: wrap;
 }
 /* Serving multiplier */
-.serving-mult-row { display:flex; align-items:center; gap:6px; padding:8px 16px; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
-.serving-mult-row::-webkit-scrollbar { display:none; }
+.serving-mult-row { display:flex; align-items:center; gap:8px; padding:8px 16px; flex-wrap:wrap; }
 .mult-btn {
-  padding:5px 11px; border-radius:20px; font-size:13px; font-weight:700; white-space:nowrap; flex-shrink:0;
+  padding:5px 12px; border-radius:20px; font-size:13px; font-weight:700;
   border: 2px solid var(--c-border); background: var(--c-surface2); color:var(--c-text-muted);
   transition: all 0.15s; cursor:pointer;
 }
@@ -213,9 +212,13 @@
 .cooking-ing-panel.open .cooking-ing-body { display: block; }
 .cooking-ing-item {
   font-size: 14px; padding: 5px 0; border-bottom: 1px solid var(--c-border);
-  color: var(--c-text); display: flex; gap: 6px;
+  color: var(--c-text); display: flex; gap: 6px; cursor: pointer;
+  transition: opacity 0.15s;
 }
 .cooking-ing-item:last-child { border-bottom: none; }
+.cooking-ing-item.checked { opacity: 0.4; }
+.cooking-ing-item.checked .ci-name,
+.cooking-ing-item.checked .ci-qty { text-decoration: line-through; }
 /* Ingredient scaler */
 .ing-scaler-wrap {
   padding: 10px 16px 0; margin-bottom: -4px;
@@ -824,10 +827,7 @@ body.ltr .search-icon { right: auto; left: 14px; }
   max-height: 92vh;
   border-radius: 20px 20px 0 0;
 }
-.modal-sheet.modal-full { height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh; border-radius: 0; }
-.modal-sheet.modal-full .modal-header {
-  padding-top: max(16px, env(safe-area-inset-top, 0px));
-}
+.modal-sheet.modal-full { height: 100vh; max-height: 100vh; border-radius: 0; }
 /* Swipe navigation — override slideUp with horizontal slide */
 .modal-sheet.swipe-from-right { animation: slideFromRight 0.22s ease-out !important; }
 .modal-sheet.swipe-from-left  { animation: slideFromLeft  0.22s ease-out !important; }
@@ -851,28 +851,6 @@ body.ltr .search-icon { right: auto; left: 14px; }
 .modal-footer {
   padding: 16px 20px; border-top: 1px solid var(--c-border);
   display: flex; gap: 10px; flex-shrink: 0;
-}
-/* iOS back bar — shown only on iOS when safe-area > 20px (has notch/home indicator) */
-.ios-back-bar {
-  display: none;
-  position: sticky; bottom: 0; left: 0; right: 0; z-index: 10;
-  background: var(--c-surface);
-  border-top: 1px solid var(--c-border);
-  padding: 10px 20px;
-  padding-bottom: max(14px, env(safe-area-inset-bottom, 14px));
-  flex-shrink: 0;
-}
-.ios-back-bar button {
-  width: 100%; padding: 13px;
-  background: var(--c-surface2); color: var(--c-text);
-  border-radius: var(--radius); font-size: 16px; font-weight: 600;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-}
-.ios-back-bar button:active { opacity: 0.7; }
-@supports (padding-top: env(safe-area-inset-top)) {
-  @media (max-width: 767px) {
-    .ios-back-bar { display: flex; flex-direction: column; }
-  }
 }
 
 /* ===== ADD RECIPE MODAL TABS ===== */
@@ -2794,6 +2772,7 @@ let currentOpenRecipeId = null;
 let cookingModeWakeLock = null;
 let cookingModeStep = 0;
 let cookingModeActive = false;
+let checkedIngredients = new Set(); // persists across detail ↔ cooking mode
 let _noSleepVideo = null; // canvas-stream fallback for iOS <16.4
 let _detailNavList = [];   // snapshot of filteredRecipes when detail opens
 let _detailNavIdx  = -1;
@@ -3758,6 +3737,7 @@ function openRecipeDetail(id, readOnly = false, sharedUid = null) {
 }
 
 function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
+  if (currentOpenRecipeId !== recipe.id) checkedIngredients.clear();
   currentOpenRecipeId = recipe.id;
   detailServingMult = 1;
   const heroInner = (recipe.images && recipe.images.length > 0)
@@ -3852,11 +3832,13 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
     </div>` : '';
 
   const ingredientsHtml = (recipe.ingredients && recipe.ingredients.length > 0)
-    ? recipe.ingredients.map((ing, i) => `
-        <label class="ingredient-check-item" id="ing-item-${i}">
-          <input type="checkbox" onchange="toggleIngCheck(${i})">
+    ? recipe.ingredients.map((ing, i) => {
+        const ck = checkedIngredients.has(i);
+        return `<label class="ingredient-check-item${ck?' checked':''}" id="ing-item-${i}">
+          <input type="checkbox" onchange="toggleIngCheck(${i})"${ck?' checked':''}>
           <span>${escHtml(multiplyQty(ing.quantity))} ${escHtml(ing.unit || '')} ${escHtml(ing.name || '')}</span>
-        </label>`).join('')
+        </label>`;
+      }).join('')
     : `<p style="color:var(--c-text-muted);font-size:14px;">${t('noIngredients')}</p>`;
 
   const stepsHtml = (recipe.steps && recipe.steps.length > 0)
@@ -3927,9 +3909,10 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
           <span class="detail-nav-counter">${_detailNavIdx + 1}/${_detailNavList.length}</span>
           <button class="detail-nav-btn" onclick="detailNavGo(1)" ${_detailNavIdx >= _detailNavList.length - 1 ? 'disabled' : ''}>›</button>
         </div>` : ''}
+        <!-- swipe hint dots shown only when multiple recipes -->
         ${!readOnly && _detailNavList.length > 1 ? `<div style="display:none" id="detail-swipe-hint"></div>` : ''}
         <div class="modal-title" style="flex:1;">${escHtml(recipe.name)}</div>
-        <button class="modal-close" onclick="closeModal()" style="width:40px;height:40px;font-size:20px;min-width:40px;">✕</button>
+        <button class="modal-close" onclick="closeModal()">✕</button>
       </div>
       <div style="overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;">
         ${heroHtml}
@@ -3949,11 +3932,6 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
         ${sourceHtml}
         ${actionsHtml}
       </div>
-      <div class="ios-back-bar">
-        <button onclick="closeModal()">
-          ← ${currentLang==='he' ? 'חזרה למתכונים' : currentLang==='ru' ? 'К рецептам' : 'Back to Recipes'}
-        </button>
-      </div>
     </div>`);
   // Enable swipe navigation between recipes
   requestAnimationFrame(_initDetailSwipe);
@@ -3961,7 +3939,10 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
 
 function toggleIngCheck(i) {
   const item = document.getElementById('ing-item-' + i);
-  if (item) item.classList.toggle('checked', item.querySelector('input').checked);
+  if (!item) return;
+  const cb = item.querySelector('input');
+  item.classList.toggle('checked', cb.checked);
+  if (cb.checked) checkedIngredients.add(i); else checkedIngredients.delete(i);
 }
 
 // =====================================================================
@@ -4037,11 +4018,13 @@ function renderDetailIngredients(recipe) {
     container.innerHTML = `<p style="color:var(--c-text-muted);font-size:14px;">${t('noIngredients')}</p>`;
     return;
   }
-  container.innerHTML = recipe.ingredients.map((ing, i) => `
-    <label class="ingredient-check-item" id="ing-item-${i}">
-      <input type="checkbox" onchange="toggleIngCheck(${i})">
+  container.innerHTML = recipe.ingredients.map((ing, i) => {
+    const ck = checkedIngredients.has(i);
+    return `<label class="ingredient-check-item${ck?' checked':''}" id="ing-item-${i}">
+      <input type="checkbox" onchange="toggleIngCheck(${i})"${ck?' checked':''}>
       <span>${escHtml(multiplyQty(ing.quantity))} ${escHtml(ing.unit || '')} ${escHtml(ing.name || '')}</span>
-    </label>`).join('');
+    </label>`;
+  }).join('');
 }
 
 // =====================================================================
@@ -4327,10 +4310,14 @@ function renderCookingMode(recipe) {
   // Build ingredients panel
   const ings = recipe.ingredients || [];
   const ingListHtml = ings.length
-    ? ings.map(ing => `<div class="cooking-ing-item">
-        <span style="color:var(--c-primary);font-weight:600;">${escHtml(String(ing.quantity || ''))} ${escHtml(ing.unit || '')}</span>
-        <span>${escHtml(ing.name || '')}</span>
-      </div>`).join('')
+    ? ings.map((ing, i) => {
+        const ck = checkedIngredients.has(i);
+        return `<div class="cooking-ing-item${ck?' checked':''}" id="cook-ing-${i}" onclick="toggleCookingIngCheck(${i})">
+          <span class="ci-qty" style="color:var(--c-primary);font-weight:600;min-width:0;">${escHtml(String(ing.quantity || ''))} ${escHtml(ing.unit || '')}</span>
+          <span class="ci-name" style="flex:1;">${escHtml(ing.name || '')}</span>
+          <span style="font-size:15px;min-width:18px;text-align:center;">${ck?'✓':''}</span>
+        </div>`;
+      }).join('')
     : `<div style="color:var(--c-text-muted);font-size:13px;padding:6px 0;">${t('noIngredients')}</div>`;
 
   const ingPanelLabel = currentLang === 'he' ? `🧂 מצרכים (${ings.length})`
@@ -4371,6 +4358,26 @@ function renderCookingMode(recipe) {
 function toggleCookingIngredients() {
   const panel = document.getElementById('cooking-ing-panel');
   if (panel) panel.classList.toggle('open');
+}
+
+function toggleCookingIngCheck(i) {
+  if (checkedIngredients.has(i)) checkedIngredients.delete(i);
+  else checkedIngredients.add(i);
+  const ck = checkedIngredients.has(i);
+  // Update cooking mode item
+  const el = document.getElementById('cook-ing-' + i);
+  if (el) {
+    el.classList.toggle('checked', ck);
+    const tick = el.querySelector('span:last-child');
+    if (tick) tick.textContent = ck ? '✓' : '';
+  }
+  // Sync detail view item if open
+  const det = document.getElementById('ing-item-' + i);
+  if (det) {
+    det.classList.toggle('checked', ck);
+    const cb = det.querySelector('input');
+    if (cb) cb.checked = ck;
+  }
 }
 
 function cookingStepNext() {
