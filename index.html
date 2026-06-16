@@ -114,6 +114,15 @@
   font-size: 22px; line-height: 1.6; text-align: center; color: var(--c-text);
   max-width: 600px;
 }
+.cooking-speak-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 18px; border-radius: 24px; border: 1.5px solid var(--c-border);
+  background: var(--c-surface2); color: var(--c-text); font-size: 15px; font-weight: 600;
+  cursor: pointer; touch-action: manipulation; transition: all 0.15s;
+}
+.cooking-speak-btn:active { transform: scale(0.96); }
+.cooking-speak-btn.speaking { background: var(--c-primary); color: #fff; border-color: var(--c-primary); }
+.cooking-speak-btn .csb-icon { font-size: 17px; }
 /* Cooking step timer — inline start button */
 .cst-start-btn {
   margin-top: 10px; padding: 12px 20px; border-radius: 12px; border: none;
@@ -211,19 +220,10 @@
 }
 .cooking-ing-panel.open .cooking-ing-body { display: block; }
 .cooking-ing-item {
-  font-size: 14px; padding: 8px 4px; border-bottom: 1px solid var(--c-border);
-  color: var(--c-text); display: flex; gap: 6px; align-items: center;
-  width: 100%; text-align: start; background: none;
-  border-left: none; border-right: none; border-top: none; border-radius: 0;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: rgba(0,0,0,0.06);
-  cursor: pointer; transition: opacity 0.15s;
+  font-size: 14px; padding: 5px 0; border-bottom: 1px solid var(--c-border);
+  color: var(--c-text); display: flex; gap: 6px;
 }
 .cooking-ing-item:last-child { border-bottom: none; }
-.cooking-ing-item:active { opacity: 0.6; }
-.cooking-ing-item.checked { opacity: 0.42; }
-.cooking-ing-item.checked .ci-name,
-.cooking-ing-item.checked .ci-qty { text-decoration: line-through; }
 /* Ingredient scaler */
 .ing-scaler-wrap {
   padding: 10px 16px 0; margin-bottom: -4px;
@@ -832,33 +832,7 @@ body.ltr .search-icon { right: auto; left: 14px; }
   max-height: 92vh;
   border-radius: 20px 20px 0 0;
 }
-.modal-sheet.modal-full { height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh; border-radius: 0; }
-/* iOS: push header below status-bar / Dynamic Island */
-.modal-sheet.modal-full .modal-header {
-  padding-top: max(16px, env(safe-area-inset-top, 0px));
-}
-/* make ✕ bigger — easier to tap */
-.modal-sheet.modal-full .modal-close {
-  width: 40px; height: 40px; font-size: 18px; min-width: 40px;
-}
-/* iOS back bar — sticky bottom, mobile only */
-.ios-back-bar {
-  display: none;
-  position: sticky; bottom: 0; z-index: 10;
-  background: var(--c-surface); border-top: 1px solid var(--c-border);
-  padding: 10px 20px;
-  padding-bottom: max(14px, env(safe-area-inset-bottom, 14px));
-  flex-shrink: 0;
-}
-.ios-back-bar-btn {
-  width: 100%; padding: 13px;
-  background: var(--c-surface2); color: var(--c-text);
-  border-radius: var(--radius); font-size: 16px; font-weight: 600;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  touch-action: manipulation;
-}
-.ios-back-bar-btn:active { opacity: 0.7; }
-@media (max-width: 767px) { .ios-back-bar { display: flex; flex-direction: column; } }
+.modal-sheet.modal-full { height: 100vh; max-height: 100vh; border-radius: 0; }
 /* Swipe navigation — override slideUp with horizontal slide */
 .modal-sheet.swipe-from-right { animation: slideFromRight 0.22s ease-out !important; }
 .modal-sheet.swipe-from-left  { animation: slideFromLeft  0.22s ease-out !important; }
@@ -2766,7 +2740,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '2.1.4';
+const APP_VERSION = '2.1.5';
 
 // =====================================================================
 // BUILT-IN FIREBASE CONFIG (shared project — no per-user setup needed)
@@ -2803,7 +2777,6 @@ let currentOpenRecipeId = null;
 let cookingModeWakeLock = null;
 let cookingModeStep = 0;
 let cookingModeActive = false;
-let checkedIngredients = new Set();
 let _noSleepVideo = null; // canvas-stream fallback for iOS <16.4
 let _detailNavList = [];   // snapshot of filteredRecipes when detail opens
 let _detailNavIdx  = -1;
@@ -3768,7 +3741,6 @@ function openRecipeDetail(id, readOnly = false, sharedUid = null) {
 }
 
 function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
-  if (currentOpenRecipeId !== recipe.id) checkedIngredients.clear();
   currentOpenRecipeId = recipe.id;
   detailServingMult = 1;
   const heroInner = (recipe.images && recipe.images.length > 0)
@@ -3831,7 +3803,6 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
       <span style="font-size:13px;color:var(--c-text-muted);">${t('servings')}:</span>
       <button class="mult-btn ${activeHalf ? 'active' : ''}" onclick="setServingMult(0.5)">×½</button>
       <button class="mult-btn ${detailServingMult === 1 ? 'active' : ''}" onclick="setServingMult(1)">×1</button>
-      <button class="mult-btn ${detailServingMult === 1.5 ? 'active' : ''}" onclick="setServingMult(1.5)">×1½</button>
       <button class="mult-btn ${detailServingMult === 2 ? 'active' : ''}" onclick="setServingMult(2)">×2</button>
       <button class="mult-btn ${detailServingMult === 3 ? 'active' : ''}" onclick="setServingMult(3)">×3</button>
     </div>`;
@@ -3863,13 +3834,11 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
     </div>` : '';
 
   const ingredientsHtml = (recipe.ingredients && recipe.ingredients.length > 0)
-    ? recipe.ingredients.map((ing, i) => {
-        const ck = checkedIngredients.has(i);
-        return `<label class="ingredient-check-item${ck?' checked':''}" id="ing-item-${i}">
-          <input type="checkbox" onchange="toggleIngCheck(${i})"${ck?' checked':''}>
+    ? recipe.ingredients.map((ing, i) => `
+        <label class="ingredient-check-item" id="ing-item-${i}">
+          <input type="checkbox" onchange="toggleIngCheck(${i})">
           <span>${escHtml(multiplyQty(ing.quantity))} ${escHtml(ing.unit || '')} ${escHtml(ing.name || '')}</span>
-        </label>`;
-      }).join('')
+        </label>`).join('')
     : `<p style="color:var(--c-text-muted);font-size:14px;">${t('noIngredients')}</p>`;
 
   const stepsHtml = (recipe.steps && recipe.steps.length > 0)
@@ -3963,11 +3932,6 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
         ${sourceHtml}
         ${actionsHtml}
       </div>
-      <div class="ios-back-bar">
-        <button class="ios-back-bar-btn" onclick="closeModal()">
-          ← ${currentLang==='he' ? 'חזרה למתכונים' : currentLang==='ru' ? 'К рецептам' : 'Back to Recipes'}
-        </button>
-      </div>
     </div>`);
   // Enable swipe navigation between recipes
   requestAnimationFrame(_initDetailSwipe);
@@ -3975,10 +3939,7 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
 
 function toggleIngCheck(i) {
   const item = document.getElementById('ing-item-' + i);
-  if (!item) return;
-  const cb = item.querySelector('input');
-  item.classList.toggle('checked', cb.checked);
-  if (cb.checked) checkedIngredients.add(i); else checkedIngredients.delete(i);
+  if (item) item.classList.toggle('checked', item.querySelector('input').checked);
 }
 
 // =====================================================================
@@ -4037,10 +3998,8 @@ function setServingMult(factor) {
   detailServingMult = factor;
   document.querySelectorAll('.mult-btn').forEach(b => {
     const txt = b.textContent.trim();
-    let btnFactor;
-    if (txt === '×½') btnFactor = 0.5;
-    else if (txt === '×1½') btnFactor = 1.5;
-    else btnFactor = parseFloat(txt.replace('×',''));
+    const isHalf = txt === '×½';
+    const btnFactor = isHalf ? 0.5 : parseFloat(txt.replace('×',''));
     b.classList.toggle('active', btnFactor === factor);
   });
   const recipe = allRecipes.find(r => r.id === currentOpenRecipeId);
@@ -4054,13 +4013,11 @@ function renderDetailIngredients(recipe) {
     container.innerHTML = `<p style="color:var(--c-text-muted);font-size:14px;">${t('noIngredients')}</p>`;
     return;
   }
-  container.innerHTML = recipe.ingredients.map((ing, i) => {
-    const ck = checkedIngredients.has(i);
-    return `<label class="ingredient-check-item${ck?' checked':''}" id="ing-item-${i}">
-      <input type="checkbox" onchange="toggleIngCheck(${i})"${ck?' checked':''}>
+  container.innerHTML = recipe.ingredients.map((ing, i) => `
+    <label class="ingredient-check-item" id="ing-item-${i}">
+      <input type="checkbox" onchange="toggleIngCheck(${i})">
       <span>${escHtml(multiplyQty(ing.quantity))} ${escHtml(ing.unit || '')} ${escHtml(ing.name || '')}</span>
-    </label>`;
-  }).join('');
+    </label>`).join('');
 }
 
 // =====================================================================
@@ -4346,15 +4303,10 @@ function renderCookingMode(recipe) {
   // Build ingredients panel
   const ings = recipe.ingredients || [];
   const ingListHtml = ings.length
-    ? ings.map((ing, i) => {
-        const ck = checkedIngredients.has(i);
-        return `<button type="button" class="cooking-ing-item${ck?' checked':''}" id="cook-ing-${i}"
-            onclick="toggleCookingIngCheck(${i})">
-          <span class="ci-qty" style="color:var(--c-primary);font-weight:600;flex-shrink:0;">${escHtml(String(ing.quantity || ''))} ${escHtml(ing.unit || '')}</span>
-          <span class="ci-name" style="flex:1;text-align:start;">${escHtml(ing.name || '')}</span>
-          <span class="ci-tick" style="font-size:16px;min-width:20px;text-align:center;flex-shrink:0;">${ck?'✓':''}</span>
-        </button>`;
-      }).join('')
+    ? ings.map(ing => `<div class="cooking-ing-item">
+        <span style="color:var(--c-primary);font-weight:600;">${escHtml(String(ing.quantity || ''))} ${escHtml(ing.unit || '')}</span>
+        <span>${escHtml(ing.name || '')}</span>
+      </div>`).join('')
     : `<div style="color:var(--c-text-muted);font-size:13px;padding:6px 0;">${t('noIngredients')}</div>`;
 
   const ingPanelLabel = currentLang === 'he' ? `🧂 מצרכים (${ings.length})`
@@ -4373,6 +4325,10 @@ function renderCookingMode(recipe) {
     <div id="cooking-timers-float" style="display:none;"></div>
     <div class="cooking-step-area">
       <div class="cooking-step-text">${escHtml(step)}</div>
+      <button class="cooking-speak-btn" id="cooking-speak-btn" onclick="speakCookingStep()">
+        <span class="csb-icon">🔊</span>
+        <span id="cooking-speak-label">${currentLang==='he' ? 'הקראת השלב' : currentLang==='ru' ? 'Озвучить шаг' : 'Read step aloud'}</span>
+      </button>
       ${buildCookingStepTimer(step, cookingModeStep)}
     </div>
     <div class="cooking-ing-panel" id="cooking-ing-panel">
@@ -4397,28 +4353,11 @@ function toggleCookingIngredients() {
   if (panel) panel.classList.toggle('open');
 }
 
-function toggleCookingIngCheck(i) {
-  if (checkedIngredients.has(i)) checkedIngredients.delete(i);
-  else checkedIngredients.add(i);
-  const ck = checkedIngredients.has(i);
-  const el = document.getElementById('cook-ing-' + i);
-  if (el) {
-    el.classList.toggle('checked', ck);
-    const tick = el.querySelector('.ci-tick');
-    if (tick) tick.textContent = ck ? '✓' : '';
-  }
-  const det = document.getElementById('ing-item-' + i);
-  if (det) {
-    det.classList.toggle('checked', ck);
-    const cb = det.querySelector('input');
-    if (cb) cb.checked = ck;
-  }
-}
-
 function cookingStepNext() {
   const recipe = allRecipes.find(r => r.id === currentOpenRecipeId);
   if (!recipe) return;
   if (cookingModeStep < (recipe.steps?.length || 1) - 1) {
+    stopCookingSpeech();
     cookingModeStep++;
     renderCookingMode(recipe);
     renderCookingTimersFloat(); // keep running timers visible
@@ -4429,14 +4368,54 @@ function cookingStepPrev() {
   const recipe = allRecipes.find(r => r.id === currentOpenRecipeId);
   if (!recipe) return;
   if (cookingModeStep > 0) {
+    stopCookingSpeech();
     cookingModeStep--;
     renderCookingMode(recipe);
     renderCookingTimersFloat(); // keep running timers visible
   }
 }
 
+// ── Text-to-speech for the current cooking step ──
+function speakCookingStep() {
+  if (!('speechSynthesis' in window)) {
+    showToast(currentLang==='he' ? 'הדפדפן לא תומך בהקראה' : currentLang==='ru' ? 'Браузер не поддерживает озвучку' : 'Speech not supported on this browser');
+    return;
+  }
+  const textEl = document.querySelector('.cooking-step-text');
+  if (!textEl) return;
+  const text = textEl.textContent.trim();
+  if (!text) return;
+
+  // Stop any current speech (tapping again re-reads from the start)
+  window.speechSynthesis.cancel();
+
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = currentLang === 'he' ? 'he-IL' : currentLang === 'ru' ? 'ru-RU' : 'en-US';
+  utter.rate = 1.0;
+
+  const btn = document.getElementById('cooking-speak-btn');
+  const label = document.getElementById('cooking-speak-label');
+  const setSpeaking = (on) => {
+    if (btn) btn.classList.toggle('speaking', on);
+    if (label) label.textContent = on
+      ? (currentLang==='he' ? 'מקריא...' : currentLang==='ru' ? 'Читаю...' : 'Reading...')
+      : (currentLang==='he' ? 'הקראת השלב' : currentLang==='ru' ? 'Озвучить шаг' : 'Read step aloud');
+  };
+
+  utter.onstart = () => setSpeaking(true);
+  utter.onend   = () => setSpeaking(false);
+  utter.onerror = () => setSpeaking(false);
+
+  window.speechSynthesis.speak(utter);
+}
+
+function stopCookingSpeech() {
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+}
+
 async function exitCookingMode() {
   cookingModeActive = false;
+  stopCookingSpeech();
   // Clean up cooking timers
   _cookingTimers.forEach(tmr => { clearInterval(tmr.interval); clearInterval(tmr.alertInterval); });
   _cookingTimers = [];
