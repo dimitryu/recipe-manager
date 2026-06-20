@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#e85d04">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -220,10 +220,19 @@
 }
 .cooking-ing-panel.open .cooking-ing-body { display: block; }
 .cooking-ing-item {
-  font-size: 14px; padding: 5px 0; border-bottom: 1px solid var(--c-border);
-  color: var(--c-text); display: flex; gap: 6px;
+  font-size: 14px; padding: 8px 4px; border-bottom: 1px solid var(--c-border);
+  color: var(--c-text); display: flex; gap: 6px; align-items: center;
+  width: 100%; text-align: start; background: none;
+  border-left: none; border-right: none; border-top: none; border-radius: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0,0,0,0.06);
+  cursor: pointer; transition: opacity 0.15s;
 }
 .cooking-ing-item:last-child { border-bottom: none; }
+.cooking-ing-item:active { opacity: 0.6; }
+.cooking-ing-item.checked { opacity: 0.42; }
+.cooking-ing-item.checked .ci-name,
+.cooking-ing-item.checked .ci-qty { text-decoration: line-through; }
 /* Ingredient scaler */
 .ing-scaler-wrap {
   padding: 10px 16px 0; margin-bottom: -4px;
@@ -832,7 +841,33 @@ body.ltr .search-icon { right: auto; left: 14px; }
   max-height: 92vh;
   border-radius: 20px 20px 0 0;
 }
-.modal-sheet.modal-full { height: 100vh; max-height: 100vh; border-radius: 0; }
+.modal-sheet.modal-full { height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh; border-radius: 0; }
+/* iOS: push header below status-bar / Dynamic Island */
+.modal-sheet.modal-full .modal-header {
+  padding-top: max(16px, env(safe-area-inset-top, 0px));
+}
+/* make ✕ bigger — easier to tap */
+.modal-sheet.modal-full .modal-close {
+  width: 40px; height: 40px; font-size: 18px; min-width: 40px;
+}
+/* iOS back bar — sticky bottom, mobile only */
+.ios-back-bar {
+  display: none;
+  position: sticky; bottom: 0; z-index: 10;
+  background: var(--c-surface); border-top: 1px solid var(--c-border);
+  padding: 10px 20px;
+  padding-bottom: max(14px, env(safe-area-inset-bottom, 14px));
+  flex-shrink: 0;
+}
+.ios-back-bar-btn {
+  width: 100%; padding: 13px;
+  background: var(--c-surface2); color: var(--c-text);
+  border-radius: var(--radius); font-size: 16px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  touch-action: manipulation;
+}
+.ios-back-bar-btn:active { opacity: 0.7; }
+@media (max-width: 767px) { .ios-back-bar { display: flex; flex-direction: column; } }
 /* Swipe navigation — override slideUp with horizontal slide */
 .modal-sheet.swipe-from-right { animation: slideFromRight 0.22s ease-out !important; }
 .modal-sheet.swipe-from-left  { animation: slideFromLeft  0.22s ease-out !important; }
@@ -2740,7 +2775,7 @@ function saveUserCategories(cats) {
 // =====================================================================
 // VERSION
 // =====================================================================
-const APP_VERSION = '2.1.5';
+const APP_VERSION = '2.1.6';
 
 // =====================================================================
 // BUILT-IN FIREBASE CONFIG (shared project — no per-user setup needed)
@@ -2777,6 +2812,7 @@ let currentOpenRecipeId = null;
 let cookingModeWakeLock = null;
 let cookingModeStep = 0;
 let cookingModeActive = false;
+let checkedIngredients = new Set();
 let _noSleepVideo = null; // canvas-stream fallback for iOS <16.4
 let _detailNavList = [];   // snapshot of filteredRecipes when detail opens
 let _detailNavIdx  = -1;
@@ -3741,6 +3777,7 @@ function openRecipeDetail(id, readOnly = false, sharedUid = null) {
 }
 
 function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
+  if (currentOpenRecipeId !== recipe.id) checkedIngredients.clear();
   currentOpenRecipeId = recipe.id;
   detailServingMult = 1;
   const heroInner = (recipe.images && recipe.images.length > 0)
@@ -3803,6 +3840,7 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
       <span style="font-size:13px;color:var(--c-text-muted);">${t('servings')}:</span>
       <button class="mult-btn ${activeHalf ? 'active' : ''}" onclick="setServingMult(0.5)">×½</button>
       <button class="mult-btn ${detailServingMult === 1 ? 'active' : ''}" onclick="setServingMult(1)">×1</button>
+      <button class="mult-btn ${detailServingMult === 1.5 ? 'active' : ''}" onclick="setServingMult(1.5)">×1½</button>
       <button class="mult-btn ${detailServingMult === 2 ? 'active' : ''}" onclick="setServingMult(2)">×2</button>
       <button class="mult-btn ${detailServingMult === 3 ? 'active' : ''}" onclick="setServingMult(3)">×3</button>
     </div>`;
@@ -3834,11 +3872,13 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
     </div>` : '';
 
   const ingredientsHtml = (recipe.ingredients && recipe.ingredients.length > 0)
-    ? recipe.ingredients.map((ing, i) => `
-        <label class="ingredient-check-item" id="ing-item-${i}">
-          <input type="checkbox" onchange="toggleIngCheck(${i})">
+    ? recipe.ingredients.map((ing, i) => {
+        const ck = checkedIngredients.has(i);
+        return `<label class="ingredient-check-item${ck?' checked':''}" id="ing-item-${i}">
+          <input type="checkbox" onchange="toggleIngCheck(${i})"${ck?' checked':''}>
           <span>${escHtml(multiplyQty(ing.quantity))} ${escHtml(ing.unit || '')} ${escHtml(ing.name || '')}</span>
-        </label>`).join('')
+        </label>`;
+      }).join('')
     : `<p style="color:var(--c-text-muted);font-size:14px;">${t('noIngredients')}</p>`;
 
   const stepsHtml = (recipe.steps && recipe.steps.length > 0)
@@ -3932,6 +3972,11 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
         ${sourceHtml}
         ${actionsHtml}
       </div>
+      <div class="ios-back-bar">
+        <button class="ios-back-bar-btn" onclick="closeModal()">
+          ← ${currentLang==='he' ? 'חזרה למתכונים' : currentLang==='ru' ? 'К рецептам' : 'Back to Recipes'}
+        </button>
+      </div>
     </div>`);
   // Enable swipe navigation between recipes
   requestAnimationFrame(_initDetailSwipe);
@@ -3939,7 +3984,10 @@ function renderRecipeDetailModal(recipe, readOnly = false, sharedUid = null) {
 
 function toggleIngCheck(i) {
   const item = document.getElementById('ing-item-' + i);
-  if (item) item.classList.toggle('checked', item.querySelector('input').checked);
+  if (!item) return;
+  const cb = item.querySelector('input');
+  item.classList.toggle('checked', cb.checked);
+  if (cb.checked) checkedIngredients.add(i); else checkedIngredients.delete(i);
 }
 
 // =====================================================================
@@ -3998,8 +4046,10 @@ function setServingMult(factor) {
   detailServingMult = factor;
   document.querySelectorAll('.mult-btn').forEach(b => {
     const txt = b.textContent.trim();
-    const isHalf = txt === '×½';
-    const btnFactor = isHalf ? 0.5 : parseFloat(txt.replace('×',''));
+    let btnFactor;
+    if (txt === '×½') btnFactor = 0.5;
+    else if (txt === '×1½') btnFactor = 1.5;
+    else btnFactor = parseFloat(txt.replace('×',''));
     b.classList.toggle('active', btnFactor === factor);
   });
   const recipe = allRecipes.find(r => r.id === currentOpenRecipeId);
@@ -4013,11 +4063,13 @@ function renderDetailIngredients(recipe) {
     container.innerHTML = `<p style="color:var(--c-text-muted);font-size:14px;">${t('noIngredients')}</p>`;
     return;
   }
-  container.innerHTML = recipe.ingredients.map((ing, i) => `
-    <label class="ingredient-check-item" id="ing-item-${i}">
-      <input type="checkbox" onchange="toggleIngCheck(${i})">
+  container.innerHTML = recipe.ingredients.map((ing, i) => {
+    const ck = checkedIngredients.has(i);
+    return `<label class="ingredient-check-item${ck?' checked':''}" id="ing-item-${i}">
+      <input type="checkbox" onchange="toggleIngCheck(${i})"${ck?' checked':''}>
       <span>${escHtml(multiplyQty(ing.quantity))} ${escHtml(ing.unit || '')} ${escHtml(ing.name || '')}</span>
-    </label>`).join('');
+    </label>`;
+  }).join('');
 }
 
 // =====================================================================
@@ -4303,10 +4355,15 @@ function renderCookingMode(recipe) {
   // Build ingredients panel
   const ings = recipe.ingredients || [];
   const ingListHtml = ings.length
-    ? ings.map(ing => `<div class="cooking-ing-item">
-        <span style="color:var(--c-primary);font-weight:600;">${escHtml(String(ing.quantity || ''))} ${escHtml(ing.unit || '')}</span>
-        <span>${escHtml(ing.name || '')}</span>
-      </div>`).join('')
+    ? ings.map((ing, i) => {
+        const ck = checkedIngredients.has(i);
+        return `<button type="button" class="cooking-ing-item${ck?' checked':''}" id="cook-ing-${i}"
+            onclick="toggleCookingIngCheck(${i})">
+          <span class="ci-qty" style="color:var(--c-primary);font-weight:600;flex-shrink:0;">${escHtml(String(ing.quantity || ''))} ${escHtml(ing.unit || '')}</span>
+          <span class="ci-name" style="flex:1;text-align:start;">${escHtml(ing.name || '')}</span>
+          <span class="ci-tick" style="font-size:16px;min-width:20px;text-align:center;flex-shrink:0;">${ck?'✓':''}</span>
+        </button>`;
+      }).join('')
     : `<div style="color:var(--c-text-muted);font-size:13px;padding:6px 0;">${t('noIngredients')}</div>`;
 
   const ingPanelLabel = currentLang === 'he' ? `🧂 מצרכים (${ings.length})`
@@ -4353,6 +4410,24 @@ function toggleCookingIngredients() {
   if (panel) panel.classList.toggle('open');
 }
 
+function toggleCookingIngCheck(i) {
+  if (checkedIngredients.has(i)) checkedIngredients.delete(i);
+  else checkedIngredients.add(i);
+  const ck = checkedIngredients.has(i);
+  const el = document.getElementById('cook-ing-' + i);
+  if (el) {
+    el.classList.toggle('checked', ck);
+    const tick = el.querySelector('.ci-tick');
+    if (tick) tick.textContent = ck ? '✓' : '';
+  }
+  const det = document.getElementById('ing-item-' + i);
+  if (det) {
+    det.classList.toggle('checked', ck);
+    const cb = det.querySelector('input');
+    if (cb) cb.checked = ck;
+  }
+}
+
 function cookingStepNext() {
   const recipe = allRecipes.find(r => r.id === currentOpenRecipeId);
   if (!recipe) return;
@@ -4386,7 +4461,6 @@ function speakCookingStep() {
   const text = textEl.textContent.trim();
   if (!text) return;
 
-  // Stop any current speech (tapping again re-reads from the start)
   window.speechSynthesis.cancel();
 
   const utter = new SpeechSynthesisUtterance(text);
@@ -5385,8 +5459,214 @@ async function analyzeVideo(url) {
       document.getElementById('facebook-text')?.focus();
       return;
 
+    } else if (/tiktok\.com|vt\.tiktok\.com|vm\.tiktok\.com/i.test(url)) {
+      // ── TikTok (incl. short URLs: vt.tiktok.com, vm.tiktok.com) ──
+      showLoading('📄 ' + t('analyzingVideo'));
+
+      let tiktokDesc = '';
+      let tiktokTitle = '';
+      let rawHtml = '';
+
+      function decodeUniEsc(s) {
+        return s.replace(/\\u([0-9a-fA-F]{4})/g, (_, c) => String.fromCharCode(parseInt(c, 16)))
+                .replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\r/g, '');
+      }
+
+      function extractOembedText(oe) {
+        let caption = '';
+        if (oe.html) {
+          const pMatch = oe.html.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
+          if (pMatch) {
+            caption = pMatch[1].replace(/<a[^>]*>([^<]*)<\/a>/gi, '$1')
+                               .replace(/<[^>]+>/g, ' ')
+                               .replace(/&amp;/g, '&').replace(/&#39;/g, "'")
+                               .replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+                               .replace(/\s+/g, ' ').trim();
+          }
+        }
+        const titleText = (oe.title || '').trim();
+        return caption.length >= titleText.length ? caption : titleText;
+      }
+
+      function extractShareMetaDesc(html) {
+        const smBlock = html.match(/"shareMeta"\s*:\s*(\{[^}]{0,2000}\})/);
+        if (smBlock) {
+          try {
+            const obj = JSON.parse(smBlock[1]);
+            if (obj.desc && obj.desc.length > 5) return { desc: obj.desc, title: obj.title || '' };
+          } catch {}
+          const descM = smBlock[1].match(/"desc"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+          const titM  = smBlock[1].match(/"title"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+          if (descM) return { desc: decodeUniEsc(descM[1]), title: titM ? decodeUniEsc(titM[1]) : '' };
+        }
+        return null;
+      }
+
+      function extractJsonField(block, field) {
+        try {
+          const obj = JSON.parse(block);
+          if (obj[field] && String(obj[field]).length > 2) return String(obj[field]);
+        } catch {}
+        const m = block.match(new RegExp('"' + field + '"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"'));
+        return m ? decodeUniEsc(m[1]) : '';
+      }
+
+      // ── Fetch 1: TikTok official oEmbed API (CORS-enabled, most reliable) ──
+      try {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 10000);
+        const r = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
+        clearTimeout(tid);
+        if (r.ok) {
+          const oe = await r.json();
+          const cap = extractOembedText(oe);
+          if (cap && cap.length > 5) {
+            tiktokDesc  = cap;
+            tiktokTitle = oe.author_name ? `@${oe.author_name}` : '';
+          }
+        }
+      } catch {}
+
+      // ── Fetch 2: noembed.com fallback ──
+      if (!tiktokDesc) {
+        try {
+          const ctrl = new AbortController();
+          const tid = setTimeout(() => ctrl.abort(), 10000);
+          const r = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
+          clearTimeout(tid);
+          if (r.ok) {
+            const oe = await r.json();
+            const cap = extractOembedText(oe);
+            if (cap && cap.length > 5) {
+              tiktokDesc  = cap;
+              tiktokTitle = tiktokTitle || (oe.author_name ? `@${oe.author_name}` : '');
+            }
+          }
+        } catch {}
+      }
+
+      // ── Fetch 3: allorigins — raw HTML (shareMeta / share_info JSON) ──
+      if (!tiktokDesc) {
+        try {
+          const ctrl = new AbortController();
+          const tid = setTimeout(() => ctrl.abort(), 13000);
+          const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
+          clearTimeout(tid);
+          if (r.ok) {
+            const d = await r.json();
+            if (d.contents && d.contents.length > 80) rawHtml = d.contents.substring(0, 80000);
+          }
+        } catch {}
+      }
+
+      // ── Fetch 4: corsproxy fallback ──
+      if (!tiktokDesc && !rawHtml) {
+        try {
+          const ctrl = new AbortController();
+          const tid = setTimeout(() => ctrl.abort(), 12000);
+          const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, { signal: ctrl.signal });
+          clearTimeout(tid);
+          if (r.ok) { const t2 = await r.text(); if (t2.length > 80) rawHtml = t2.substring(0, 80000); }
+        } catch {}
+      }
+
+      // ── Fetch 5: Jina Reader ──
+      let jinaText = '';
+      if (!tiktokDesc && !rawHtml) {
+        try {
+          const ctrl = new AbortController();
+          const tid = setTimeout(() => ctrl.abort(), 14000);
+          const r = await fetch(`https://r.jina.ai/${url}`, {
+            signal: ctrl.signal,
+            headers: { 'Accept': 'text/plain', 'X-Return-Format': 'text' }
+          });
+          clearTimeout(tid);
+          if (r.ok) { const t3 = await r.text(); if (t3.length > 80) jinaText = t3.substring(0, 8000); }
+        } catch {}
+      }
+
+      // ── Extract from raw HTML (only if oEmbed didn't already give us text) ──
+      if (rawHtml && !tiktokDesc) {
+        const sm = extractShareMetaDesc(rawHtml);
+        if (sm && sm.desc && sm.desc.length > 5) {
+          tiktokDesc  = sm.desc;
+          tiktokTitle = sm.title || '';
+        }
+        if (!tiktokDesc) {
+          const siBlock = rawHtml.match(/"share_info"\s*:\s*(\{[^}]{0,3000}\})/);
+          if (siBlock) {
+            const siTitle = extractJsonField(siBlock[1], 'title');
+            const siDesc  = extractJsonField(siBlock[1], 'desc');
+            if (siDesc  && siDesc.length  > 5) tiktokDesc  = siDesc;
+            if (siTitle && siTitle.length > 2) tiktokTitle = tiktokTitle || siTitle;
+            if (!tiktokDesc && siTitle && siTitle.length > 10) tiktokDesc = siTitle;
+          }
+        }
+        if (!tiktokDesc) {
+          const m = rawHtml.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']{5,3000})["']/i)
+            || rawHtml.match(/<meta[^>]+content=["']([^"']{5,3000})["'][^>]+property=["']og:description["']/i);
+          if (m) tiktokDesc = decodeUniEsc(m[1]);
+        }
+        if (!tiktokTitle) {
+          const m = rawHtml.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']{2,300})["']/i)
+            || rawHtml.match(/<meta[^>]+content=["']([^"']{2,300})["'][^>]+property=["']og:title["']/i);
+          if (m) tiktokTitle = decodeUniEsc(m[1]);
+        }
+        if (!tiktokDesc) {
+          const m = rawHtml.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']{5,3000})["']/i)
+            || rawHtml.match(/<meta[^>]+content=["']([^"']{5,3000})["'][^>]+name=["']description["']/i);
+          if (m) tiktokDesc = decodeUniEsc(m[1]);
+        }
+      }
+
+      if (!tiktokDesc && jinaText.length > 100) {
+        tiktokDesc = jinaText.substring(0, 4000);
+      }
+
+      // ── Last resort: send the entire raw response to Claude and ask it to find the recipe ──
+      if (!tiktokDesc && !tiktokTitle) {
+        const fullText = (rawHtml || jinaText || '').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+        if (fullText.length > 100) {
+          showLoading('🤖 ' + t('analyzingVideo'));
+          const scanResponse = await callClaude([{
+            role: 'user',
+            content: (currentLang === 'he'
+              ? 'מצא בתוכן הבא מתכון אם קיים, ונתח אותו לפורמט JSON. אם אין מתכון ברור, השתמש בכל מידע רלוונטי שמצאת.'
+              : currentLang === 'ru'
+              ? 'Найди рецепт в следующем контенте и разбери его в JSON формат.'
+              : 'Find any recipe in the following page content and parse it.')
+              + '\n\n' + getRecipePromptVerbatim()
+              + '\n\nTikTok page content:\n' + fullText.substring(0, 6000)
+          }], 2500);
+          const scanParsed = parseClaudeResponse(scanResponse);
+          if (!scanParsed.sourceUrl) scanParsed.sourceUrl = url;
+          hideLoading();
+          openRecipeForm(scanParsed);
+          return;
+        }
+        throw new Error(currentLang === 'he'
+          ? 'לא ניתן לחלץ תוכן מה-TikTok. נסה להדביק את הטקסט ישירות בלשונית "טקסט".'
+          : currentLang === 'ru'
+          ? 'Не удалось извлечь контент TikTok. Вставьте текст рецепта вручную.'
+          : 'Could not extract TikTok content. Try pasting the recipe text in the "Text" tab.');
+      }
+
+      let ttContent = `TikTok Video\nURL: ${url}\n`;
+      if (tiktokTitle) ttContent += `Author: ${tiktokTitle}\n`;
+      ttContent += `\nThe following is the TikTok video caption which contains the recipe. ` +
+        `Extract the recipe from it — ingredients, quantities, and preparation steps:\n\n${tiktokDesc || tiktokTitle}\n`;
+
+      showLoading('🤖 ' + t('analyzingVideo'));
+      const ttResponse = await callClaude([{
+        role: 'user', content: getRecipePrompt() + '\n\n' + ttContent
+      }], 2500);
+      const ttParsed = parseClaudeResponse(ttResponse);
+      if (!ttParsed.sourceUrl) ttParsed.sourceUrl = url;
+      hideLoading();
+      openRecipeForm(ttParsed);
+
     } else {
-      // Generic URL (TikTok, etc.) — fetch page text
+      // Generic URL — fetch page text
       const content = await ytProxy(url, 10000);
       const stripped = (content || '')
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
